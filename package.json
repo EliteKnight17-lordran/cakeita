@@ -1,11 +1,11 @@
 {
   "name": "cakeita",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.1",
   "description": "Cakeita: budget-first custom cake quotes with a live 3D cake preview for Filipino home bakers.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "vite",

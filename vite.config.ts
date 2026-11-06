@@ -22,7 +22,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.ts', 'api/**/*.test.ts'],
+    include: ['src/**/*.test.ts'],
     environment: 'node',
   },
 });

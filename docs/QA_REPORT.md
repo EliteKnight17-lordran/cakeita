@@ -1,15 +1,15 @@
 # QA report
 
-**Build:** v0.1 · **Date:** 2026-11-06 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+**Build:** v1.0.1 · **Date:** 2026-11-06 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
 
 ## Results
 
 | Suite | Result |
 | --- | --- |
-| Unit tests (Vitest) | **132 / 132 passed** |
+| Unit tests (Vitest) | **135 / 135 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
-| End-to-end checks (4 phones) | **37 / 37 passed** |
+| End-to-end checks (4 phones) | **41 / 41 passed** |
 | Accessibility (axe, 12 screens) | **0 serious or critical issues** |
 | JavaScript errors during e2e | 0 on all phones |
 | `npm audit` | 0 known vulnerabilities |
@@ -37,3 +37,10 @@
 - **HEIC photos:** may not open on some browsers; the app shows a friendly message and asks for a screenshot.
 - **Only 2 designs** appear when Simple and Classic would be identical (budget exactly fits Simple). This is intentional; consider a short note explaining it.
 - **Sample prices** are unverified estimates; replace with real supplier prices from interviewed bakers.
+
+## v1.0.1 regression (2026-11-06)
+
+| Bug | Found by | Fix | Guard |
+| --- | --- | --- | --- |
+| English/Taglish choice reverted when a second tab (e.g. a Messenger link) was open | User on the live Vercel build | Prefs now sync across tabs (`storage` event, re-read on tab focus) and merge over the saved value before writing | e2e: "language picked in another tab reaches this tab", "language stays after reload…" (fails on v1.0.0, passes on v1.0.1) |
+| Vercel build showed TS2835 for `api/parse.ts`; the function would fail to import in Node ESM | Vercel build log | `.js` extensions on the server import chain; test moved out of `api/`; Node pinned to 22.x | Unit test checks every relative import in the chain ends in `.js`; compiled with `tsc --module nodenext` and ran GET/POST in plain Node |

@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { readWithGemini } from '../src/ai/gemini';
-import { RateLimiter } from '../src/ai/rateLimit';
-import { publicMenuSchema } from '../src/domain/schemas';
+import { readWithGemini } from '../src/ai/gemini.js';
+import { RateLimiter } from '../src/ai/rateLimit.js';
+import { publicMenuSchema } from '../src/domain/schemas.js';
 
 /**
  * POST /api/parse  (Vercel serverless function, optional)

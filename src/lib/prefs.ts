@@ -16,13 +16,19 @@ export interface Prefs {
 const KEY = 'cakeita.prefs.v1';
 const DEFAULTS: Prefs = { lang: 'tl', big: false, dev: false, force2D: false, aiOff: false };
 
-function load(): Prefs {
+/** What this device saved, or {} when nothing is saved or storage is blocked. */
+function saved(): Partial<Prefs> {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Prefs>) } : DEFAULTS;
+    const v: unknown = raw ? JSON.parse(raw) : {};
+    return v && typeof v === 'object' ? (v as Partial<Prefs>) : {};
   } catch {
-    return DEFAULTS;
+    return {};
   }
+}
+
+function load(): Prefs {
+  return { ...DEFAULTS, ...saved() };
 }
 
 let state: Prefs = typeof window === 'undefined' ? DEFAULTS : load();
@@ -39,15 +45,41 @@ export function getPrefs(): Prefs {
   return state;
 }
 
+function notify() {
+  apply(state);
+  listeners.forEach((l) => l());
+}
+
+/**
+ * Another tab (a Messenger link, "open like a customer") changed the prefs.
+ * Pick them up right away so a stale tab never writes the old language back.
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== KEY && e.key !== null) return;
+    state = { ...state, ...saved() };
+    notify();
+  });
+  // Coming back to a tab (or a phone's in-app browser) re-reads the saved choice.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const fresh = { ...state, ...saved() };
+    if (JSON.stringify(fresh) !== JSON.stringify(state)) {
+      state = fresh;
+      notify();
+    }
+  });
+}
+
 export function setPrefs(patch: Partial<Prefs>) {
-  state = { ...state, ...patch };
+  // Merge over what is saved now, not what this tab loaded earlier.
+  state = { ...state, ...saved(), ...patch };
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch {
     /* private mode: keep in memory */
   }
-  apply(state);
-  listeners.forEach((l) => l());
+  notify();
 }
 
 export function usePrefs(): Prefs {

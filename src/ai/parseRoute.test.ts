@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { toPublicMenu } from '../src/domain/pricing';
-import { createSampleBakery } from '../src/domain/starterMenus';
-import { GET, POST } from './parse';
+import { toPublicMenu } from '../domain/pricing';
+import { createSampleBakery } from '../domain/starterMenus';
+import { GET, POST } from '../../api/parse';
 
 const menu = toPublicMenu(createSampleBakery());
 const req = (body: unknown, ip = '1.1.1.1') =>
@@ -45,5 +45,17 @@ describe('/api/parse', () => {
     let last = 0;
     for (let i = 0; i < 11; i++) last = (await POST(req({ text: 5, menu }, '9.9.9.9'))).status;
     expect(last).toBe(429);
+  });
+});
+
+describe('Vercel function imports', () => {
+  // Vercel runs api/ as plain Node ESM, which needs ".js" on every relative import.
+  it('uses .js extensions on the whole server import chain', async () => {
+    const { readFileSync } = await import('node:fs');
+    for (const f of ['../../api/parse.ts', './gemini.ts', './rateLimit.ts', '../domain/schemas.ts']) {
+      const src = readFileSync(new URL(f, import.meta.url), 'utf8');
+      const rel = [...src.matchAll(/from '(\.[^']+)'/g)].map((m) => m[1]!);
+      for (const spec of rel) expect(spec, `${f}: ${spec}`).toMatch(/\.js$/);
+    }
   });
 });

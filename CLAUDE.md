@@ -23,5 +23,8 @@ Budget-first custom cake quotes with a 3D cake for Filipino home bakers. Hackath
 - `npm run build && npm run e2e` Playwright walkthrough (customer, baker, elder, tester) + axe.
 - Developer panel: `?dev=1` or tap the logo 5 times.
 
+## Releases
+- Add an entry to `src/changelog.ts` (shown on About) and bump `version` in package.json. A test checks they match.
+
 ## Before you push
 Run `npm run check` and `npm run e2e`. Keep 375 px mobile layout, labels on inputs, and AA contrast.

@@ -217,6 +217,20 @@ async function main() {
     await axe(elder, 'elder welcome');
     await shot(elder, '11-elder');
 
+    // Language must survive a second tab (e.g. a link opened from Messenger).
+    const tab2 = await elder.context().newPage();
+    await tab2.goto(`${BASE}#/about`);
+    await tab2.getByRole('button', { name: 'Switch to English' }).click();
+    await elder.bringToFront();
+    check('language picked in another tab reaches this tab', await waitTrue(() => elder.getByRole('button', { name: 'Lumipat sa Taglish' }).isVisible()));
+    // Changing big text in the old tab must not write the old language back.
+    await elder.getByRole('button', { name: 'Bigger text' }).click();
+    await elder.reload();
+    check('language stays after reload and other settings change', await waitTrue(() => elder.getByRole('button', { name: 'Lumipat sa Taglish' }).isVisible()));
+    check('about page shows update history', await tab2.getByRole('heading', { name: /^v\d+\.\d+\.\d+/ }).first().isVisible());
+    await axe(tab2, 'about + update history');
+    await tab2.close();
+
     // ---------------- No WebGL / dev panel ----------------
     const tester = await phone(browser, 'tester');
     await tester.goto(`${BASE}?dev=1#/b/sample?dev=1`);

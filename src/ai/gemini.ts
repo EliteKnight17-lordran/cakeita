@@ -1,5 +1,5 @@
-import { aiReadingSchema, type AiReading } from '../domain/schemas';
-import type { PublicMenu } from '../domain/types';
+import { aiReadingSchema, type AiReading } from '../domain/schemas.js';
+import type { PublicMenu } from '../domain/types.js';
 
 /**
  * Server-side helper that asks Gemini to READ a cake request (text and/or inspo photo)

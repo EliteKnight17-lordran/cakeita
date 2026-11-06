@@ -1,8 +1,10 @@
 import { Layout } from '../components/Layout';
-import { useTx } from '../lib/prefs';
+import { CHANGELOG, APP_VERSION } from '../changelog';
+import { usePrefs, useTx } from '../lib/prefs';
 
 export default function About() {
   const tx = useTx();
+  const { lang } = usePrefs();
   const S = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <section className="card space-y-2">
       <h2 className="font-display text-xl font-bold">{title}</h2>
@@ -47,7 +49,23 @@ export default function About() {
             <li>{tx('Character themes are made generic. Bakers should use licensed toppers.', 'Ginagawang generic ang character themes. Gumamit ng licensed topper.')}</li>
           </ul>
         </S>
-        <p className="text-center text-sm text-ink-soft">Build-Off 2026 · {tx('Prototype', 'Prototype')} · v0.1</p>
+        <S title={tx('Update history', 'Mga update')}>
+          <ol className="space-y-3" aria-label={tx('Update history', 'Mga update')}>
+            {CHANGELOG.map((r) => (
+              <li key={r.version}>
+                <h3 className="font-bold">
+                  v{r.version} <span className="font-normal text-sm text-ink-soft">· {r.date}</span>
+                </h3>
+                <ul className="list-disc space-y-1 pl-5">
+                  {(lang === 'tl' ? r.tl : r.en).map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </S>
+        <p className="text-center text-sm text-ink-soft">Build-Off 2026 · {tx('Prototype', 'Prototype')} · v{APP_VERSION}</p>
       </div>
     </Layout>
   );
