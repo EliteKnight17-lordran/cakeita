@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+e2e/out
+*.log
+.DS_Store
+.vercel
+coverage
