@@ -31,7 +31,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     key: 'hero',
-    title: 'Superhero theme (trademark)',
+    title: 'Superhero theme, ₱1.8k',
     message: "Spiderman theme cake for my son's 5th bday, 20 pax, 1.8k budget, may candles po",
     occasion: 'Birthday', servings: 20, budget: 1800, inDays: 12,
     customer: { name: 'Carla Santos (sample)', contact: '0917 000 0003' },
