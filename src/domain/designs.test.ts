@@ -90,6 +90,14 @@ describe('buildDesigns', () => {
     }
   });
 
+  it("Simple uses the baker's house frosting when the budget allows, and the cheapest only when needed", () => {
+    const roomy = buildDesigns(sample, W({ servings: 12, budget: 5000 }));
+    expect(roomy.options[0]!.selection.componentIds).toContain('cv-buttercream');
+    const tight = buildDesigns(sample, W({ servings: 12, budget: 1000 }));
+    const simple = tight.options[0]!;
+    expect(simple.estimate).toBeLessThanOrEqual(1000);
+  });
+
   it('never returns two identical designs', () => {
     for (const budget of [null, 400, 800, 1200, 2000, 5000, 20000]) {
       const r = buildDesigns(sample, W({ budget, servings: 8 }));

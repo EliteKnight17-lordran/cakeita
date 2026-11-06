@@ -43,24 +43,37 @@ export async function encodePayload(value: unknown): Promise<string> {
   return 'j' + toBase64Url(json);
 }
 
-export type DecodeResult<T> = { ok: true; value: T } | { ok: false; error: string };
+export type LinkError = 'empty' | 'unsupported' | 'format' | 'too-big' | 'changed' | 'broken';
+export type DecodeResult<T> = { ok: true; value: T } | { ok: false; error: LinkError };
+
+/** Friendly, bilingual text for a link problem. */
+export function linkErrorText(e: LinkError, tx: (en: string, tl: string) => string): string {
+  switch (e) {
+    case 'unsupported':
+      return tx('This browser is too old to open the link. Please update it or use Chrome.', 'Luma na ang browser para sa link. Paki-update o gamitin ang Chrome.');
+    case 'changed':
+      return tx('This link is incomplete or was changed.', 'Kulang o binago ang link na ito.');
+    default:
+      return tx('This link is broken. Ask for a new one.', 'Sira ang link na ito. Humingi ng bago.');
+  }
+}
 
 export async function decodePayload<T>(code: string, schema: ZodType<T>): Promise<DecodeResult<T>> {
   try {
-    if (!code || code.length > MAX_ENCODED_LENGTH) return { ok: false, error: 'Link is empty or too long.' };
+    if (!code || code.length > MAX_ENCODED_LENGTH) return { ok: false, error: 'empty' };
     const kind = code[0];
     const body = fromBase64Url(code.slice(1));
     let jsonBytes: Uint8Array;
     if (kind === 'z') {
-      if (!canCompress()) return { ok: false, error: 'This browser cannot open compressed links. Please update it.' };
+      if (!canCompress()) return { ok: false, error: 'unsupported' };
       jsonBytes = await pipe(body, new DecompressionStream('deflate-raw'));
     } else if (kind === 'j') jsonBytes = body;
-    else return { ok: false, error: 'Unknown link format.' };
-    if (jsonBytes.length > 64_000) return { ok: false, error: 'Link content is too big.' };
+    else return { ok: false, error: 'format' };
+    if (jsonBytes.length > 64_000) return { ok: false, error: 'too-big' };
     const parsed = schema.safeParse(JSON.parse(new TextDecoder().decode(jsonBytes)));
-    if (!parsed.success) return { ok: false, error: 'This link is incomplete or was changed.' };
+    if (!parsed.success) return { ok: false, error: 'changed' };
     return { ok: true, value: parsed.data };
   } catch {
-    return { ok: false, error: 'This link is broken. Ask for a new one.' };
+    return { ok: false, error: 'broken' };
   }
 }

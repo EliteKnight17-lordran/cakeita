@@ -1,0 +1,117 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-cream: #fff8f0;
+  --color-card: #ffffff;
+  --color-berry: #b3164f;
+  --color-berry-dark: #8e0f3d;
+  --color-berry-soft: #fde4ee;
+  --color-ink: #2b1a1f;
+  --color-ink-soft: #6b4a52;
+  --color-line: #ecd9cf;
+  --color-amber-bg: #fff3d6;
+  --color-amber-ink: #6e4500;
+  --color-danger-bg: #fde8e8;
+  --color-danger-ink: #9b1717;
+  --color-ok-bg: #e3f5e8;
+  --color-ok-ink: #155a2b;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: Georgia, 'Times New Roman', serif;
+}
+
+html {
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+/* Elder-friendly mode: everything scales because sizes are in rem. */
+html[data-big='true'] {
+  font-size: 125%;
+}
+html[data-big='true'] body {
+  --color-ink-soft: #4a2f36;
+  --color-line: #c9aea2;
+}
+
+body {
+  margin: 0;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 3px solid #1a5fd0;
+  outline-offset: 2px;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-berry px-5 py-3 text-base font-bold text-white shadow-sm transition hover:bg-berry-dark active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-berry bg-white px-5 py-3 text-base font-bold text-berry transition hover:bg-berry-soft active:scale-[0.98] disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:bg-berry-soft;
+  }
+  .btn-danger {
+    @apply inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-danger-ink bg-white px-4 py-2 text-sm font-bold text-danger-ink hover:bg-danger-bg;
+  }
+  .chip {
+    @apply inline-flex min-h-11 items-center gap-1 rounded-full border-2 border-line bg-white px-4 py-2 text-base font-semibold text-ink transition hover:border-berry;
+  }
+  .chip[aria-pressed='true'] {
+    @apply border-berry bg-berry-soft text-berry-dark;
+  }
+  .card {
+    @apply rounded-3xl border border-line bg-card p-4 shadow-sm;
+  }
+  .input {
+    @apply min-h-12 w-full rounded-2xl border-2 border-line bg-white px-4 py-2 text-base text-ink placeholder:text-[#8a6f76] focus:border-berry focus:outline-none;
+  }
+  .label {
+    @apply mb-1 block text-base font-bold text-ink;
+  }
+  .hint {
+    @apply mt-1 text-sm text-ink-soft;
+  }
+  .price {
+    @apply font-display text-3xl font-bold tracking-tight text-ink;
+  }
+  .tag {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-sm font-bold;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}

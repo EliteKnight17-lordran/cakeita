@@ -77,7 +77,9 @@ export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
 
   const flavor = (wants.flavorId && partById.get(wants.flavorId)?.id) || flavors[0]?.id || null;
   const cheapCovering = coverings[0]?.id ?? null;
-  const wantedCovering = (wants.coveringId && partById.get(wants.coveringId)?.id) || cheapCovering;
+  // The baker's first-listed covering is their "house" default (usually buttercream).
+  const houseCovering = parts.find((p) => p.category === 'covering')?.id ?? cheapCovering;
+  const wantedCovering = (wants.coveringId && partById.get(wants.coveringId)?.id) || houseCovering;
   const wanted = uniq(wants.componentIds.filter((id) => {
     const p = partById.get(id);
     return p && p.category !== 'flavor' && p.category !== 'covering';
@@ -108,9 +110,17 @@ export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
   const showSel: Selection = { baseCakeId: showBase.id, componentIds: uniq([flavor, wantedCovering, ...wanted, ...withText, ...showExtras]) };
 
   // ----- simple -----
-  let simpleSel: Selection = { baseCakeId: simpleBase.id, componentIds: uniq([flavor, cheapCovering, ...withText]) };
-  if (wants.budget != null && withText.length && est(simpleSel) > wants.budget) {
-    simpleSel = { baseCakeId: simpleBase.id, componentIds: uniq([flavor, cheapCovering]) };
+  // Simple: house frosting (or what they asked for). If that is over budget, drop the
+  // message, then fall back to the cheapest frosting.
+  const simpleTries: Selection[] = [
+    { baseCakeId: simpleBase.id, componentIds: uniq([flavor, wantedCovering, ...withText]) },
+    { baseCakeId: simpleBase.id, componentIds: uniq([flavor, wantedCovering]) },
+    { baseCakeId: simpleBase.id, componentIds: uniq([flavor, cheapCovering, ...withText]) },
+    { baseCakeId: simpleBase.id, componentIds: uniq([flavor, cheapCovering]) },
+  ];
+  let simpleSel: Selection = simpleTries[0]!;
+  if (wants.budget != null) {
+    simpleSel = simpleTries.find((t) => est(t) <= wants.budget!) ?? simpleTries[simpleTries.length - 1]!;
   }
   const simplePrice = est(simpleSel);
   const budgetTooLow = wants.budget != null && simplePrice > wants.budget;
