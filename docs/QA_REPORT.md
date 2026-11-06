@@ -1,0 +1,39 @@
+# QA report
+
+**Build:** v0.1 · **Date:** 2026-11-06 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+
+## Results
+
+| Suite | Result |
+| --- | --- |
+| Unit tests (Vitest) | **132 / 132 passed** |
+| Typecheck (strict) | Pass |
+| Lint | Pass |
+| End-to-end checks (4 phones) | **37 / 37 passed** |
+| Accessibility (axe, 12 screens) | **0 serious or critical issues** |
+| JavaScript errors during e2e | 0 on all phones |
+| `npm audit` | 0 known vulnerabilities |
+| First load (gzip) | ≈ 128 KB; 3D engine ≈ 243 KB loaded on demand |
+
+## Bugs found during QA and fixed
+
+| # | Found by | Problem | Fix | Guarded by |
+| --- | --- | --- | --- | --- |
+| 1 | Customer walkthrough | Simple design used semi-naked (cheapest) frosting, so a "pink" request showed no pink | Use the baker's house frosting first; cheapest only if needed for the budget | unit test |
+| 2 | Customer walkthrough | Quote page listed "words on cake" even when no lettering part was priced | Words only appear when a piped message or topper is in the priced parts; customizer warns | unit test |
+| 3 | Visual check | Piped text hidden under chocolate drip and low contrast | Raised the text layer, cream letters on dark drip | screenshot |
+| 4 | Performance check | The 3D engine was preloaded on the first page (≈ 370 KB gz) | Split chunks so three.js loads only with a cake | build output |
+| 5 | axe | Progress bar had no accessible name | Added label | e2e a11y |
+| 6 | Elder/tester walkthrough | Broken-link errors were English only | Bilingual error texts | e2e |
+| 7 | Unit test | "fondant ₱1,200/kg" split at the comma | Normalize thousands before splitting | unit test |
+| 8 | Unit test | "budget ko ngayon 2k" not read | Allow filler words after "budget" | unit test |
+| 9 | Visual check | Camera too close; cake top cropped | Fit camera to cake size | screenshot |
+
+## Open items (not yet verified)
+
+- **Real devices:** only emulated Chromium so far. Run the manual checklist in [TEST_PLAN.md](TEST_PLAN.md) on an Android phone and an iPhone before the exhibition.
+- **Vercel AI route:** unit-tested, not yet deployed. The app falls back to the offline reader if it fails.
+- **Voice price update:** depends on the browser's speech recognition; not tested with real speech.
+- **HEIC photos:** may not open on some browsers; the app shows a friendly message and asks for a screenshot.
+- **Only 2 designs** appear when Simple and Classic would be identical (budget exactly fits Simple). This is intentional; consider a short note explaining it.
+- **Sample prices** are unverified estimates; replace with real supplier prices from interviewed bakers.
