@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/fredoka';
+@import '@fontsource-variable/nunito';
 
 @theme {
   --color-cream: #fff8f0;
@@ -15,8 +17,14 @@
   --color-danger-ink: #9b1717;
   --color-ok-bg: #e3f5e8;
   --color-ok-ink: #155a2b;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: Georgia, 'Times New Roman', serif;
+  /* Pastel sweets used for accents (backgrounds only, never for text). */
+  --color-strawberry: #ffd6e4;
+  --color-ube: #ece0fb;
+  --color-mango: #ffefc2;
+  --color-mint: #dcf4e3;
+  --color-blueberry: #dcefff;
+  --font-sans: 'Nunito Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-display: 'Fredoka Variable', 'Nunito Variable', ui-rounded, system-ui, sans-serif;
 }
 
 html {
@@ -34,7 +42,15 @@ html[data-big='true'] body {
 
 body {
   margin: 0;
-  background: var(--color-cream);
+  /* Sweets wallpaper: cakes, cupcakes, poppers, candy. Pale on purpose so text stays AA. */
+  background-color: var(--color-cream);
+  background-image:
+    radial-gradient(60rem 30rem at 110% -10%, rgb(255 214 228 / 0.7), transparent 60%),
+    radial-gradient(50rem 30rem at -20% 40%, rgb(236 224 251 / 0.6), transparent 60%),
+    radial-gradient(50rem 30rem at 120% 90%, rgb(255 239 194 / 0.6), transparent 60%),
+    url('./assets/sweets.svg');
+  background-size: auto, auto, auto, 320px 320px;
+  background-attachment: fixed, fixed, fixed, scroll;
   color: var(--color-ink);
   font-family: var(--font-sans);
   line-height: 1.5;
@@ -45,12 +61,49 @@ body {
   outline-offset: 2px;
 }
 
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Frosting drip under the header. */
+.frosting {
+  position: relative;
+}
+.frosting::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='14' viewBox='0 0 120 14'%3E%3Cpath d='M0 0h120v4c-6 0-7 9-12 9s-5-9-11-9-6 6-11 6-5-6-12-6-6 10-12 10-6-10-12-10-5 5-11 5S44 4 38 4s-7 8-12 8-6-8-12-8S8 9 4 9 0 4 0 4Z' fill='%23ffd6e4'/%3E%3C/svg%3E")
+    repeat-x;
+  background-size: 120px 14px;
+}
+
 @layer components {
+  /* Candy buttons: a darker "base" under each button, pressed on tap. */
   .btn {
-    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-berry px-5 py-3 text-base font-bold text-white shadow-sm transition hover:bg-berry-dark active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-berry px-5 py-3 text-base font-bold text-white transition hover:bg-berry-dark active:translate-y-[3px] disabled:cursor-not-allowed disabled:opacity-50;
+    font-family: var(--font-display);
+    font-weight: 600;
+    box-shadow: 0 4px 0 var(--color-berry-dark), 0 8px 18px rgb(179 22 79 / 0.18);
+  }
+  .btn:active {
+    box-shadow: 0 1px 0 var(--color-berry-dark);
   }
   .btn-secondary {
-    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-berry bg-white px-5 py-3 text-base font-bold text-berry transition hover:bg-berry-soft active:scale-[0.98] disabled:opacity-50;
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-berry bg-white px-5 py-3 text-base font-bold text-berry transition hover:bg-berry-soft active:translate-y-[3px] disabled:opacity-50;
+    font-family: var(--font-display);
+    font-weight: 600;
+    box-shadow: 0 4px 0 #f3b9cd;
+  }
+  .btn-secondary:active {
+    box-shadow: 0 1px 0 #f3b9cd;
   }
   .btn-ghost {
     @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:bg-berry-soft;
@@ -64,8 +117,10 @@ body {
   .chip[aria-pressed='true'] {
     @apply border-berry bg-berry-soft text-berry-dark;
   }
+  /* Cards sit like a cake layer on a pink plate. */
   .card {
-    @apply rounded-3xl border border-line bg-card p-4 shadow-sm;
+    @apply rounded-3xl border border-line bg-card p-4;
+    box-shadow: 0 4px 0 #f6dbe3, 0 10px 24px rgb(120 40 70 / 0.06);
   }
   .input {
     @apply min-h-12 w-full rounded-2xl border-2 border-line bg-white px-4 py-2 text-base text-ink placeholder:text-[#8a6f76] focus:border-berry focus:outline-none;
@@ -96,7 +151,45 @@ body {
   border: 0;
 }
 
+/* Confetti for happy moments (approve, confirm). Decorative only. */
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 60;
+}
+.confetti i {
+  position: absolute;
+  top: -20px;
+  width: 9px;
+  height: 14px;
+  border-radius: 3px;
+  animation: confetti-fall 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
+}
+@keyframes confetti-fall {
+  to {
+    transform: translate3d(var(--dx), 105vh, 0) rotate(var(--rot));
+    opacity: 0.9;
+  }
+}
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--r, 0deg));
+  }
+  50% {
+    transform: translateY(-8px) rotate(var(--r, 0deg));
+  }
+}
+.bob {
+  animation: bob 4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
   *,
   *::before,
   *::after {
@@ -113,5 +206,8 @@ body {
   }
   body {
     background: #fff;
+  }
+  .frosting::after {
+    display: none;
   }
 }

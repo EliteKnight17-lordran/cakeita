@@ -11,6 +11,29 @@ import { usePrefs, useTx } from '../lib/prefs';
 const HERO_MENU = toPublicMenu(createSampleBakery());
 const HERO = toVisual(HERO_MENU, { baseCakeId: 't2-6-8', componentIds: ['fl-ube', 'cv-buttercream', 'dc-drip', 'dc-flowers', 'tp-text'] }, { colors: ['#f8c8d8', '#b3164f'], textOnCake: 'Kita sa bawat hiwa', candles: 0 });
 
+const STEP_BG = ['bg-strawberry', 'bg-ube', 'bg-mango'];
+
+/** Party sweets floating around the hero. Decorative only, hidden from screen readers. */
+function FloatingSweets() {
+  const items: Array<[string, string, string]> = [
+    ['🧁', 'left-0 top-0', '-12deg'],
+    ['🎈', 'right-1 top-2', '8deg'],
+    ['🍬', '-left-10 top-40 hidden md:block', '20deg'],
+    ['🍩', '-right-10 top-44 hidden md:block', '-10deg'],
+    ['🍭', '-left-8 bottom-0 hidden md:block', '14deg'],
+    ['🎊', '-right-8 bottom-2 hidden md:block', '0deg'],
+  ];
+  return (
+    <div className="pointer-events-none absolute inset-0 -z-0" aria-hidden="true">
+      {items.map(([e, pos, r], i) => (
+        <span key={i} className={`bob absolute text-3xl opacity-80 ${pos}`} style={{ ['--r' as string]: r, animationDelay: `${i * 0.6}s` }}>
+          {e}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function Home() {
   const tx = useTx();
   const prefs = usePrefs();
@@ -18,9 +41,12 @@ export default function Home() {
   return (
     <Layout>
       <div className="space-y-8">
-        <section className="space-y-4 pt-2 text-center">
-          <p className="font-display text-lg italic text-berry">Kita sa bawat hiwa.</p>
-          <h1 className="font-display text-4xl font-bold leading-tight sm:text-5xl">
+        <section className="relative space-y-4 pt-2 text-center">
+          <FloatingSweets />
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-1 font-display text-lg font-medium text-berry shadow-sm">
+            <span aria-hidden="true">🎉</span> Kita sa bawat hiwa. <span aria-hidden="true">🍰</span>
+          </p>
+          <h1 className="font-display text-4xl font-semibold leading-tight sm:text-5xl">
             {tx('Custom cake quotes that fit the budget and still pay the baker', 'Custom cake quotes na pasok sa budget, at kumikita pa rin ang baker')}
           </h1>
           <p className="mx-auto max-w-xl text-lg text-ink-soft">
@@ -31,7 +57,9 @@ export default function Home() {
           </p>
         </section>
 
-        <CakeView visual={HERO} description={describeCake(HERO, prefs.lang)} showTools={false} />
+        <div className="rounded-[2rem] bg-white/70 p-2 shadow-[0_6px_0_#f6dbe3]">
+          <CakeView visual={HERO} description={describeCake(HERO, prefs.lang)} showTools={false} />
+        </div>
 
         <section className="grid gap-3 sm:grid-cols-2">
           <Link to="/b/sample" className="btn min-h-16 text-lg">
@@ -52,8 +80,8 @@ export default function Home() {
               ['🧁', tx('Cakeita builds Simple, Classic and Showstopper designs from the baker\'s menu, priced by code.', 'Gagawa ang Cakeita ng Simple, Classic at Showstopper mula sa menu ng baker, presyo gamit ang code.')],
               ['✅', tx('The baker checks the cost breakdown, approves, and sends the quote link in Messenger.', 'Iche-check ng baker ang breakdown, i-a-approve, at ipapadala ang quote link sa Messenger.')],
             ].map(([icon, text], i) => (
-              <li key={i} className="card">
-                <p className="text-3xl" aria-hidden="true">
+              <li key={i} className={`card ${STEP_BG[i]}`}>
+                <p className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-3xl shadow-sm" aria-hidden="true">
                   {icon}
                 </p>
                 <p className="mt-1">
@@ -64,7 +92,7 @@ export default function Home() {
           </ol>
         </section>
 
-        <section className="card space-y-2 bg-berry-soft">
+        <section className="card space-y-2 bg-mint">
           <h2 className="font-display text-xl font-bold">{tx('Built for real kitchens', 'Para sa totoong kusina')}</h2>
           <ul className="list-disc space-y-1 pl-5">
             <li>{tx('Free. No sign-up. Works on a basic phone and weak signal.', 'Libre. Walang sign-up. Gumagana sa simpleng phone at mahinang signal.')}</li>

@@ -13,7 +13,7 @@ export function Logo() {
         <rect x="31" y="8" width="2.5" height="10" fill="#fff8f0" />
         <circle cx="32.2" cy="7" r="2.5" fill="#ffc94d" />
       </svg>
-      <span className="font-display text-2xl font-bold text-berry">Cakeita</span>
+      <span className="font-display text-2xl font-semibold tracking-tight text-berry">Cakeita</span>
     </span>
   );
 }
@@ -38,7 +38,7 @@ export function Layout({ children, nav }: { children: ReactNode; nav?: ReactNode
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-xl focus:bg-white focus:p-3">
         {tx('Skip to content', 'Lumaktaw sa nilalaman')}
       </a>
-      <header className="sticky top-0 z-30 border-b border-line bg-cream/95 backdrop-blur">
+      <header className="frosting sticky top-0 z-30 bg-strawberry">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2">
           <Link to="/" onClick={onLogoTap} aria-label="Cakeita home">
             <Logo />
@@ -68,7 +68,7 @@ export function Layout({ children, nav }: { children: ReactNode; nav?: ReactNode
         </div>
         {nav && <nav className="mx-auto max-w-3xl px-2 pb-2">{nav}</nav>}
       </header>
-      <main id="main" className="mx-auto max-w-3xl px-4 pb-28 pt-4">
+      <main id="main" className="mx-auto max-w-3xl px-4 pb-28 pt-6">
         {children}
       </main>
       <footer className="no-print mx-auto max-w-3xl px-4 pb-24 text-center text-sm text-ink-soft">

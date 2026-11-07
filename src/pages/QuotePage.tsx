@@ -1,3 +1,4 @@
+import { popConfetti } from '../lib/confetti';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { describeCake } from '../cake/describe';
@@ -97,6 +98,7 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
     const res = applyConfirmation(repo.get().orders.find((o) => o.id === quote.orderId), c);
     if (res.ok) repo.upsertOrder(res.order);
     repo.updateMyRequest(quote.orderId, { status: 'confirmed' });
+    popConfetti();
   };
 
   return (

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <!-- Background doodles: cakes, cupcakes, poppers, candy, donut, lollipop, sprinkles. Kept pale so text stays readable. -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" opacity="0.55">
+    <!-- slice of cake -->
+    <g transform="translate(22 30) rotate(-8)" stroke="#f2a9c0">
+      <path d="M0 40 L46 22 L46 52 L0 64 Z" fill="#fde3ec"/>
+      <path d="M0 40 L46 22" stroke="#f08db0"/>
+      <path d="M0 52 L46 37" stroke="#f7c2d4"/>
+      <circle cx="30" cy="16" r="5" fill="#ffb3c7"/>
+    </g>
+    <!-- cupcake -->
+    <g transform="translate(200 18)" stroke="#c7a3e8">
+      <path d="M6 30 L12 58 L40 58 L46 30 Z" fill="#efe3fb"/>
+      <path d="M16 30 L18 58 M26 30 L26 58 M36 30 L34 58" stroke="#d8c2f2"/>
+      <path d="M2 30 C2 14 16 8 26 8 C36 8 50 14 50 30 Z" fill="#fbe0ec" stroke="#f2a9c0"/>
+      <circle cx="26" cy="4" r="4" fill="#ff8fa8" stroke="#f08db0"/>
+    </g>
+    <!-- party popper -->
+    <g transform="translate(120 96) rotate(12)" stroke="#f5c76a">
+      <path d="M0 50 L14 6 L40 32 Z" fill="#fff0c9"/>
+      <path d="M6 32 L22 18 M3 42 L30 24" stroke="#f3b44a"/>
+      <path d="M30 0 l4 -8 M42 8 l8 -4 M48 22 l9 0" stroke="#f08db0"/>
+      <circle cx="22" cy="-8" r="2.5" fill="#a9d8f5" stroke="#8cc7ef"/>
+      <circle cx="54" cy="6" r="2.5" fill="#bfe8c8" stroke="#9ed8ab"/>
+    </g>
+    <!-- wrapped candy -->
+    <g transform="translate(24 176) rotate(-18)" stroke="#8cc7ef">
+      <ellipse cx="30" cy="14" rx="16" ry="12" fill="#ddf0fc"/>
+      <path d="M14 14 L0 4 L0 24 Z M46 14 L60 4 L60 24 Z" fill="#ddf0fc"/>
+      <path d="M24 4 L34 24" stroke="#f2a9c0"/>
+    </g>
+    <!-- donut -->
+    <g transform="translate(226 150)" stroke="#e8b48a">
+      <circle cx="26" cy="26" r="24" fill="#f9e2cc"/>
+      <path d="M6 22 C10 6 42 4 47 22 C44 32 36 30 30 34 C22 38 12 34 6 22 Z" fill="#fcd3e1" stroke="#f2a9c0"/>
+      <circle cx="26" cy="26" r="7" fill="#fff8f0"/>
+      <path d="M14 18 l4 -2 M34 14 l3 3 M40 24 l-3 2 M20 30 l-3 2" stroke="#8cc7ef"/>
+    </g>
+    <!-- lollipop -->
+    <g transform="translate(140 224)" stroke="#9ed8ab">
+      <path d="M20 40 L20 82" stroke="#e5c9a8"/>
+      <circle cx="20" cy="22" r="20" fill="#e3f6e7"/>
+      <path d="M20 22 m-12 0 a12 12 0 1 0 12 -12 a8 8 0 1 0 8 8" stroke="#f2a9c0"/>
+    </g>
+    <!-- birthday candle -->
+    <g transform="translate(286 252) rotate(10)" stroke="#f2a9c0">
+      <rect x="0" y="12" width="10" height="34" rx="3" fill="#fde3ec"/>
+      <path d="M0 22 L10 18 M0 32 L10 28 M0 42 L10 38" stroke="#c7a3e8"/>
+      <path d="M5 0 C10 6 9 10 5 11 C1 10 0 6 5 0 Z" fill="#ffd27a" stroke="#f5c76a"/>
+    </g>
+    <!-- macaron -->
+    <g transform="translate(70 264)" stroke="#c7a3e8">
+      <ellipse cx="22" cy="10" rx="20" ry="9" fill="#efe3fb"/>
+      <rect x="4" y="12" width="36" height="6" rx="3" fill="#fff8f0" stroke="#e8d6f7"/>
+      <ellipse cx="22" cy="22" rx="20" ry="8" fill="#efe3fb"/>
+    </g>
+  </g>
+  <!-- loose sprinkles -->
+  <g stroke-linecap="round" stroke-width="4" opacity="0.6">
+    <path d="M96 30 l10 4" stroke="#f08db0"/>
+    <path d="M170 60 l3 10" stroke="#8cc7ef"/>
+    <path d="M290 100 l-8 6" stroke="#f5c76a"/>
+    <path d="M60 130 l9 -5" stroke="#9ed8ab"/>
+    <path d="M190 170 l10 2" stroke="#c7a3e8"/>
+    <path d="M110 190 l2 -10" stroke="#f08db0"/>
+    <path d="M260 220 l9 5" stroke="#8cc7ef"/>
+    <path d="M30 240 l-6 8" stroke="#f5c76a"/>
+    <path d="M220 300 l10 -3" stroke="#9ed8ab"/>
+    <path d="M150 140 l6 7" stroke="#f2a9c0"/>
+  </g>
+  <g opacity="0.6">
+    <circle cx="140" cy="20" r="3" fill="#f5c76a"/>
+    <circle cx="300" cy="40" r="3" fill="#f08db0"/>
+    <circle cx="90" cy="100" r="3" fill="#8cc7ef"/>
+    <circle cx="250" cy="120" r="3" fill="#c7a3e8"/>
+    <circle cx="10" cy="150" r="3" fill="#9ed8ab"/>
+    <circle cx="200" cy="250" r="3" fill="#f08db0"/>
+    <circle cx="120" cy="310" r="3" fill="#f5c76a"/>
+    <circle cx="300" cy="300" r="3" fill="#8cc7ef"/>
+  </g>
+</svg>

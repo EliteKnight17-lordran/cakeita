@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.0',
+    date: '2026-11-07',
+    en: [
+      'New look: sweets wallpaper (cakes, cupcakes, poppers, candy), frosting drip header and fiesta banderitas over the cake.',
+      'Rounder, friendlier fonts that work offline, and candy-style buttons.',
+      'Confetti when the baker approves a quote and when the customer confirms.',
+    ],
+    tl: [
+      'Bagong itsura: wallpaper ng matatamis (cake, cupcake, popper, kendi), frosting drip sa header at banderitas sa ibabaw ng cake.',
+      'Mas bilog at masayang font na gumagana kahit offline, at parang kendi na mga button.',
+      'May confetti kapag in-approve ng baker ang quote at kapag nag-confirm ang customer.',
+    ],
+  },
+  {
     version: '1.0.1',
     date: '2026-11-06',
     en: [

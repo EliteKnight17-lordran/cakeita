@@ -115,6 +115,7 @@ export function CakeView({ visual, description, interactive = true, className = 
         aria-label={description}
         onPointerDown={() => setTouched(true)}
       >
+        <Banderitas />
         {use3D ? (
           <GLBoundary fallback={flat}>
             <Suspense fallback={<div className="h-full w-full animate-pulse">{flat}</div>}>
@@ -150,5 +151,23 @@ export function CakeView({ visual, description, interactive = true, className = 
       )}
       <p className="mt-1 text-center text-sm text-ink-soft">{tx('Concept only. The final cake may look different.', 'Concept lang ito. Puwedeng mag-iba nang kaunti ang totoong cake.')}</p>
     </figure>
+  );
+}
+
+/** Fiesta flags strung across the top of the cake stage. Decorative only. */
+function Banderitas() {
+  const colors = ['#f08db0', '#f5c76a', '#8cc7ef', '#9ed8ab', '#c7a3e8'];
+  const n = 13;
+  return (
+    <svg className="pointer-events-none absolute inset-x-0 top-0 z-10 h-10 w-full" viewBox="0 0 260 40" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 4 Q130 22 260 4" fill="none" stroke="#d9b8a6" strokeWidth="1.2" />
+      {Array.from({ length: n }, (_, i) => {
+        const x = (i + 0.5) * (260 / n);
+        const t = x / 260;
+        const y = 4 + 36 * t * (1 - t); // on the string curve
+        const w = 7;
+        return <path key={i} d={`M${x - w} ${y} L${x + w} ${y} L${x} ${y + 15} Z`} fill={colors[i % colors.length]} opacity="0.9" />;
+      })}
+    </svg>
   );
 }

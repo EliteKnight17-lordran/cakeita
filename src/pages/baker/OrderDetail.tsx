@@ -7,6 +7,7 @@ import { Field, Notice } from '../../components/ui';
 import { normalizeSelection } from '../../domain/designs';
 import { addDays } from '../../domain/insights';
 import { formatPeso } from '../../domain/money';
+import { popConfetti } from '../../lib/confetti';
 import { approveOrder, quoteLinkPayload } from '../../domain/orders';
 import { evaluatePrice, priceSelection, toPublicMenu } from '../../domain/pricing';
 import { formatQty, shoppingForOrder } from '../../domain/shopping';
@@ -79,6 +80,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
     const next = approveOrder(bakery, order, { selection, look, price, note, validDays });
     repo.upsertOrder(next);
     setEditing(false);
+    popConfetti();
   };
 
   const replyByHand = async () => {
