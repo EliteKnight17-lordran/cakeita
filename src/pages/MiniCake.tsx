@@ -21,8 +21,8 @@ export function MiniCake({ target, visual, description, price }: { target: RefOb
       const el = target.current;
       // Only after scrolling past the cake, not before reaching it.
       const gone = !!el && el.getBoundingClientRect().bottom < 0;
+      // Keep the open/closed choice: a resize (rotating the phone) must not close it.
       setPast(gone);
-      if (!gone) setOpen(false);
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(check);
