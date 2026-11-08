@@ -74,6 +74,18 @@ export default function BakeryMap({ spot, matches, selected, radiusKm, onSelect,
   const loaded = useRef(0);
   const tile = TILES[tileIdx]!;
 
+  // Some networks and blockers make tiles hang instead of failing. If nothing has drawn after a
+  // few seconds, try the next map provider, then say so (pins and the list still work).
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (loaded.current > 0) return;
+      errors.current = 0;
+      if (tileIdx < TILES.length - 1) setTileIdx(tileIdx + 1);
+      else setTilesDown(true);
+    }, 7000);
+    return () => window.clearTimeout(t);
+  }, [tileIdx]);
+
   const youIcon = useMemo(() => L.divIcon({ className: '', html: '<span class="pin-you" aria-hidden="true"></span>', iconSize: [22, 22], iconAnchor: [11, 11] }), []);
   const icons = useMemo(
     () =>

@@ -13,6 +13,12 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.5',
+    date: '2026-11-09',
+    en: ['Map: if map pictures hang on a network or browser, it tries a second map provider, then says so clearly. Pins, prices and the list keep working.'],
+    tl: ['Mapa: kung hindi mag-load ang larawan ng mapa, susubukan ang ibang provider, at sasabihin nang malinaw. Gumagana pa rin ang pins, presyo at listahan.'],
+  },
+  {
     version: '1.3.4',
     date: '2026-11-09',
     en: [

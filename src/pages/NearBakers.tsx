@@ -214,7 +214,7 @@ export default function NearBakers() {
             labels={{
               you: tx('You', 'Ikaw'),
               tapHint: tx('Tap the map to move your pin', 'I-tap ang mapa para ilipat ang pin'),
-              offline: tx('Map pictures need internet. Prices and the list below still work.', 'Kailangan ng internet para sa mapa. Gumagana pa rin ang presyo at listahan sa baba.'),
+              offline: tx('Map pictures could not load on this network or browser (an ad blocker can do this). Prices and the list below still work.', 'Hindi ma-load ang mapa sa network o browser na ito (puwedeng dahil sa ad blocker). Gumagana pa rin ang presyo at listahan sa baba.'),
             }}
           />
         </Suspense>
