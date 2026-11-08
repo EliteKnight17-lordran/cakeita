@@ -213,6 +213,7 @@ h3 {
 }
 
 /* ---------- Nearby bakers map ---------- */
+.leaflet-container.cakeita-map,
 .cakeita-map {
   height: 22rem;
   width: 100%;
@@ -228,6 +229,7 @@ h3 {
   font-family: var(--font-sans);
 }
 @media (min-width: 640px) {
+  .leaflet-container.cakeita-map,
   .cakeita-map {
     height: 28rem;
   }

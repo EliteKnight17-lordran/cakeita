@@ -16,6 +16,13 @@ import { candleStripes, crumbBump, frostingBump, strawberrySkin } from './textur
 
 const K = 0.12; // world units per inch
 
+function isLight(hex: string): boolean {
+  const n = parseInt(hex.replace('#', ''), 16);
+  if (Number.isNaN(n)) return true;
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150;
+}
+
 function seeded(seed: number) {
   let s = seed;
   return () => {
@@ -563,7 +570,10 @@ function CakeModel({ v, spin }: { v: CakeVisual; spin: number }) {
   const top = stack[stack.length - 1]!;
   const topY = top.y + top.h;
   const base = stack[0]!;
-  const pipedTex = useTextTexture(v.textStyle === 'piped' ? v.text : '', v.drip && v.dripColor !== '#d4af37' ? '#fff8f0' : v.accent, 'piped');
+  // Piped words must stand out from whatever is on top (drip or frosting).
+  const topColor = v.drip ? v.dripColor : v.frosting;
+  const textColor = isLight(topColor) ? (isLight(v.accent) ? '#6b2e1f' : v.accent) : '#fff8f0';
+  const pipedTex = useTextTexture(v.textStyle === 'piped' ? v.text : '', textColor, 'piped');
   const acrylicTex = useTextTexture(v.textStyle === 'acrylic' ? v.text : '', v.accent, 'acrylic');
 
   return (
