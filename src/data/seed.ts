@@ -1,5 +1,6 @@
 import { buildDesigns } from '../domain/designs';
 import { addDays } from '../domain/insights';
+import { motifFor } from '../domain/motifs';
 import { approveOrder, requestToOrder } from '../domain/orders';
 import { priceSelection, toPublicMenu } from '../domain/pricing';
 import { readRequest } from '../domain/requestReader';
@@ -36,7 +37,7 @@ export function orderFromMessage(
     description: message.slice(0, 1000),
     tier: pick.tier,
     selection: pick.selection,
-    look: { colors: r.colors.slice(0, 2).map((c) => c.hex), textOnCake: r.textOnCake.slice(0, 32), candles: r.age ? Math.min(10, r.age) : 1 },
+    look: { colors: r.colors.slice(0, 2).map((c) => c.hex), textOnCake: r.textOnCake.slice(0, 32), candles: r.age ? Math.min(10, r.age) : 1, motif: motifFor(r.theme, extra.occasion ?? r.occasion) },
     theme: r.theme,
     licensedNote: r.licensedNote,
     unavailable: r.unavailable,

@@ -93,6 +93,8 @@ export const SAMPLE_COMPONENTS: CakeComponent[] = [
   comp({ id: 'tp-text', name: 'Piped message', nameTl: 'Nakasulat na bati', category: 'topper', visual: 'text', recipe: [r('icing-sugar', 30), r('butter', 20), r('gel-color', 1)], laborMinutes: 10, extraCost: 0, scales: false, keywords: ['message', 'dedication', 'nakasulat', 'sulat', 'greeting', 'text'] }),
   comp({ id: 'tp-acrylic', name: 'Acrylic topper', category: 'topper', visual: 'acrylic', recipe: [], laborMinutes: 5, extraCost: 180, scales: false, keywords: ['acrylic', 'topper', 'cake topper', 'name topper'] }),
   comp({ id: 'tp-figure', name: 'Fondant figure', nameTl: 'Fondant na figure', category: 'topper', visual: 'figure', recipe: [r('fondant', 150), r('gel-color', 3)], laborMinutes: 90, extraCost: 0, scales: false, keywords: ['figure', 'figurine', 'character', 'fondant figure', 'toy', 'doll'] }),
+  // A printed cardstock cut-out in the theme's colors (hero emblem, crown, dino...). Characters stay generic.
+  comp({ id: 'tp-theme', name: 'Theme topper', nameTl: 'Theme topper', category: 'topper', visual: 'motif', recipe: [], laborMinutes: 10, extraCost: 120, scales: false, keywords: ['theme topper', 'printed topper', 'cardstock topper', 'paper topper', 'character topper', 'cupcake toppers'] }),
 
   // Finishes
   comp({ id: 'fn-gold', name: 'Gold leaf accents', category: 'finish', visual: 'gold', recipe: [r('gold-leaf', 2)], laborMinutes: 15, extraCost: 0, scales: false, keywords: ['gold leaf', 'gold accents', 'gold flakes', 'gold details', 'edible gold'] }),
@@ -204,4 +206,17 @@ export function defaultPartIds(components: Array<{ id: string; category: string 
     flavor: components.find((c) => c.category === 'flavor')?.id,
     covering: components.find((c) => c.category === 'covering')?.id,
   };
+}
+
+/** Parts added after launch. Saved bakeries from older versions get them on first load. */
+const ADDED_LATER = ['tp-theme'];
+
+/**
+ * Bring a saved bakery up to date with parts added in later versions. A real baker gets them
+ * switched off (nothing on their menu changes until they say so); sample bakeries get them on.
+ */
+export function upgradeBakery(b: Bakery): Bakery {
+  const missing = SAMPLE_COMPONENTS.filter((c) => ADDED_LATER.includes(c.id) && !b.components.some((x) => x.id === c.id));
+  if (!missing.length) return b;
+  return { ...b, components: [...b.components, ...clone(missing).map((c) => ({ ...c, canMake: b.isSample }))] };
 }

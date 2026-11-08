@@ -1,3 +1,4 @@
+import { themeMotif } from './motifs';
 import type { PublicMenu } from './types';
 
 /**
@@ -329,6 +330,16 @@ export function findTrademark(text: string): { theme: string; colors: string[]; 
   return null;
 }
 
+/**
+ * A themed request ("Spider-Man", "dinosaur", "princess") gets the baker's theme topper,
+ * if they offer one: a generic printed cut-out, never the character itself.
+ */
+export function addThemeTopper(componentIds: string[], theme: string, menu: PublicMenu): string[] {
+  const part = menu.components.find((c) => c.visual === 'motif');
+  if (!part || !themeMotif(theme) || componentIds.includes(part.id)) return componentIds;
+  return [...componentIds, part.id];
+}
+
 /** Swap trademarked names in a free-text string for their generic theme. */
 export function genericizeText(text: string): string {
   let out = text;
@@ -405,6 +416,7 @@ export function readRequest(text: string, menu: PublicMenu, today = new Date()):
     else if (c.category === 'covering') coveringId ??= c.id;
     else if (!componentIds.includes(c.id)) componentIds.push(c.id);
   }
+  for (const id of addThemeTopper(componentIds, theme, menu)) if (!componentIds.includes(id)) componentIds.push(id);
   if (flavorId) found.push('flavor');
   if (coveringId) found.push('covering');
   if (componentIds.length) found.push('decorations');

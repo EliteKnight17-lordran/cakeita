@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MOTIF_KEYS } from './motifs.js';
 
 /**
  * Validation for everything that crosses a trust boundary:
@@ -13,7 +14,7 @@ const money = z.number().finite().min(0).max(1_000_000);
 
 export const visualEnum = z.enum([
   'sponge', 'buttercream', 'whipped', 'fondant', 'ganache', 'naked', 'drip', 'sprinkles', 'flowers', 'rosettes',
-  'pearls', 'fruits', 'candles', 'text', 'acrylic', 'figure', 'gold',
+  'pearls', 'fruits', 'candles', 'text', 'acrylic', 'figure', 'motif', 'gold',
 ]);
 export const categoryEnum = z.enum(['flavor', 'covering', 'decoration', 'topper', 'finish']);
 
@@ -26,6 +27,7 @@ export const lookSchema = z.object({
   colors: z.array(hex).max(4),
   textOnCake: shortText(40),
   candles: z.number().int().min(0).max(99),
+  motif: z.enum(MOTIF_KEYS).optional().catch(undefined),
 });
 
 export const publicMenuSchema = z.object({
@@ -112,6 +114,8 @@ export const cakeVisualSchema = z.object({
   text: shortText(40),
   textStyle: z.enum(['piped', 'acrylic']).nullable(),
   figure: z.boolean(),
+  // Older quote links have no topper; an unknown shape is dropped rather than breaking the link.
+  motif: z.object({ key: z.enum(MOTIF_KEYS), main: hex, accent: hex }).nullable().optional().default(null).catch(null),
   gold: z.boolean(),
 });
 

@@ -43,6 +43,7 @@ export type Visual =
   | 'text'
   | 'acrylic'
   | 'figure'
+  | 'motif'
   | 'gold';
 
 export interface CakeComponent {
@@ -129,6 +130,8 @@ export interface CakeLook {
   colors: string[];
   textOnCake: string;
   candles: number;
+  /** Shape of the theme topper (see motifs.ts). Only drawn when a 'motif' part is picked. */
+  motif?: string;
 }
 
 /**

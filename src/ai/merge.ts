@@ -1,4 +1,4 @@
-import { COLOR_WORDS, findTrademark, type ColorHit, type ParsedRequest } from '../domain/requestReader';
+import { addThemeTopper, COLOR_WORDS, findTrademark, type ColorHit, type ParsedRequest } from '../domain/requestReader';
 import type { AiReading } from '../domain/schemas';
 import type { PublicMenu } from '../domain/types';
 
@@ -54,7 +54,7 @@ export function mergeReading(rule: ParsedRequest, ai: AiReading, menu: PublicMen
     textOnCake: rule.textOnCake || ai.textOnCake,
     flavorId,
     coveringId,
-    componentIds,
+    componentIds: addThemeTopper(componentIds, theme, menu),
     colors: colors.slice(0, 4),
     theme,
     licensedNote,

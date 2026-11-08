@@ -52,7 +52,7 @@ describe('Vercel function imports', () => {
   // Vercel runs api/ as plain Node ESM, which needs ".js" on every relative import.
   it('uses .js extensions on the whole server import chain', async () => {
     const { readFileSync } = await import('node:fs');
-    for (const f of ['../../api/parse.ts', './gemini.ts', './rateLimit.ts', '../domain/schemas.ts']) {
+    for (const f of ['../../api/parse.ts', './gemini.ts', './rateLimit.ts', '../domain/schemas.ts', '../domain/motifs.ts']) {
       const src = readFileSync(new URL(f, import.meta.url), 'utf8');
       const rel = [...src.matchAll(/from '(\.[^']+)'/g)].map((m) => m[1]!);
       for (const spec of rel) expect(spec, `${f}: ${spec}`).toMatch(/\.js$/);

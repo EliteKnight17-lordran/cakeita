@@ -1,4 +1,5 @@
 import { forwardRef, useMemo } from 'react';
+import { MOTIFS, motifFill } from '../domain/motifs';
 import { shade, type CakeVisual } from '../domain/visual';
 
 /**
@@ -145,6 +146,24 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
           <ellipse cx={top.x + top.w * 0.86} cy={top.y + 2} rx={9} ry={4} fill="#5fae6b" transform={`rotate(-25 ${top.x + top.w * 0.86} ${top.y + 2})`} />
         </g>
       )}
+
+      {top && v.motif && (() => {
+        const withWords = v.textStyle === 'acrylic' && !!v.text;
+        const size = Math.max(44, Math.min(78, top.w * (withWords ? 0.36 : 0.5)));
+        const cx = withWords ? top.x + top.w * 0.8 : W / 2;
+        const stick = 16;
+        const y0 = top.y - stick - size;
+        return (
+          <g data-part="motif">
+            <line x1={cx} y1={top.y + 2} x2={cx} y2={top.y - stick - 4} stroke="#c9a227" strokeWidth={2} />
+            <g transform={`translate(${cx - size / 2} ${y0}) scale(${size / 100})`}>
+              {MOTIFS[v.motif.key].layers.map((l, i) => (
+                <path key={i} d={l.d} fill={motifFill(l.fill, v.motif!)} stroke={i === 0 ? '#00000026' : 'none'} strokeWidth={1.5} />
+              ))}
+            </g>
+          </g>
+        );
+      })()}
 
       {top && v.candles > 0 &&
         Array.from({ length: v.candles }, (_, k) => {

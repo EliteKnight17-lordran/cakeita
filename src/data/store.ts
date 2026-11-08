@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { createSampleBakery } from '../domain/starterMenus';
+import { createSampleBakery, upgradeBakery } from '../domain/starterMenus';
 import type { Bakery, Order, OrderEvent } from '../domain/types';
 import { directoryBakery } from './directory';
 
@@ -53,7 +53,7 @@ function read(): DbState {
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as DbState;
     if (parsed?.v !== 1 || !Array.isArray(parsed.orders)) throw new Error('bad shape');
-    return { ...EMPTY, ...parsed, myRequests: parsed.myRequests ?? [] };
+    return { ...EMPTY, ...parsed, bakery: parsed.bakery ? upgradeBakery(parsed.bakery) : null, myRequests: parsed.myRequests ?? [] };
   } catch {
     try {
       const raw = localStorage.getItem(KEY);

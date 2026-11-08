@@ -1,8 +1,10 @@
 import { ContactShadows, Environment, Lightformer, OrbitControls, PerformanceMonitor } from '@react-three/drei';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { MOTIFS, motifFill } from '../domain/motifs';
 import { shade, type CakeVisual } from '../domain/visual';
 import { candleStripes, crumbBump, frostingBump, strawberrySkin } from './textures';
 
@@ -507,6 +509,49 @@ function Figure({ y, r, color }: { y: number; r: number; color: string }) {
   );
 }
 
+/**
+ * Printed cardstock theme topper on a gold pick: each motif layer is a thin extruded shape,
+ * printed on both faces like the real thing. Shapes come from the same data as the 2D cake.
+ */
+function MotifTopper({ motif, position, size }: { motif: NonNullable<CakeVisual['motif']>; position: [number, number, number]; size: number }) {
+  const layers = useMemo(() => {
+    const def = MOTIFS[motif.key];
+    const loader = new SVGLoader();
+    return def.layers.map((l, i) => {
+      const data = loader.parse(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="${l.d}"/></svg>`);
+      const shapes = data.paths.flatMap((p) => SVGLoader.createShapes(p));
+      const geo = new THREE.ExtrudeGeometry(shapes, { depth: 1.2, bevelEnabled: false, curveSegments: 10 });
+      geo.translate(-50, -50, i * 0.9);
+      return { geo, color: motifFill(l.fill, motif), metal: l.fill === 'gold' || l.fill === '#b8901c' };
+    });
+  }, [motif]);
+  useEffect(() => () => layers.forEach((l) => l.geo.dispose()), [layers]);
+  const s = size / 100;
+  const lift = 0.13 + size * 0.5;
+  // The back is the same cut-out seen from behind (mirrored), so both sides share one outline.
+  const face = (back: boolean) => (
+    <group position={[0, 0, back ? -0.001 : 0.001]}>
+      {layers.map((l, i) => (
+        <mesh key={i} geometry={l.geo} scale={[s, -s, (back ? -s : s) * 0.6]} castShadow>
+          <meshStandardMaterial color={l.color} roughness={l.metal ? 0.3 : 0.55} metalness={l.metal ? 0.55 : 0} />
+        </mesh>
+      ))}
+    </group>
+  );
+  return (
+    <group position={position}>
+      <mesh position={[0, lift / 2 - 0.02, 0]}>
+        <cylinderGeometry args={[0.005, 0.005, lift, 6]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.6} roughness={0.3} />
+      </mesh>
+      <group position={[0, lift, 0]}>
+        {face(false)}
+        {face(true)}
+      </group>
+    </group>
+  );
+}
+
 function GoldLeaf({ r, y, h }: { r: number; y: number; h: number }) {
   const build = useMemo(
     () => (_i: number, o: THREE.Object3D, rnd: () => number) => {
@@ -610,6 +655,13 @@ function CakeModel({ v, spin }: { v: CakeVisual; spin: number }) {
       )}
       {v.candles > 0 && <Candles n={v.candles} r={top.r} y={topY} color={v.accent} />}
       {v.figure && <Figure y={topY} r={top.r} color={v.accent} />}
+      {v.motif && (
+        <MotifTopper
+          motif={v.motif}
+          size={Math.max(0.2, top.r * (acrylicTex ? 0.62 : 0.85))}
+          position={acrylicTex ? [top.r * 0.5, topY, top.r * 0.05] : [0, topY, -top.r * 0.3]}
+        />
+      )}
 
       {pipedTex && (
         <mesh position={[0, topY + (v.drip ? 0.024 : 0.006), top.r * 0.15]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
@@ -635,6 +687,41 @@ function CakeModel({ v, spin }: { v: CakeVisual; spin: number }) {
   );
 }
 
+/**
+ * The camera is placed once when the canvas starts. When the cake grows or shrinks (bento to
+ * 3 tiers, a topper added), glide to the new distance from the same angle the customer is looking.
+ */
+function Reframe({ dist, lookY }: { dist: number; lookY: number }) {
+  const camera = useThree((st) => st.camera);
+  const invalidate = useThree((st) => st.invalidate);
+  const controls = useThree((st) => st.controls) as unknown as { target: THREE.Vector3; update: () => void } | null;
+  const goal = useRef<THREE.Vector3 | null>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const target = new THREE.Vector3(0, lookY, 0);
+    const dir = camera.position.clone().sub(controls?.target ?? target);
+    if (dir.lengthSq() < 1e-6) dir.set(0, 0.62, 0.92);
+    goal.current = target.add(dir.normalize().multiplyScalar(dist * Math.hypot(0.62, 0.92)));
+    invalidate();
+  }, [dist, lookY, camera, controls, invalidate]);
+  useFrame((_, dt) => {
+    const g = goal.current;
+    if (!g) return;
+    camera.position.lerp(g, Math.min(1, dt * 5));
+    if (camera.position.distanceTo(g) < 0.002) {
+      camera.position.copy(g);
+      goal.current = null;
+    }
+    controls?.update();
+    invalidate();
+  });
+  return null;
+}
+
 export interface Cake3DProps {
   visual: CakeVisual;
   spin: number;
@@ -645,7 +732,11 @@ export interface Cake3DProps {
 }
 
 export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady }: Cake3DProps) {
-  const totalH = visual.tiers.reduce((a, t) => a + t.h * K, 0);
+  const cakeH = visual.tiers.reduce((a, t) => a + t.h * K, 0);
+  // Leave room for whatever stands on top (theme topper on its pick, acrylic words).
+  const topR = (visual.tiers[visual.tiers.length - 1]!.d / 2) * K * 1.6;
+  const onTop = visual.motif ? 0.13 + Math.max(0.2, topR * 0.85) * 1.2 : visual.textStyle === 'acrylic' ? 0.28 : 0;
+  const totalH = cakeH + onTop * 0.7;
   const maxR = Math.max(...visual.tiers.map((t) => (t.d / 2) * K * 1.6));
   const dist = Math.max(1.8, Math.max(totalH * 2.7, maxR * 4.3));
   const lookY = totalH * 0.45;
@@ -677,8 +768,10 @@ export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady
       <directionalLight position={[2.5, 4, 2]} intensity={1.35} castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.02} />
       <directionalLight position={[-3, 2, -2]} intensity={0.35} color="#ffe1ec" />
       <CakeModel v={visual} spin={spin} />
+      <Reframe dist={dist} lookY={lookY} />
       {!lowPower && <ContactShadows position={[0, -0.161, 0]} opacity={0.45} scale={maxR * 6} blur={2.6} far={1.2} />}
       <OrbitControls
+        makeDefault
         target={[0, lookY, 0]}
         enablePan={false}
         minDistance={dist * 0.55}

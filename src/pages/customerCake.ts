@@ -1,6 +1,7 @@
 import type { Reading } from '../ai/client';
 import { buildDesigns, type DesignResult, type Wants } from '../domain/designs';
 import { earliestDate } from '../domain/insights';
+import { motifFor } from '../domain/motifs';
 import { readRequest } from '../domain/requestReader';
 import type { CakeLook, PublicMenu, Selection } from '../domain/types';
 import type { Draft } from '../data/draft';
@@ -30,6 +31,7 @@ export function lookFromReading(r: Reading | null, occasion: string): CakeLook {
     colors: (r?.colors ?? []).slice(0, 2).map((c) => c.hex),
     textOnCake: r?.textOnCake ?? '',
     candles: r?.age ? Math.min(10, r.age) : occasion === 'Birthday' ? 1 : 0,
+    motif: motifFor(r?.theme ?? '', occasion),
   };
 }
 

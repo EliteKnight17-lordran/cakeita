@@ -1,3 +1,4 @@
+import { MOTIFS } from '../domain/motifs';
 import type { CakeVisual } from '../domain/visual';
 
 const COVERING_NAME: Record<string, [string, string]> = {
@@ -23,6 +24,7 @@ export function describeCake(v: CakeVisual, lang: 'tl' | 'en', colorNames: strin
   if (v.fruits) extras.push(tl ? 'prutas' : 'fresh fruit');
   if (v.gold) extras.push(tl ? 'gold leaf' : 'gold leaf');
   if (v.figure) extras.push(tl ? 'figure sa ibabaw' : 'a figure on top');
+  if (v.motif) extras.push(tl ? `${MOTIFS[v.motif.key].nameTl.toLowerCase()} na topper` : `a ${MOTIFS[v.motif.key].name.toLowerCase()} topper`);
   if (v.candles) extras.push(`${v.candles} ${tl ? 'kandila' : v.candles === 1 ? 'candle' : 'candles'}`);
   if (v.text) extras.push(tl ? `nakasulat na "${v.text}"` : `the words "${v.text}"`);
   const head = tl ? `${tiers} na ${color}${cov} cake` : `A ${tiers} ${color}${cov} cake`;

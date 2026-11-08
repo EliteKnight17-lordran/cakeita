@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { aiAvailable, type Reading } from '../ai/client';
 import { hasWebGL } from '../cake/CakeView';
 import { addDays } from '../domain/insights';
+import { motifFor } from '../domain/motifs';
 import { applyConfirmation, approveOrder } from '../domain/orders';
 import { priceSelection, toPublicMenu } from '../domain/pricing';
 import { readRequest } from '../domain/requestReader';
@@ -56,7 +57,7 @@ export function DevPanel() {
       description: s.message,
       reading,
       readingFor: s.message,
-      look: { colors: r.colors.slice(0, 2).map((c) => c.hex), textOnCake: r.textOnCake.slice(0, 32), candles: r.age ? Math.min(10, r.age) : 1 },
+      look: { colors: r.colors.slice(0, 2).map((c) => c.hex), textOnCake: r.textOnCake.slice(0, 32), candles: r.age ? Math.min(10, r.age) : 1, motif: motifFor(r.theme, s.occasion) },
       name: withContact ? s.customer.name : '',
       contact: withContact ? s.customer.contact : '',
       consent: withContact,

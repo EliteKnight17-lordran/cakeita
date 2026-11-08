@@ -1,3 +1,4 @@
+import { isMotifKey, type MotifKey } from './motifs';
 import type { CakeLook, PublicMenu, Selection, Visual } from './types';
 
 /** Everything the 3D (or 2D fallback) cake needs. Built from the SAME parts that are priced. */
@@ -18,6 +19,8 @@ export interface CakeVisual {
   text: string;
   textStyle: 'piped' | 'acrylic' | null;
   figure: boolean;
+  /** Theme topper shape and its two colors, or null when no theme topper is picked. */
+  motif: { key: MotifKey; main: string; accent: string } | null;
   gold: boolean;
 }
 
@@ -38,6 +41,13 @@ export function shade(hex: string, amount: number): string {
   const g = f((n >> 8) & 255);
   const b = f(n & 255);
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+}
+
+/** Very light colors (cream, white) vanish on a cream cake, so the topper uses the accent instead. */
+function isPale(hex: string): boolean {
+  const n = parseInt(hex.slice(1), 16);
+  const lum = 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+  return lum > 225;
 }
 
 export function toVisual(menu: PublicMenu, sel: Selection, look: CakeLook): CakeVisual {
@@ -73,6 +83,13 @@ export function toVisual(menu: PublicMenu, sel: Selection, look: CakeLook): Cake
     text: textStyle ? look.textOnCake.slice(0, 32) : '',
     textStyle: textStyle && look.textOnCake.trim() ? textStyle : null,
     figure: has('figure'),
+    motif: has('motif')
+      ? {
+          key: isMotifKey(look.motif) ? look.motif : 'star',
+          main: colors[0] && !isPale(colors[0]) ? colors[0] : accent,
+          accent: colors[1] ?? (colors[0] && !isPale(colors[0]) ? '#d4af37' : shade(accent, 0.35)),
+        }
+      : null,
     gold: has('gold'),
   };
 }

@@ -4,6 +4,7 @@ import { aiAvailable, analyzeRequest, type Reading } from '../ai/client';
 import { describeCake } from '../cake/describe';
 import { CakeView } from '../cake/CakeView';
 import { Cake2D } from '../cake/Cake2D';
+import { MotifIcon } from '../cake/MotifIcon';
 import { Layout } from '../components/Layout';
 import { IconArrow, IconCamera, IconCheck, IconChevron, IconPin, IconSparkle } from '../components/icons';
 import { ShareBox } from '../components/ShareBox';
@@ -11,6 +12,7 @@ import { Bubble, Chip, Field, Notice, SampleBadge } from '../components/ui';
 import { normalizeSelection, type DesignOption } from '../domain/designs';
 import { addDays, earliestDate } from '../domain/insights';
 import { formatPeso } from '../domain/money';
+import { MOTIF_KEYS, MOTIFS } from '../domain/motifs';
 import { requestToOrder } from '../domain/orders';
 import { estimateFromMenu } from '../domain/pricing';
 import { COLOR_WORDS } from '../domain/requestReader';
@@ -632,6 +634,10 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
   const textPart = menu.components.find((c) => c.visual === 'text');
   const acrylic = menu.components.find((c) => c.visual === 'acrylic');
   const candlePart = menu.components.find((c) => c.visual === 'candles');
+  const motifPart = menu.components.find((c) => c.visual === 'motif');
+  // Same colors the cake uses for the topper, so the picker previews what you'll get.
+  const motifLook = motifPart ? toVisual(menu, { ...selection, componentIds: [...selection.componentIds, motifPart.id] }, look).motif : null;
+  const motifOn = !!motifPart && has(motifPart.id);
   const extras = menu.components.filter((c) => ['decoration', 'finish'].includes(c.category) || (c.category === 'topper' && c.visual === 'figure'));
   const swatch = (slot: 0 | 1) => (
     <div role="group" aria-label={slot === 0 ? tx('Main color', 'Pangunahing kulay') : tx('Accent color', 'Pangalawang kulay')} className="flex flex-wrap gap-2">
@@ -714,6 +720,44 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
           ))}
         </div>
       </section>
+      {motifPart && motifLook && (
+        <section>
+          <h2 className="label" id="motif-label">
+            {tx('Theme topper', 'Theme topper')}
+            {prices && <span className="ml-2 text-sm font-normal text-ink-soft">+{formatPeso(delta(motifPart.id))}</span>}
+          </h2>
+          <p className="hint mb-2">
+            {tx('A printed cut-out in your colors. Want a real character? Ask the baker for a licensed topper or toy.', 'Printed na cut-out sa kulay mo. Gusto ng totoong character? Itanong sa baker ang licensed topper o laruan.')}
+          </p>
+          <div role="group" aria-labelledby="motif-label" className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+            <button
+              type="button"
+              aria-pressed={!motifOn}
+              onClick={() => onChange({ ...selection, componentIds: selection.componentIds.filter((x) => x !== motifPart.id) }, look)}
+              className={`flex min-h-[4.75rem] flex-col items-center justify-center gap-1 rounded-xl border bg-white p-1.5 text-xs font-medium text-ink ${!motifOn ? 'border-ink ring-1 ring-ink' : 'border-line'}`}
+            >
+              <span aria-hidden="true" className="grid h-9 w-9 place-items-center rounded-full border border-dashed border-[#cdbdb0] text-ink-soft">∅</span>
+              {tx('None', 'Wala')}
+            </button>
+            {MOTIF_KEYS.map((k) => {
+              const on = motifOn && motifLook.key === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={on}
+                  data-motif={k}
+                  onClick={() => onChange({ ...selection, componentIds: motifOn ? selection.componentIds : [...selection.componentIds, motifPart.id] }, { ...look, motif: k })}
+                  className={`flex min-h-[4.75rem] flex-col items-center justify-center gap-1 rounded-xl border bg-white p-1.5 text-center text-xs font-medium leading-tight text-ink ${on ? 'border-ink ring-1 ring-ink' : 'border-line'}`}
+                >
+                  <MotifIcon k={k} colors={motifLook} />
+                  {tx(MOTIFS[k].name, MOTIFS[k].nameTl)}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
       {(textPart || acrylic) && (
         <section className="space-y-2">
           <Field id="cake-text" label={tx('Words on the cake', 'Nakasulat sa cake')} hint={tx('Up to 32 letters', 'Hanggang 32 letra')}>
