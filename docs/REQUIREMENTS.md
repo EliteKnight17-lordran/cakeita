@@ -1,5 +1,7 @@
 # Requirements
 
+_Cakeita v1.2.2 · updated 2026-11-08_
+
 ## 1. Problem (start with the problem)
 
 Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quoting is manual:
@@ -29,7 +31,7 @@ Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quo
 ### Customer
 - **C1** As a customer I can paste my message and have the form filled in.
   *AC:* budget like "2.5k", "₱1,950", "budget ko 2k" is read; servings "30 pax", "mga 15 katao"; tiers; date "Dec 12" / "sa Sabado"; quoted text; colors; flavors; decorations. Unknown things are listed, never guessed.
-- **C2** I answer one question at a time and can go back without losing answers (survives refresh).
+- **C2** I fill in everything on one page (message, basics, design, contact). Designs and the price update as I type, and my answers survive a refresh.
 - **C3** I see up to 3 designs (Simple, Classic, Showstopper) that feed everyone; Simple and Classic fit my budget when possible; Showstopper may go over and says "Lampas sa budget".
   *AC:* if even Simple is over budget, I am told politely and shown the lowest price.
 - **C4** I can turn the cake in 3D (drag or buttons) and save a picture. If my phone has no WebGL, I see a 2D drawing instead.
@@ -37,6 +39,9 @@ Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quo
 - **C6** I send the request to the baker through Messenger (share sheet, copy, or QR).
 - **C7** I open the baker's quote, see the price, parts and validity, and tap "Ito ang gusto ko" to confirm.
 - **C8** I am never asked for payment inside Cakeita.
+- **C9** I can compare nearby bakers on a map. Each shows its own estimate for the same cake (from that baker's costs), distance, notice needed and delivery, and I can send my request to the one I pick.
+  *AC:* the map estimate equals the price that baker's own app would suggest; sample shops are labeled "(sample)"; the list still works if map pictures can't load.
+- **C10** While customizing I can still see my cake: a small floating cake on phones (tap to enlarge or jump back to 3D) and the cake pinned beside the form on laptops.
 
 ### Baker
 - **B1** I set up in 3 steps from a starter menu and edit only ~5 key prices.
@@ -72,7 +77,7 @@ Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quo
 
 ## 5. Out of scope
 
-Payments of any kind (and payment look-alikes), delivery booking, customer accounts, multi-branch, live cloud sync, AI image generation.
+Payments of any kind (and payment look-alikes), delivery booking, customer accounts, multi-branch, live cloud sync, AI image generation, self-serve map listings (bakers send a listing and the team adds it; self-serve would need a database).
 
 ## 6. Alignment with the Ganap notes
 
@@ -94,4 +99,4 @@ Payments of any kind (and payment look-alikes), delivery booking, customer accou
 - **Business impact & problem fit (30%)**: faster quotes, fewer lost sales, margin protection; validation plan.
 - **Technical execution (30%)**: tested pricing engine, offline reader, parametric 3D, schema-validated links, optional AI with fallback, CI.
 - **Solution quality & innovation (25%)**: picture and price from one parts list; budget-first; zero-server link exchange.
-- **UX (15%)**: Taglish, one question at a time, big-text mode, accessible, 375px-first.
+- **UX (15%)**: Taglish, one-page order with live price, cake always in view, refined look, big-text mode, accessible, 375px-first.
