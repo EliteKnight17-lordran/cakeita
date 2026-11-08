@@ -61,6 +61,7 @@ async function phone(browser, name, opts = {}) {
   // Map pictures come from the internet; serve a blank tile so the test is offline and repeatable.
   await ctx.route(/basemaps\.cartocdn\.com|tile\.openstreetmap\.org/, (r) => r.fulfill({ contentType: 'image/png', body: BLANK_TILE }));
   const page = await ctx.newPage();
+  if (process.env.E2E_THROTTLE) { const c = await ctx.newCDPSession(page); await c.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.E2E_THROTTLE) }); }
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && page.errors.push(m.text()));
@@ -136,7 +137,7 @@ async function main() {
 
     // Nearby bakers map: same cake, each baker's own price.
     await customer.getByRole('link', { name: /Ikumpara ang malapit na baker/ }).click();
-    await customer.getByRole('heading', { name: /Mga baker na malapit/ }).waitFor();
+    await customer.getByRole('heading', { name: /Mga baker na malapit/ }).waitFor().catch(async (e) => { console.log('URL', customer.url(), 'ERRORS', customer.errors.join(' | ')); await customer.screenshot({ path: join(OUT, 'fail.png') }); throw e; });
     check('map loads with price pins', await waitTrue(async () => (await customer.locator('.leaflet-marker-icon .pin').count()) >= 2), `${await customer.locator('.leaflet-marker-icon .pin').count()} pins`);
     const requestButtons = customer.getByRole('button', { name: /^Mag-request kay/ });
     check('map lists bakers who can make it', (await requestButtons.count()) >= 1, `${await requestButtons.count()} bakers`);
