@@ -107,6 +107,10 @@ export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
     return c === 'decoration' || c === 'finish';
   }).length;
   const showExtras = extras.slice(0, Math.max(0, 2 - wantedDecorCount));
+  // Classic adds a surprise decoration only when the customer didn't name any themselves.
+  const classicExtras = wantedDecorCount ? [] : showExtras;
+  // A size or tier count they typed is a requirement, not a suggestion.
+  const askedBase = wants.tiers || wants.sizeIn ? showBase : simpleBase;
   const showSel: Selection = { baseCakeId: showBase.id, componentIds: uniq([flavor, wantedCovering, ...wanted, ...withText, ...showExtras]) };
 
   // ----- simple -----
@@ -126,12 +130,12 @@ export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
   const budgetTooLow = wants.budget != null && simplePrice > wants.budget;
 
   // ----- classic -----
-  const priority = uniq([...wanted, ...withText, ...showExtras]);
+  const priority = uniq([...wanted, ...withText, ...classicExtras]);
   let classicSel: Selection;
   if (wants.budget == null) {
     // No budget: the request as asked, on the cheapest cake that feeds everyone, no extras.
-    classicSel = { baseCakeId: simpleBase.id, componentIds: uniq([flavor, wantedCovering, ...wanted, ...withText]) };
-    if (selectionKey(classicSel) === selectionKey(simpleSel) && extras[0]) {
+    classicSel = { baseCakeId: askedBase.id, componentIds: uniq([flavor, wantedCovering, ...wanted, ...withText]) };
+    if (selectionKey(classicSel) === selectionKey(simpleSel) && extras[0] && !wantedDecorCount) {
       classicSel = { ...classicSel, componentIds: uniq([...classicSel.componentIds, extras[0]]) };
     }
   } else if (budgetTooLow) {
@@ -229,4 +233,29 @@ export function normalizeSelection(menu: PublicMenu, sel: Selection): { selectio
   flavor ??= parts.find((p) => p.category === 'flavor')?.id ?? null;
   covering ??= [...parts].filter((p) => p.category === 'covering').sort((a, b) => a.p - b.p)[0]?.id ?? null;
   return { selection: { baseCakeId: base?.id ?? '', componentIds: uniq([flavor, covering, ...ids]) }, errors };
+}
+
+export interface LeftOut {
+  /** Names of parts the customer asked for that this design doesn't have. */
+  parts: string[];
+  /** Asked for more tiers than the baker makes. */
+  maxTiers: number | null;
+}
+
+/**
+ * What the customer asked for that the picked design leaves out, so the page can say so
+ * instead of silently dropping it (usually to fit the budget).
+ */
+export function leftOut(menu: PublicMenu, wants: Wants, sel: Selection): LeftOut {
+  const parts = allowedParts(menu);
+  const byId = new Map(parts.map((p) => [p.id, p]));
+  const asked = uniq([
+    wants.coveringId,
+    ...wants.componentIds.filter((id) => byId.get(id)?.category !== 'flavor'),
+    wants.textOnCake ? parts.find((p) => p.visual === 'text')?.id : null,
+  ]).filter((id) => byId.has(id));
+  const missing = asked.filter((id) => !sel.componentIds.includes(id)).map((id) => byId.get(id)!.name);
+  const base = menu.baseCakes.find((b) => b.id === sel.baseCakeId);
+  if (wants.tiers && base && base.tiers.length < Math.min(wants.tiers, menu.maxTiers)) missing.unshift(`${wants.tiers} tiers`);
+  return { parts: missing, maxTiers: wants.tiers && wants.tiers > menu.maxTiers ? menu.maxTiers : null };
 }

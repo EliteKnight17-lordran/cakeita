@@ -1,6 +1,6 @@
 import { ContactShadows, Environment, Lightformer, OrbitControls, PerformanceMonitor } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -589,13 +589,103 @@ function CakeStand({ r }: { r: number }) {
   );
 }
 
-function CakeModel({ v, spin }: { v: CakeVisual; spin: number }) {
+/** A slice cut out of the front of the cake: the gap is a quarter turn, facing the camera. */
+const CUT_HALF = Math.PI / 4;
+const dir = (a: number) => new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
+
+/** Cut face texture: sponge layers with filling between, a frosting coat on the outside and top. */
+function useCutTexture(v: CakeVisual, h: number, r: number) {
+  return useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const W = 256;
+    const H = Math.max(64, Math.round((W * h) / r));
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const g = c.getContext('2d');
+    if (!g) return null;
+    const naked = v.covering === 'naked';
+    const filling = naked || v.covering === 'fondant' ? '#fff3e2' : v.covering === 'ganache' ? '#4a2a1a' : v.frosting;
+    const coat = naked ? null : v.frosting;
+    const coatW = coat ? Math.round(W * (v.covering === 'fondant' ? 0.03 : 0.05)) : 0;
+    const coatTop = coat ? Math.round(H * 0.07) : 0;
+    g.fillStyle = v.sponge;
+    g.fillRect(0, 0, W, H);
+    // Crumb: tiny darker and lighter specks.
+    const rnd = seeded(7);
+    for (let i = 0; i < (W * H) / 30; i++) {
+      g.fillStyle = rnd() > 0.5 ? shade(v.sponge, -0.12) : shade(v.sponge, 0.18);
+      g.fillRect(rnd() * W, rnd() * H, 1.6, 1.6);
+    }
+    // Two filling layers split the inside into three sponges.
+    const inside = H - coatTop;
+    const fill = Math.max(4, Math.round(inside * 0.07));
+    g.fillStyle = filling;
+    for (const f of [1 / 3, 2 / 3]) g.fillRect(0, coatTop + Math.round(inside * f - fill / 2), W - coatW, fill);
+    if (coat) {
+      g.fillStyle = coat;
+      g.fillRect(0, 0, W, coatTop);
+      g.fillRect(W - coatW, 0, coatW, H);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    return tex;
+  }, [v.sponge, v.frosting, v.covering, h, r]);
+}
+
+/** One flat cut face from the middle of the tier out to its edge, at angle a. */
+function CutFace({ v, r, h, y, a }: { v: CakeVisual; r: number; h: number; y: number; a: number }) {
+  const tex = useCutTexture(v, h, r);
+  const geo = useMemo(() => {
+    const d = dir(a).multiplyScalar(r + 0.004);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, d.x, 0, d.z, d.x, h, d.z, 0, h, 0], 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2));
+    g.setIndex([0, 1, 2, 0, 2, 3]);
+    g.computeVertexNormals();
+    return g;
+  }, [a, r, h]);
+  return (
+    <mesh geometry={geo} position={[0, y, 0]}>
+      <meshStandardMaterial map={tex} roughness={0.9} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
+function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?: boolean }) {
   const group = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null);
   const target = useRef(spin);
   target.current = spin;
+  const invalidate = useThree((st) => st.invalidate);
+  // Clipping planes in world space that remove the wedge; they turn with the cake.
+  const planes = useMemo(() => [new THREE.Plane(), new THREE.Plane()], []);
+  const placePlanes = (turn: number) => {
+    // Clipped where both distances are negative, i.e. inside the wedge.
+    planes[0]!.set(dir(-CUT_HALF + turn + Math.PI / 2).negate(), 0);
+    planes[1]!.set(dir(CUT_HALF + turn + Math.PI / 2), 0);
+  };
+  useLayoutEffect(() => {
+    placePlanes(group.current?.rotation.y ?? 0);
+    body.current?.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      if (!m || o.userData.cutFace) return;
+      for (const mat of Array.isArray(m) ? m : [m]) {
+        const want = cut ? planes : null;
+        if (mat.clippingPlanes !== want) {
+          mat.clippingPlanes = want;
+          mat.clipIntersection = true;
+          mat.needsUpdate = true;
+        }
+      }
+    });
+    invalidate();
+  });
   useFrame((state, dt) => {
     const g = group.current;
     if (!g) return;
+    if (cut) placePlanes(g.rotation.y);
     const diff = target.current - g.rotation.y;
     if (Math.abs(diff) < 0.0005) return;
     g.rotation.y += diff * Math.min(1, dt * 6);
@@ -630,6 +720,14 @@ function CakeModel({ v, spin }: { v: CakeVisual; spin: number }) {
         <meshPhysicalMaterial color="#efe8de" metalness={0.55} roughness={0.32} clearcoat={0.5} />
       </mesh>
 
+      {cut &&
+        stack.map((s, i) => (
+          <group key={`cut${i}`} userData={{ cutFace: true }}>
+            <CutFace v={v} r={s.r} h={s.h} y={s.y} a={-CUT_HALF} />
+            <CutFace v={v} r={s.r} h={s.h} y={s.y} a={CUT_HALF} />
+          </group>
+        ))}
+      <group ref={body}>
       {stack.map((s, i) => (
         <Tier key={i} v={v} r={s.r} h={s.h} y={s.y} isTop={i === stack.length - 1} />
       ))}
@@ -683,6 +781,7 @@ function CakeModel({ v, spin }: { v: CakeVisual; spin: number }) {
           ))}
         </group>
       )}
+      </group>
     </group>
   );
 }
@@ -729,9 +828,11 @@ export interface Cake3DProps {
   /** No graphics chip: skip studio lighting and shadows, lower resolution. */
   lite?: boolean;
   onReady?: (canvas: HTMLCanvasElement) => void;
+  /** Show the inside: a slice is cut out of the front. */
+  cut?: boolean;
 }
 
-export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady }: Cake3DProps) {
+export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady, cut = false }: Cake3DProps) {
   const cakeH = visual.tiers.reduce((a, t) => a + t.h * K, 0);
   // Leave room for whatever stands on top (theme topper on its pick, acrylic words).
   const topR = (visual.tiers[visual.tiers.length - 1]!.d / 2) * K * 1.6;
@@ -750,7 +851,10 @@ export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady
       frameloop={autoRotate ? 'always' : 'demand'}
       camera={{ position: [0, lookY + dist * 0.62, dist * 0.92], fov: 36, near: 0.05, far: 50 }}
       gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
-      onCreated={({ gl }) => onReady?.(gl.domElement)}
+      onCreated={({ gl }) => {
+        gl.localClippingEnabled = true;
+        onReady?.(gl.domElement);
+      }}
     >
       {!lite && <PerformanceMonitor onDecline={() => setDpr(1)} onFallback={() => { setDpr(1); setLowPower(true); }} flipflops={2} />}
       {/* Soft studio light, rendered once on the device (no downloads). */}
@@ -767,7 +871,7 @@ export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady
       <hemisphereLight args={['#fff6ea', '#d9c7b0', lite ? 0.7 : 0.35]} />
       <directionalLight position={[2.5, 4, 2]} intensity={1.35} castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.02} />
       <directionalLight position={[-3, 2, -2]} intensity={0.35} color="#ffe1ec" />
-      <CakeModel v={visual} spin={spin} />
+      <CakeModel v={visual} spin={spin} cut={cut} />
       <Reframe dist={dist} lookY={lookY} />
       {!lowPower && <ContactShadows position={[0, -0.161, 0]} opacity={0.45} scale={maxR * 6} blur={2.6} far={1.2} />}
       <OrbitControls

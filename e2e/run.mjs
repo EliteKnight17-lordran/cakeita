@@ -136,6 +136,11 @@ async function main() {
     check('designs show budget fit labels', (await customer.getByText('Pasok sa budget').count()) >= 1);
     check('unofficial understanding shown live', await customer.getByText('Ang naintindihan namin').isVisible());
     check('sticky price shows while filling in', await customer.getByTestId('live-price').isVisible());
+    check('says what the budget design leaves out', await customer.locator('[data-left-out]').getByText(/Chocolate drip/).isVisible());
+    const inside = customer.locator('[data-see-inside]').first();
+    await inside.click();
+    check('"See inside" cuts the cake open', (await inside.getAttribute('aria-pressed')) === 'true' && /Hiniwa/.test((await customer.locator('figure [role="img"]').first().getAttribute('aria-label')) ?? ''));
+    await inside.click();
     await customer.waitForTimeout(1200);
     await axe(customer, 'customer one-page form');
     await shot(customer, '02-designs');

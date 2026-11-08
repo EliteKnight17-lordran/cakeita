@@ -9,7 +9,7 @@ import { Layout } from '../components/Layout';
 import { IconArrow, IconCamera, IconCheck, IconChevron, IconPin, IconSparkle } from '../components/icons';
 import { ShareBox } from '../components/ShareBox';
 import { Bubble, Chip, Field, Notice, SampleBadge } from '../components/ui';
-import { normalizeSelection, type DesignOption } from '../domain/designs';
+import { leftOut, normalizeSelection, type DesignOption } from '../domain/designs';
 import { addDays, earliestDate } from '../domain/insights';
 import { formatPeso } from '../domain/money';
 import { MOTIF_KEYS, MOTIFS } from '../domain/motifs';
@@ -121,7 +121,16 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const wantsKey = JSON.stringify(wants);
   const estimate = selection ? estimateFromMenu(menu, selection) : null;
   const visual = selection ? toVisual(menu, selection, look) : null;
+  const missingBase = selection ? leftOut(menu, wants, selection) : null;
+  // The design that keeps the most of what they asked for, to offer when the current one drops things.
+  const fullest = designs.options
+    .map((o) => ({ o, n: leftOut(menu, wants, o.selection).parts.length }))
+    .sort((a, b) => a.n - b.n || a.o.estimate - b.o.estimate)[0];
   const colorNames = look.colors.map((h) => PALETTE.find((p) => p.hex === h)?.name ?? '').filter(Boolean);
+  // Semi-naked cakes have no frosting to color, so say so instead of quietly dropping the color.
+  const missing = missingBase && visual?.covering === 'naked' && colorNames.length
+    ? { ...missingBase, parts: [...missingBase.parts, tx(`${colorNames.join(' and ')} frosting (semi-naked has none)`, `${colorNames.join(' at ')} na frosting (walang frosting ang semi-naked)`)] }
+    : missingBase;
   const description = visual ? describeCake(visual, prefs.lang, colorNames) : '';
 
   // When the request changes (people, budget, message), the suggested designs change too:
@@ -132,6 +141,15 @@ function Flow({ menu }: { menu: PublicMenu }) {
     firstWants.current = wantsKey;
     if (draft.selection) update({ selection: null });
   }, [wantsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Same for the look: new colors, theme or words in the message replace hand-picked ones.
+  const askedLook = JSON.stringify([reading.colors?.map((c) => c.hex), reading.theme, reading.textOnCake, reading.age]);
+  const firstLook = useRef(askedLook);
+  useEffect(() => {
+    if (firstLook.current === askedLook) return;
+    firstLook.current = askedLook;
+    if (draft.lookTouched) update({ lookTouched: false });
+  }, [askedLook]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (draft.step === 'done') doneRef.current?.focus();
@@ -455,6 +473,21 @@ function Flow({ menu }: { menu: PublicMenu }) {
               <DesignCard key={o.tier} option={o} menu={menu} look={look} selected={!isCustom && JSON.stringify(selection) === JSON.stringify(o.selection)} onPick={() => update({ tier: o.tier, selection: null })} budget={wants.budget} />
             ))}
           </div>
+          {missing?.maxTiers && (
+            <Notice tone="info">{tx(`${menu.name} makes cakes up to ${missing.maxTiers} tiers, so the designs use ${missing.maxTiers}.`, `Hanggang ${missing.maxTiers} tier lang ang ginagawa ng ${menu.name}, kaya ${missing.maxTiers} tier ang mga design.`)}</Notice>
+          )}
+          {!isCustom && missing && missing.parts.length > 0 && (
+            <div data-left-out>
+              <Notice tone="info" title={wants.budget != null ? tx(`Left out to fit ${formatPeso(wants.budget)}`, `Tinanggal para pumasok sa ${formatPeso(wants.budget)}`) : tx('Not in this design', 'Wala sa design na ito')}>
+                <p>{missing.parts.join(', ')}</p>
+                {fullest && fullest.n < missing.parts.length && (
+                  <button type="button" className="btn-secondary mt-2" onClick={() => update({ tier: fullest.o.tier, selection: null })}>
+                    {fullest.n === 0 ? tx(`Show it with everything (${formatPeso(fullest.o.estimate)})`, `Ipakita nang kumpleto (${formatPeso(fullest.o.estimate)})`) : tx(`Show the closest match (${formatPeso(fullest.o.estimate)})`, `Ipakita ang pinakamalapit (${formatPeso(fullest.o.estimate)})`)}
+                  </button>
+                )}
+              </Notice>
+            </div>
+          )}
           {isCustom && (
             <p className="text-sm">
               <span className="tag border border-line bg-[#faf6f1] text-ink">{tx('Your custom design', 'Sarili mong design')}</span>{' '}

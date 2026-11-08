@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { allowedParts, buildDesigns, normalizeSelection, selectionKey, type Wants } from './designs';
+import { allowedParts, buildDesigns, leftOut, normalizeSelection, selectionKey, type Wants } from './designs';
+import { readRequest, readServings } from './requestReader';
 import { estimateFromMenu, toPublicMenu } from './pricing';
 import { createBakeryFromStarter, createSampleBakery } from './starterMenus';
 import { toVisual } from './visual';
@@ -144,5 +145,45 @@ describe('toVisual', () => {
     const v = toVisual(sample, { baseCakeId: 'r6-2', componentIds: ['fl-vanilla', 'cv-whipped'] }, { colors: [], textOnCake: 'Hi', candles: 0 });
     expect(v.textStyle).toBeNull();
     expect(v.text).toBe('');
+  });
+});
+
+describe('what the request asked for', () => {
+  const T2 = new Date(2026, 10, 6);
+  const m = toPublicMenu(createSampleBakery(T2), T2);
+  const want = (text: string) => {
+    const r = readRequest(text, m, T2);
+    return { servings: r.servings, budget: r.budget, tiers: r.tiers, sizeIn: r.sizeIn, flavorId: r.flavorId, coveringId: r.coveringId, componentIds: r.componentIds, textOnCake: r.textOnCake };
+  };
+
+  it('reads "cake for 15" as 15 people, but not sizes, ages or money', () => {
+    expect(readServings('simple vanilla cake po 8 inch for 15')).toBe(15);
+    expect(readServings('cake for 7 years old')).toBeNull();
+    expect(readServings('cake for 2k')).toBeNull();
+    expect(readServings('for 8 inch po')).toBeNull();
+  });
+
+  it('keeps the size they typed when there is no budget', () => {
+    const w = want('vanilla cake 8 inch for 15, "Congrats Ella"');
+    const classic = buildDesigns(m, w).options.find((o) => o.tier === 'classic')!;
+    expect(m.baseCakes.find((b) => b.id === classic.selection.baseCakeId)!.tiers).toEqual([8]);
+  });
+
+  it('does not add a surprise decoration when they named their own', () => {
+    const w = want('wedding cake white buttercream, flowers, 100 pax, budget 10k');
+    const classic = buildDesigns(m, w).options.find((o) => o.tier === 'classic')!;
+    expect(classic.selection.componentIds).toContain('dc-flowers');
+    expect(classic.selection.componentIds).not.toContain('dc-drip');
+  });
+
+  it('lists what a budget design leaves out, and the tier limit', () => {
+    const w = want('2 tier pink ube cake, chocolate drip, flowers, 30 pax, budget 2.5k, "Happy 7th Mia"');
+    const d = buildDesigns(m, w);
+    const simple = d.options.find((o) => o.tier === 'simple')!;
+    const lo = leftOut(m, w, simple.selection);
+    expect(lo.parts).toEqual(expect.arrayContaining(['Chocolate drip', 'Fresh flowers']));
+    const show = d.options.find((o) => o.tier === 'showstopper')!;
+    expect(leftOut(m, w, show.selection).parts).toEqual([]);
+    expect(leftOut(m, want('3 tier cake, 60 pax'), show.selection).maxTiers).toBe(2);
   });
 });

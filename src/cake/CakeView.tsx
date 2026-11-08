@@ -106,6 +106,7 @@ export function CakeView({ visual, description, interactive = true, className = 
   const [spin, setSpin] = useState(0);
   const [touched, setTouched] = useState(false);
   const [idle, setIdle] = useState(false);
+  const [cut, setCut] = useState(false);
   // Stop the slow auto-turn after a while so phones don't burn battery on a still screen.
   useEffect(() => {
     const t = window.setTimeout(() => setIdle(true), 10_000);
@@ -137,13 +138,13 @@ export function CakeView({ visual, description, interactive = true, className = 
       <div
         className="relative aspect-[16/14] w-full overflow-hidden rounded-2xl border border-line bg-[radial-gradient(120%_90%_at_50%_10%,#fffdfa_0%,#f3ece4_55%,#e6dcd0_100%)]"
         role="img"
-        aria-label={description}
+        aria-label={cut ? `${description} ${tx('Cut open to show the sponge and filling layers.', 'Hiniwa para makita ang sponge at palaman.')}` : description}
         onPointerDown={() => setTouched(true)}
       >
         {use3D ? (
           <GLBoundary fallback={flat}>
             <Suspense fallback={<div className="h-full w-full animate-pulse">{flat}</div>}>
-              <Cake3D visual={visual} spin={spin} lite={lite} autoRotate={!lite && !touched && !idle && !reduceMotion} onReady={(c) => (canvasRef.current = c)} />
+              <Cake3D visual={visual} spin={spin} lite={lite} cut={cut} autoRotate={!cut && !lite && !touched && !idle && !reduceMotion} onReady={(c) => (canvasRef.current = c)} />
             </Suspense>
           </GLBoundary>
         ) : (
@@ -166,6 +167,9 @@ export function CakeView({ visual, description, interactive = true, className = 
               </button>
               <button type="button" className="btn-ghost" onClick={() => { setTouched(true); setSpin((s) => s + Math.PI / 4); }} aria-label={tx('Turn right', 'Ikot pakanan')}>
                 ↻
+              </button>
+              <button type="button" className="btn-ghost" aria-pressed={cut} data-see-inside onClick={() => { setTouched(true); setCut((c) => !c); }}>
+                {cut ? tx('Close the slice', 'Isara ang hiwa') : tx('See inside', 'Tingnan ang loob')}
               </button>
             </>
           )}

@@ -13,6 +13,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.2',
+    date: '2026-11-09',
+    en: [
+      'See inside: cut a slice out of the 3D cake to show the sponge and filling layers.',
+      'Nothing you type is dropped silently: when a design leaves something out to fit your budget, the page lists it, with one tap to the design that has it all.',
+      '"Cake for 15" now reads as 15 people, a size you type (8 inch) is kept, and no surprise chocolate drip when you named your own decorations.',
+      'New colors or words in your message now update the cake even after you customized it.',
+    ],
+    tl: [
+      'Tingnan ang loob: hiwain ang 3D cake para makita ang sponge at palaman.',
+      'Walang nawawala nang tahimik: kung may tinanggal para pumasok sa budget, nakalista ito, at isang pindot lang papunta sa kumpletong design.',
+      'Nababasa na ang "cake for 15" bilang 15 tao, sinusunod ang laki (8 inch), at walang dagdag na drip kung may sarili kang dekorasyon.',
+      'Nagbabago na ang cake kapag nagdagdag ka ng kulay o sulat sa mensahe, kahit na-customize mo na.',
+    ],
+  },
+  {
     version: '1.3.1',
     date: '2026-11-09',
     en: [

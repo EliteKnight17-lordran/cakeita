@@ -225,6 +225,8 @@ export function readServings(text: string): number | null {
     /(\d{1,3})\s*(?:-|to)\s*(\d{1,3})\s*(?:pax|people|persons?|guests?|tao|katao|bisita|servings?|slices?)\b/,
     /(\d{1,3})\s*(?:na\s+)?(?:pax|people|persons?|guests?|tao|katao|bisita|servings?|slices?)\b/,
     /(?:good for|pang|pang-|serves)\s*(\d{1,3})\b/,
+    // "cake for 15" (a bare number after "for" is people, unless a unit follows).
+    /\b(?:for|para sa)\s+(\d{1,3})\b(?!\s*(?:inch|inches|in\b|"|”|pulgada|tiers?|layers?|st\b|nd\b|rd\b|th\b|years?|yrs?|y\/?o\b|taon|days?|araw|pcs?|pieces?|cupcakes?|k\b|php|pesos?|%|[:/.,-]\d|am\b|pm\b))/,
   ];
   for (const re of patterns) {
     const m = re.exec(t);

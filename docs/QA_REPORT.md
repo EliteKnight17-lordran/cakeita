@@ -1,15 +1,15 @@
 # QA report
 
-**Build:** v1.3.0 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+**Build:** v1.3.2 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
 
 ## Results
 
 | Suite | Result |
 | --- | --- |
-| Unit tests (Vitest) | **177 / 177 passed** |
+| Unit tests (Vitest) | **181 / 181 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
-| End-to-end checks (4 phones) | **61 / 61 passed** |
+| End-to-end checks (4 phones) | **63 / 63 passed** |
 | Firestore security rules (emulator) | **32 / 32 passed** |
 | Accessibility (axe, 12 screens) | **0 serious or critical issues** |
 | JavaScript errors during e2e | 0 on all phones |
@@ -45,6 +45,19 @@
 | --- | --- | --- | --- |
 | English/Taglish choice reverted when a second tab (e.g. a Messenger link) was open | User on the live Vercel build | Prefs now sync across tabs (`storage` event, re-read on tab focus) and merge over the saved value before writing | e2e: "language picked in another tab reaches this tab", "language stays after reload…" (fails on v1.0.0, passes on v1.0.1) |
 | Vercel build showed TS2835 for `api/parse.ts`; the function would fail to import in Node ESM | Vercel build log | `.js` extensions on the server import chain; test moved out of `api/`; Node pinned to 22.x | Unit test checks every relative import in the chain ends in `.js`; compiled with `tsc --module nodenext` and ran GET/POST in plain Node |
+
+## v1.3.2 (2026-11-09)
+
+| Change | How it was checked |
+| --- | --- |
+| User report: parts of "What cake do you want?" were not applied | Probed 10 typed requests through the reader and design builder. Found: budget designs dropped asked-for items without saying so; "for 15" not read as people; typed size ignored without a budget; unrequested chocolate drip added; new colors ignored after customizing. All fixed; 4 unit tests and an e2e check added |
+| "See inside" slice view | Screenshots for buttercream, ganache, semi-naked and fondant; e2e checks the toggle and its screen-reader label |
+
+## v1.3.1 (2026-11-09)
+
+| Change | How it was checked |
+| --- | --- |
+| Delete my account; privacy.html | Emulator: bakery, menu, quote, confirmation, requests and sign-in all gone after delete |
 
 ## v1.3.0 (2026-11-09)
 
