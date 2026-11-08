@@ -89,7 +89,13 @@ export default function QuotePage() {
               <ShareBox url={mine.requestLink} message={tx('Hi! Here is my cake request again:', 'Hi po! Ito ulit ang cake request ko:')} title="Cake request" qrLabel="QR" />
             </>
           ) : (
-            <Notice tone="info">{tx('No quote here yet. Open the quote link the baker sent you.', 'Wala pang quote dito. Buksan ang quote link na pinadala ng baker.')}</Notice>
+            <>
+              <Notice tone="info">{tx('No quote here yet. Open the quote link the baker sent you, or check My cakes.', 'Wala pang quote dito. Buksan ang quote link na pinadala ng baker, o tingnan ang Mga cake ko.')}</Notice>
+              <div className="flex flex-wrap gap-2">
+                <Link to="/me" className="btn">{tx('My cakes', 'Mga cake ko')}</Link>
+                <Link to="/near" className="btn-ghost">{tx('Find a baker', 'Maghanap ng baker')}</Link>
+              </div>
+            </>
           )}
         </div>
       </Layout>

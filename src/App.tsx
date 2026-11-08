@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { CloudSync } from './cloud/CloudSync';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { Layout } from './components/Layout';
 import { setPrefs } from './lib/prefs';
 import Home from './pages/Home';
@@ -33,6 +34,11 @@ function DevFlag() {
   return null;
 }
 
+function Guarded({ children }: { children: React.ReactNode }) {
+  const loc = useLocation();
+  return <AppErrorBoundary resetKey={loc.pathname}>{children}</AppErrorBoundary>;
+}
+
 function NotFound() {
   return (
     <Layout>
@@ -46,6 +52,7 @@ export default function App() {
     <HashRouter>
       <DevFlag />
       <CloudSync />
+      <Guarded>
       <Suspense fallback={<div className="p-10 text-center text-ink-soft">Loading…</div>}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -66,6 +73,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      </Guarded>
     </HashRouter>
   );
 }

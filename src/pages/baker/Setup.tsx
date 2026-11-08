@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAccount } from '../../cloud/account';
 import { Layout } from '../../components/Layout';
 import { Field, Notice, Stepper } from '../../components/ui';
 import { formatPeso } from '../../domain/money';
@@ -18,6 +20,7 @@ const KEY_INGREDIENTS: Array<{ id: string; per: number; unitLabel: string }> = [
 ];
 
 export default function Setup() {
+  const account = useAccount();
   const tx = useTx();
   const [step, setStep] = useState(1);
   const [starter, setStarter] = useState<StarterKey>('home');
@@ -67,6 +70,12 @@ export default function Setup() {
             <button type="button" className="btn w-full" onClick={() => setStep(2)}>
               {tx('Next', 'Sunod')}
             </button>
+            {account.status === 'signed-out' || account.status === 'idle' ? (
+              <p className="text-center text-sm">
+                {tx('Already set up on another phone? ', 'Naka-set up na sa ibang phone? ')}
+                <Link to="/account" className="font-semibold text-berry underline">{tx('Sign in and your bakery comes back', 'Mag-sign in at babalik ang bakery mo')}</Link>
+              </p>
+            ) : null}
             <div className="card space-y-2 bg-berry-soft">
               <p className="font-bold">{tx('Just looking? Try the demo bakery.', 'Titingin lang? Subukan ang demo bakery.')}</p>
               <p className="text-sm">{tx('Loads a sample bakery with sample prices so you can see every screen.', 'May sample bakery at sample prices para makita mo lahat ng screen.')}</p>

@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.3',
+    date: '2026-11-09',
+    en: [
+      'After an update, a page left open reloads itself instead of breaking (this could stop the map from opening).',
+      'If a screen ever crashes, you get a Reload button instead of a blank page.',
+      'Bakers on a new phone are told to sign in to bring their bakery back; the empty quote page now has a way out.',
+    ],
+    tl: [
+      'Pagkatapos ng update, kusang nagre-reload ang nakabukas na page imbes na masira (puwedeng ito ang dahilan kung bakit hindi bumubukas ang mapa).',
+      'Kung may masira na screen, may Reload button imbes na blangkong page.',
+      'Sinasabihan ang baker sa bagong phone na mag-sign in para bumalik ang bakery; may labasan na ang walang lamang quote page.',
+    ],
+  },
+  {
     version: '1.3.2',
     date: '2026-11-09',
     en: [
