@@ -24,6 +24,8 @@ import { resizeImage, type SmallImage } from '../lib/image';
 import { linkErrorText } from '../lib/codec';
 import { requestLink } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
+import { useMedia } from '../lib/useMedia';
+import { MiniCake } from './MiniCake';
 import { currentCake, offlineReading } from './customerCake';
 import { useMenu } from './useMenu';
 
@@ -99,6 +101,8 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const [errors, setErrors] = useState<Partial<Record<'date' | 'name' | 'contact' | 'consent' | 'form', string>>>({});
   const [smartAvailable, setSmartAvailable] = useState(false);
   const doneRef = useRef<HTMLHeadingElement>(null);
+  const cakeRef = useRef<HTMLDivElement>(null);
+  const wide = useMedia('(min-width: 1024px)');
   const today = useMemo(() => new Date(), []);
   const minDate = earliestDate(menu.leadTimeDays, today);
 
@@ -250,9 +254,22 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const tooSoon = !!eventDate && eventDate < minDate;
   const over = budgetGap(estimate, wants.budget);
 
+  // One 3D cake on the page: pinned beside the form on laptops, inside "Pick a design" on phones.
+  const cakeStage = visual && (
+    <div ref={cakeRef} className="scroll-mt-20">
+      <CakeView visual={visual} description={description} />
+    </div>
+  );
+
   return (
-    <Layout>
+    <Layout wide>
       {header}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10">
+      {wide && (
+        <aside className="sticky top-[calc(3.75rem+1.5rem)] space-y-3" aria-label={tx('Your cake', 'Ang cake mo')}>
+          {cakeStage}
+        </aside>
+      )}
       <div className="space-y-5">
         <div className="space-y-1">
           <h1 className="text-3xl leading-tight sm:text-4xl">{tx('Design your cake', 'I-design ang cake mo')}</h1>
@@ -411,7 +428,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
               {tx(`The simplest cake that feeds ${wants.servings ?? 'everyone'} starts at about ${formatPeso(designs.lowestPrice)}. You can pick fewer people or ask the baker.`, `Ang pinakasimpleng cake para sa ${wants.servings ?? 'lahat'} ay mga ${formatPeso(designs.lowestPrice)}. Puwedeng bawasan ang tao o itanong sa baker.`)}
             </Notice>
           )}
-          {visual && <CakeView visual={visual} description={description} />}
+          {!wide && cakeStage}
           <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={tx('Designs', 'Mga design')}>
             {designs.options.map((o) => (
               <DesignCard key={o.tier} option={o} menu={menu} look={look} selected={!isCustom && JSON.stringify(selection) === JSON.stringify(o.selection)} onPick={() => update({ tier: o.tier, selection: null })} budget={wants.budget} />
@@ -471,10 +488,13 @@ function Flow({ menu }: { menu: PublicMenu }) {
           <p className="text-sm text-ink-soft">{tx('Free to use. No payment happens here. Your photo is never saved.', 'Libre. Walang bayaran dito. Hindi sine-save ang photo mo.')}</p>
         </section>
       </div>
+      </div>
+
+      {!wide && visual && <MiniCake target={cakeRef} visual={visual} description={description} price={menu.showEstimates && estimate != null ? formatPeso(estimate) : null} />}
 
       {/* Sticky price + send */}
       <div className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#fffdfa] p-3 shadow-[0_-12px_30px_-24px_rgb(36_26_23/0.45)]">
-        <div className="mx-auto flex max-w-3xl items-center gap-3">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 lg:max-w-6xl">
           <div className="min-w-0 flex-1" aria-live="polite">
             {menu.showEstimates && estimate != null ? (
               <>

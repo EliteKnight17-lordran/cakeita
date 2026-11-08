@@ -135,6 +135,19 @@ async function main() {
     await customer.waitForTimeout(1000);
     await shot(customer, '03-customize');
 
+    // Phones: the cake follows you down the page as a small floating cake.
+    await customer.getByLabel('Nakasulat sa cake').scrollIntoViewIfNeeded();
+    const mini = customer.getByTestId('mini-cake');
+    await mini.waitFor({ timeout: 5000 }).catch(() => {});
+    check('small cake floats while customizing', await mini.isVisible());
+    await mini.click();
+    check('tapping the small cake enlarges it', await customer.getByTestId('mini-cake-open').isVisible());
+    await shot(customer, '03b-mini-cake');
+    await customer.getByRole('button', { name: /Tingnan sa 3D/ }).click();
+    await customer.waitForTimeout(1200);
+    const cakeTop = await customer.getByRole('img', { name: /cake/i }).first().evaluate((el) => el.getBoundingClientRect().top);
+    check('"See it in 3D" jumps back to the big cake', cakeTop >= 0 && cakeTop < 400, `top ${Math.round(cakeTop)}`);
+
     // Nearby bakers map: same cake, each baker's own price.
     await customer.getByRole('link', { name: /Ikumpara ang malapit na baker/ }).click();
     await customer.getByRole('heading', { name: /Mga baker na malapit/ }).waitFor();

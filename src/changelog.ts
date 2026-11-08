@@ -13,6 +13,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.2',
+    date: '2026-11-08',
+    en: [
+      'Your cake stays in view while you customize. On phones a small live cake floats above the price: tap it to enlarge, then "See it in 3D" jumps back to the big cake.',
+      'On laptops the order page is side by side: the 3D cake stays pinned on the left while you fill in the right.',
+    ],
+    tl: [
+      'Kita mo pa rin ang cake habang nagcu-customize. Sa phone, may maliit na cake sa itaas ng presyo: i-tap para lumaki, at "Tingnan sa 3D" para bumalik sa malaking cake.',
+      'Sa laptop, magkatabi na: naka-pin ang 3D cake sa kaliwa habang nagfi-fill out ka sa kanan.',
+    ],
+  },
+  {
     version: '1.2.1',
     date: '2026-11-08',
     en: [

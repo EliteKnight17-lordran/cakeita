@@ -20,7 +20,9 @@ export function Logo() {
   );
 }
 
-export function Layout({ children, nav }: { children: ReactNode; nav?: ReactNode }) {
+/** wide = two-column pages (order form) get more room on laptops. */
+export function Layout({ children, nav, wide = false }: { children: ReactNode; nav?: ReactNode; wide?: boolean }) {
+  const w = wide ? 'max-w-3xl lg:max-w-6xl' : 'max-w-3xl';
   const prefs = usePrefs();
   const tx = useTx();
   const taps = useRef<number[]>([]);
@@ -41,7 +43,7 @@ export function Layout({ children, nav }: { children: ReactNode; nav?: ReactNode
         {tx('Skip to content', 'Lumaktaw sa nilalaman')}
       </a>
       <header className="sticky top-0 z-30 border-b border-line bg-[#fffdfa]">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2">
+        <div className={`mx-auto flex ${w} items-center justify-between gap-2 px-4 py-2`}>
           <Link to="/" onClick={onLogoTap} aria-label="Cakeita home">
             <Logo />
           </Link>
@@ -70,7 +72,7 @@ export function Layout({ children, nav }: { children: ReactNode; nav?: ReactNode
         </div>
         {nav && <nav className="mx-auto max-w-3xl px-2 pb-2">{nav}</nav>}
       </header>
-      <main id="main" className="mx-auto max-w-3xl px-4 pb-28 pt-6 sm:pt-8">
+      <main id="main" className={`mx-auto ${w} px-4 pb-28 pt-6 sm:pt-8`}>
         {children}
       </main>
       <footer className="no-print mx-auto max-w-3xl px-4 pb-24 text-center text-sm text-ink-soft">

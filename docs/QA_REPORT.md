@@ -1,6 +1,6 @@
 # QA report
 
-**Build:** v1.2.1 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+**Build:** v1.2.2 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
 
 ## Results
 
@@ -9,7 +9,7 @@
 | Unit tests (Vitest) | **144 / 144 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
-| End-to-end checks (4 phones) | **51 / 51 passed** |
+| End-to-end checks (4 phones) | **54 / 54 passed** |
 | Accessibility (axe, 12 screens) | **0 serious or critical issues** |
 | JavaScript errors during e2e | 0 on all phones |
 | `npm audit` | 0 known vulnerabilities |
@@ -44,6 +44,12 @@
 | --- | --- | --- | --- |
 | English/Taglish choice reverted when a second tab (e.g. a Messenger link) was open | User on the live Vercel build | Prefs now sync across tabs (`storage` event, re-read on tab focus) and merge over the saved value before writing | e2e: "language picked in another tab reaches this tab", "language stays after reload…" (fails on v1.0.0, passes on v1.0.1) |
 | Vercel build showed TS2835 for `api/parse.ts`; the function would fail to import in Node ESM | Vercel build log | `.js` extensions on the server import chain; test moved out of `api/`; Node pinned to 22.x | Unit test checks every relative import in the chain ends in `.js`; compiled with `tsc --module nodenext` and ran GET/POST in plain Node |
+
+## v1.2.2 (2026-11-08)
+
+| Change | How it was checked |
+| --- | --- |
+| Floating mini cake on phones (tap to enlarge, "See it in 3D" jumps back); side-by-side order page on laptops | e2e: mini cake shows after scrolling past the 3D cake, tap enlarges it, button returns the big cake to the top of the screen. Laptop layout checked at 1366 px |
 
 ## v1.2.1 (2026-11-08)
 
