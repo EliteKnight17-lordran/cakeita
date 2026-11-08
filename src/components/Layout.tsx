@@ -38,11 +38,16 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
   };
 
   return (
-    <div className="min-h-dvh">
+    <div className="relative isolate min-h-dvh">
+      <div className="ambient" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </div>
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-xl focus:bg-white focus:p-3">
         {tx('Skip to content', 'Lumaktaw sa nilalaman')}
       </a>
-      <header className="sticky top-0 z-30 border-b border-line bg-[#fffdfa]">
+      <header className="scallop sticky top-0 z-30 bg-[#fffdfa]">
         <div className={`mx-auto flex ${w} items-center justify-between gap-2 px-4 py-2`}>
           <Link to="/" onClick={onLogoTap} aria-label="Cakeita home">
             <Logo />
@@ -72,7 +77,7 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
         </div>
         {nav && <nav className="mx-auto max-w-3xl px-2 pb-2">{nav}</nav>}
       </header>
-      <main id="main" className={`mx-auto ${w} px-4 pb-28 pt-6 sm:pt-8`}>
+      <main id="main" className={`page-in mx-auto ${w} px-4 pb-28 pt-7 sm:pt-9`}>
         {children}
       </main>
       <footer className="no-print mx-auto max-w-3xl px-4 pb-24 text-center text-sm text-ink-soft">

@@ -26,6 +26,7 @@ import { resizeImage, type SmallImage } from '../lib/image';
 import { linkErrorText } from '../lib/codec';
 import { requestLink } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
+import { celebrate } from '../lib/celebrate';
 import { useMedia } from '../lib/useMedia';
 import { MiniCake } from './MiniCake';
 import { currentCake, offlineReading } from './customerCake';
@@ -204,6 +205,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
     if (own && own.slug === menu.slug) repo.upsertOrder(requestToOrder(req, 'same-device'));
     update({ sentId: req.id, sentLink: link, sentMessage: message, step: 'done' });
     window.scrollTo({ top: 0 });
+    celebrate();
   };
 
   const header = (
@@ -502,7 +504,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
               <>
                 <p className="eyebrow !text-ink-soft">{tx('Estimated price', 'Tantyang presyo')}</p>
                 <p className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="price text-2xl" data-testid="live-price">{formatPeso(estimate)}</span>
+                  <span key={estimate} className="price pop text-2xl" data-testid="live-price">{formatPeso(estimate)}</span>
                   {wants.budget != null && (
                     <span className={`text-xs font-bold ${over > 0 ? 'text-amber-ink' : 'text-ok-ink'}`}>{over > 0 ? `+${formatPeso(over)} ${tx('over', 'lampas')}` : tx('Fits budget', 'Pasok sa budget')}</span>
                   )}

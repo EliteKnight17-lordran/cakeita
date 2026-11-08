@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { describeCake } from '../cake/describe';
 import { CakeView } from '../cake/CakeView';
+import { HeroSprinkles } from '../components/Decor';
 import { IconArrow, IconCheck, IconPin } from '../components/icons';
 import { Layout } from '../components/Layout';
 import { toPublicMenu } from '../domain/pricing';
@@ -46,7 +47,10 @@ export default function Home() {
           </p>
         </section>
 
-        <CakeView visual={HERO} description={describeCake(HERO, prefs.lang)} showTools={false} />
+        <div className="rise relative" style={{ ['--d' as string]: '120ms' }}>
+          <HeroSprinkles />
+          <CakeView visual={HERO} description={describeCake(HERO, prefs.lang)} showTools={false} />
+        </div>
 
         <section className="space-y-5" aria-labelledby="how-h">
           <div className="text-center">
@@ -61,7 +65,7 @@ export default function Home() {
               [tx('Cakeita designs and prices', 'Nagdi-design at nagpe-presyo ang Cakeita'), tx("Simple, Classic and Showstopper, built from the baker's own menu and priced by code.", 'Simple, Classic at Showstopper, mula sa sariling menu ng baker at may presyo gamit ang code.')],
               [tx('The baker approves', 'Nag-a-approve ang baker'), tx('A clear cost breakdown, one tap to approve, and the quote goes back through Messenger.', 'Malinaw na breakdown ng gastos, isang tap para i-approve, at babalik ang quote sa Messenger.')],
             ].map(([title, text], i) => (
-              <li key={i} className="card">
+              <li key={i} className="card rise" style={{ ['--d' as string]: `${200 + i * 90}ms` }}>
                 <p className="font-display text-3xl font-medium text-gold" aria-hidden="true">
                   {String(i + 1).padStart(2, '0')}
                 </p>

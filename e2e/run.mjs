@@ -224,7 +224,8 @@ async function main() {
     await baker.getByLabel('Message ng customer').fill("Spiderman theme cake for my son's 5th bday, 20 pax, 1.8k budget, may candles po");
     await baker.getByRole('button', { name: 'Basahin at i-presyo' }).click();
     await baker.getByText('May character').waitFor();
-    check('trademark swapped and licensed topper note shown', await baker.getByText(/licensed topper/).isVisible());
+    check('trademark swapped and licensed topper note shown', await baker.getByText(/Customer mentioned .*licensed topper/).isVisible());
+    check('character request gets a generic theme topper', (await baker.locator('[data-motif="hero"][aria-pressed="true"]').count()) === 1);
     await shot(baker, '08-pasted-dm');
 
     // ---------------- Price update + lugi ----------------

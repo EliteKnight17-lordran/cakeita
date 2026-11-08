@@ -17,6 +17,7 @@ import { repo, useDb } from '../../data/store';
 import { copyText, quoteLink } from '../../lib/links';
 import { usePrefs, useTx } from '../../lib/prefs';
 import { Customizer } from '../CustomerFlow';
+import { celebrate } from '../../lib/celebrate';
 import { BakerShell } from './BakerShell';
 import { StatusTag } from './Inbox';
 
@@ -76,7 +77,8 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
     };
   }, [bakery, order, editing]);
 
-  const approve = () => {
+  const approve = (e?: React.MouseEvent<HTMLElement>) => {
+    celebrate(e?.currentTarget);
     const next = approveOrder(bakery, order, { selection, look, price, note, validDays });
     repo.upsertOrder(next);
     setEditing(false);

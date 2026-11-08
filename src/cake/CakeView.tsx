@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { CakeVisual } from '../domain/visual';
 import { usePrefs, useTx } from '../lib/prefs';
+import { StageSparkles } from '../components/Decor';
 import { Cake2D } from './Cake2D';
 
 const Cake3D = lazy(() => import('./Cake3D'));
@@ -148,6 +149,7 @@ export function CakeView({ visual, description, interactive = true, className = 
         ) : (
           flat
         )}
+        <StageSparkles />
         {use3D && !touched && (
           <span className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-line bg-white/90 px-3 py-1 text-xs font-medium tracking-wide text-ink-soft">
             {tx('Drag to turn', 'I-drag para ikutin')}

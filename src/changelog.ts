@@ -13,6 +13,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.3',
+    date: '2026-11-08',
+    en: [
+      'Theme toppers: character and theme requests (superhero, princess, dinosaur, unicorn, sports, graduation and more) get a generic printed cut-out in the cake colors, in 3D and 2D, priced like any other part. Real characters stay a licensed-topper note.',
+      'The look is alive again: a slowly drifting glow with a pâtisserie pattern, a scalloped header, floating sprinkles and twinkling sparkles, and a sprinkle burst when you send, approve or confirm. All of it turns off with "reduce motion".',
+      'Smarter AI model choice: tries the current Gemini Flash models in order and falls back automatically.',
+      'The 3D view re-zooms when the cake grows or shrinks.',
+    ],
+    tl: [
+      'Theme toppers: ang character at theme na request (superhero, princess, dinosaur, unicorn, sports, graduation at iba pa) ay may generic na printed cut-out sa kulay ng cake, sa 3D at 2D, at may presyo tulad ng ibang part. Ang totoong character ay nananatiling note para sa licensed topper.',
+      'Buhay na ulit ang itsura: gumagalaw na glow at pattern ng pastry, scalloped na header, lumulutang na sprinkles at kislap, at sabog ng sprinkles kapag nag-send, nag-approve o nag-confirm. Naka-off lahat kapag naka-"reduce motion".',
+      'Mas matalinong pagpili ng AI model: sinusubukan ang mga bagong Gemini Flash model nang sunod-sunod.',
+      'Kusang nag-zoom ang 3D kapag lumaki o lumiit ang cake.',
+    ],
+  },
+  {
     version: '1.2.2',
     date: '2026-11-08',
     en: [

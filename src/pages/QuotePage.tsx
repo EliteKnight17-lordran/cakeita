@@ -1,3 +1,4 @@
+import { celebrate } from '../lib/celebrate';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { describeCake } from '../cake/describe';
@@ -91,7 +92,8 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
   const confirmedHere = local && ['confirmed', 'baking', 'ready', 'done'].includes(local.status);
   const desc = describeCake(quote.visual, prefs.lang);
 
-  const confirm = async () => {
+  const confirm = async (e?: React.MouseEvent<HTMLElement>) => {
+    celebrate(e?.currentTarget);
     const c = { v: 1 as const, orderId: quote.orderId, price: quote.price, confirmedAt: new Date().toISOString(), note: note.slice(0, 300), customerName: quote.customerName };
     setLink(await confirmLink(c));
     // Demo on one device: apply immediately.
