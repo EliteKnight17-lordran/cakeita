@@ -9,18 +9,19 @@ import { formatPeso } from '../../domain/money';
 /**
  * Map of nearby bakers. Loaded lazily (Leaflet is only downloaded on this page).
  * Map pictures (tiles) need internet; markers, prices and the list below work without it.
- * Tiles: CARTO Voyager (free, OpenStreetMap data), falling back to OpenStreetMap's own tiles.
+ * Tiles: OpenStreetMap's own tiles (free, no key, light use per their tile policy), falling back
+ * to OpenStreetMap France's Humanitarian style. CARTO was dropped: it now asks for an API key.
  */
 
 const TILES = [
   {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
-  },
-  {
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    subdomains: 'abc',
+  },
+  {
+    url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, tiles by <a href="https://www.openstreetmap.fr/">OSM France</a>',
     subdomains: 'abc',
   },
 ];
@@ -111,7 +112,6 @@ export default function BakeryMap({ spot, matches, selected, radiusKm, onSelect,
           url={tile.url}
           attribution={tile.attribution}
           subdomains={tile.subdomains}
-          detectRetina
           maxZoom={19}
           eventHandlers={{
             tileload: () => {

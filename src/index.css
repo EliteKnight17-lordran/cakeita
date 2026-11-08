@@ -373,6 +373,10 @@ body {
     #f4efe8;
   font-family: var(--font-sans);
 }
+/* Soften the busy street map so the price pins stand out and it matches the warm palette. */
+.cakeita-map .leaflet-tile-pane {
+  filter: saturate(0.55) sepia(0.12) brightness(1.03) contrast(0.95);
+}
 @media (min-width: 640px) {
   .leaflet-container.cakeita-map,
   .cakeita-map {

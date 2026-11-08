@@ -13,6 +13,12 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.6',
+    date: '2026-11-09',
+    en: ['Map pictures now come from OpenStreetMap (free, no key), softened to match Cakeita. CARTO had started asking for a key.'],
+    tl: ['Galing na sa OpenStreetMap ang mapa (libre, walang key). Humihingi na ng key ang CARTO.'],
+  },
+  {
     version: '1.3.5',
     date: '2026-11-09',
     en: ['Map: if map pictures hang on a network or browser, it tries a second map provider, then says so clearly. Pins, prices and the list keep working.'],
