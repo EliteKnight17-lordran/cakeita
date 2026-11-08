@@ -13,6 +13,12 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.4.1',
+    date: '2026-11-09',
+    en: ['Demo tab: owners can make the phone alert keys right on their device, ready to paste into Vercel.'],
+    tl: ['Demo tab: puwedeng gumawa ang may-ari ng phone alert keys sa sariling device, handang i-paste sa Vercel.'],
+  },
+  {
     version: '1.4.0',
     date: '2026-11-09',
     en: [
