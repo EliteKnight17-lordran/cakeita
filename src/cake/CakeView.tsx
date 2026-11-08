@@ -74,19 +74,60 @@ async function svgToPng(svg: SVGSVGElement): Promise<string> {
   }
 }
 
-/** Put a white background behind the transparent WebGL canvas and add a small caption. */
-function canvasToPng(canvas: HTMLCanvasElement, caption: string): string {
+/** Wrap lines for the picture card. */
+function wrap(ctx: CanvasRenderingContext2D, text: string, max: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const w of text.split(/\s+/)) {
+    const t = line ? `${line} ${w}` : w;
+    if (ctx.measureText(t).width > max && line) {
+      lines.push(line);
+      line = w;
+    } else line = t;
+  }
+  if (line) lines.push(line);
+  return lines.slice(0, 3);
+}
+
+/**
+ * A shareable picture card from the 3D view: soft studio background, the cake, what it is,
+ * and an honest "concept only" line. Sized for Messenger (portrait, 1080 wide).
+ */
+async function canvasToPng(canvas: HTMLCanvasElement, caption: string, title: string): Promise<string> {
+  // The bundled fonts load on demand; make sure they are ready before drawing text.
+  await Promise.all(['600 40px "Fraunces Variable"', '700 26px "Inter Variable"', '500 24px "Inter Variable"'].map((f) => document.fonts?.load(f).catch(() => null))).catch(() => null);
+  const W = 1080;
+  const cakeH = Math.round((canvas.height / canvas.width) * W);
   const c = document.createElement('canvas');
-  c.width = canvas.width;
-  c.height = canvas.height + 60;
+  c.width = W;
+  c.height = cakeH + 330;
   const ctx = c.getContext('2d')!;
-  ctx.fillStyle = '#f6f1ea';
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.drawImage(canvas, 0, 0);
+  const bg = ctx.createRadialGradient(W / 2, cakeH * 0.25, 40, W / 2, cakeH * 0.5, W);
+  bg.addColorStop(0, '#fffdfa');
+  bg.addColorStop(0.55, '#f3ece4');
+  bg.addColorStop(1, '#e6dcd0');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, c.height);
+  ctx.drawImage(canvas, 0, 0, W, cakeH);
+  // Text panel
+  ctx.fillStyle = '#fffdfa';
+  ctx.fillRect(0, cakeH, W, c.height - cakeH);
+  ctx.fillStyle = '#e7ddd3';
+  ctx.fillRect(0, cakeH, W, 2);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#8c2246';
+  ctx.font = '700 26px "Inter Variable", system-ui, sans-serif';
+  ctx.fillText('CAKEITA · CAKE DESIGN', 64, cakeH + 70);
+  ctx.fillStyle = '#241a17';
+  ctx.font = '600 40px "Fraunces Variable", Georgia, serif';
+  let y = cakeH + 130;
+  for (const l of wrap(ctx, title, W - 128)) {
+    ctx.fillText(l, 64, y);
+    y += 52;
+  }
   ctx.fillStyle = '#6b5e58';
-  ctx.font = '600 22px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(caption, c.width / 2, c.height - 22);
+  ctx.font = '500 24px "Inter Variable", system-ui, sans-serif';
+  ctx.fillText(caption, 64, c.height - 48);
   return c.toDataURL('image/png');
 }
 
@@ -122,7 +163,7 @@ export function CakeView({ visual, description, interactive = true, className = 
 
   const save = useCallback(async () => {
     try {
-      const url = canvasRef.current && use3D ? canvasToPng(canvasRef.current, caption) : svgRef.current ? await svgToPng(svgRef.current) : null;
+      const url = canvasRef.current && use3D ? await canvasToPng(canvasRef.current, caption, description) : svgRef.current ? await svgToPng(svgRef.current) : null;
       if (!url) return;
       const a = document.createElement('a');
       a.href = url;
@@ -131,7 +172,7 @@ export function CakeView({ visual, description, interactive = true, className = 
     } catch {
       /* ignore: saving a picture is optional */
     }
-  }, [use3D, caption]);
+  }, [use3D, caption, description]);
 
   return (
     <figure className={`relative ${className}`}>

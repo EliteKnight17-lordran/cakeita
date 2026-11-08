@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.4',
+    date: '2026-11-09',
+    en: [
+      'Saved pictures now use the 3D cake as a clean picture card with what the cake is, ready to send in Messenger.',
+      'The "sent" page shows the 3D cake instead of the flat drawing.',
+      'Candles stand along the back when there are words or a topper, so nothing covers the message.',
+    ],
+    tl: [
+      'Ang naka-save na picture ay galing na sa 3D cake, isang malinis na picture card na may paliwanag, handang i-send sa Messenger.',
+      '3D cake na ang nasa "naipadala" na page imbes na flat na drawing.',
+      'Nasa likod ang kandila kapag may sulat o topper, para walang natatakpan.',
+    ],
+  },
+  {
     version: '1.3.3',
     date: '2026-11-09',
     en: [

@@ -416,13 +416,15 @@ function Rosettes({ r, y, color }: { r: number; y: number; color: string }) {
   );
 }
 
-function Candles({ n, r, y, color }: { n: number; r: number; y: number; color: string }) {
-  const ring = n === 1 ? 0 : Math.min(r * 0.6, 0.08 + n * 0.02);
+/** Candles in a ring, or along the back edge when words or a topper sit in front. */
+function Candles({ n, r, y, color, back = false }: { n: number; r: number; y: number; color: string; back?: boolean }) {
+  const ring = back ? r * 0.74 : n === 1 ? 0 : Math.min(r * 0.6, 0.08 + n * 0.02);
+  const angle = (i: number) => (back ? (n === 1 ? Math.PI * 1.25 : Math.PI + 0.3 + (i / (n - 1)) * (Math.PI - 0.6)) : (i / n) * Math.PI * 2);
   const stripes = candleStripes(color) ?? undefined;
   return (
     <group>
       {Array.from({ length: n }, (_, i) => {
-        const a = (i / n) * Math.PI * 2;
+        const a = angle(i);
         const x = Math.cos(a) * ring;
         const z = Math.sin(a) * ring;
         return (
@@ -751,7 +753,7 @@ function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?
           )}
         </group>
       )}
-      {v.candles > 0 && <Candles n={v.candles} r={top.r} y={topY} color={v.accent} />}
+      {v.candles > 0 && <Candles n={v.candles} r={top.r} y={topY} color={v.accent} back={!!v.text || !!v.motif || v.figure} />}
       {v.figure && <Figure y={topY} r={top.r} color={v.accent} />}
       {v.motif && (
         <MotifTopper

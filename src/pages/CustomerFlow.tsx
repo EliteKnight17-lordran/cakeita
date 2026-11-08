@@ -267,7 +267,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
               {tx('They got it in Cakeita already. Their quote will show up under My cakes the moment they approve it. Sending it on Messenger too helps them reply faster.', 'Natanggap na nila sa Cakeita. Lalabas ang quote nila sa "Mga cake ko" pag in-approve nila. Mas mabilis ang sagot kung ipapadala mo rin sa Messenger.')}
             </Notice>
           )}
-          {visual && <CakeView visual={visual} description={description} interactive={false} />}
+          {visual && <CakeView visual={visual} description={description} />}
           {draft.sentLink && draft.sentMessage && (
             <ShareBox url={draft.sentLink} message={draft.sentMessage} title={tx('Cake request', 'Cake request')} contact={menu.contact} qrLabel={tx('QR code of your request for the baker to scan', 'QR code ng request mo para i-scan ng baker')} />
           )}
