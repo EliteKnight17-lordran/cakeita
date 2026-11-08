@@ -6,15 +6,38 @@ import { Cake2D } from './Cake2D';
 const Cake3D = lazy(() => import('./Cake3D'));
 
 let webglCache: boolean | null = null;
+let softwareGL = false;
 export function hasWebGL(): boolean {
   if (webglCache !== null) return webglCache;
   try {
     const c = document.createElement('canvas');
-    webglCache = !!(c.getContext('webgl2') || c.getContext('webgl'));
+    const gl = (c.getContext('webgl2') || c.getContext('webgl')) as WebGLRenderingContext | null;
+    webglCache = !!gl;
+    if (gl) {
+      const info = gl.getExtension('WEBGL_debug_renderer_info');
+      const name = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+      softwareGL = /swiftshader|llvmpipe|softpipe|software|basic render/i.test(name);
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+    }
   } catch {
     webglCache = false;
   }
   return webglCache;
+}
+
+/**
+ * True on computers that draw 3D without a graphics chip (old PCs, virtual machines, test robots).
+ * They get "lite 3D": no auto-turn, no studio lighting or shadows, so the page stays responsive.
+ */
+export function isSoftwareGL(): boolean {
+  hasWebGL();
+  try {
+    // Testing aid: force the full 3D look even without a graphics chip.
+    if (localStorage.getItem('cakeita.full3d') === '1') return false;
+  } catch {
+    /* storage blocked */
+  }
+  return softwareGL;
 }
 
 class GLBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
@@ -91,6 +114,7 @@ export function CakeView({ visual, description, interactive = true, className = 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const reduceMotion = useMemo(() => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches, []);
   const use3D = interactive && !prefs.force2D && typeof document !== 'undefined' && hasWebGL();
+  const lite = use3D && isSoftwareGL();
 
   const flat = <Cake2D ref={svgRef} visual={visual} title={description} className="h-full w-full" />;
 
@@ -119,7 +143,7 @@ export function CakeView({ visual, description, interactive = true, className = 
         {use3D ? (
           <GLBoundary fallback={flat}>
             <Suspense fallback={<div className="h-full w-full animate-pulse">{flat}</div>}>
-              <Cake3D visual={visual} spin={spin} autoRotate={!touched && !idle && !reduceMotion} onReady={(c) => (canvasRef.current = c)} />
+              <Cake3D visual={visual} spin={spin} lite={lite} autoRotate={!lite && !touched && !idle && !reduceMotion} onReady={(c) => (canvasRef.current = c)} />
             </Suspense>
           </GLBoundary>
         ) : (

@@ -137,7 +137,7 @@ async function main() {
 
     // Nearby bakers map: same cake, each baker's own price.
     await customer.getByRole('link', { name: /Ikumpara ang malapit na baker/ }).click();
-    await customer.getByRole('heading', { name: /Mga baker na malapit/ }).waitFor().catch(async (e) => { console.log('URL', customer.url(), 'ERRORS', customer.errors.join(' | ')); await customer.screenshot({ path: join(OUT, 'fail.png') }); throw e; });
+    await customer.getByRole('heading', { name: /Mga baker na malapit/ }).waitFor();
     check('map loads with price pins', await waitTrue(async () => (await customer.locator('.leaflet-marker-icon .pin').count()) >= 2), `${await customer.locator('.leaflet-marker-icon .pin').count()} pins`);
     const requestButtons = customer.getByRole('button', { name: /^Mag-request kay/ });
     check('map lists bakers who can make it', (await requestButtons.count()) >= 1, `${await requestButtons.count()} bakers`);

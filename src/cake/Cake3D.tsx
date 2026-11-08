@@ -629,17 +629,19 @@ export interface Cake3DProps {
   visual: CakeVisual;
   spin: number;
   autoRotate: boolean;
+  /** No graphics chip: skip studio lighting and shadows, lower resolution. */
+  lite?: boolean;
   onReady?: (canvas: HTMLCanvasElement) => void;
 }
 
-export default function Cake3D({ visual, spin, autoRotate, onReady }: Cake3DProps) {
+export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady }: Cake3DProps) {
   const totalH = visual.tiers.reduce((a, t) => a + t.h * K, 0);
   const maxR = Math.max(...visual.tiers.map((t) => (t.d / 2) * K * 1.6));
   const dist = Math.max(1.8, Math.max(totalH * 2.7, maxR * 4.3));
   const lookY = totalH * 0.45;
   // Start sharp; if this phone can't keep up, drop the resolution (and shadows) instead of stuttering.
-  const [dpr, setDpr] = useState(1.75);
-  const [lowPower, setLowPower] = useState(false);
+  const [dpr, setDpr] = useState(lite ? 1 : 1.75);
+  const [lowPower, setLowPower] = useState(lite);
   return (
     <Canvas
       shadows={!lowPower}
@@ -649,8 +651,9 @@ export default function Cake3D({ visual, spin, autoRotate, onReady }: Cake3DProp
       gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
       onCreated={({ gl }) => onReady?.(gl.domElement)}
     >
-      <PerformanceMonitor onDecline={() => setDpr(1)} onFallback={() => { setDpr(1); setLowPower(true); }} flipflops={2} />
+      {!lite && <PerformanceMonitor onDecline={() => setDpr(1)} onFallback={() => { setDpr(1); setLowPower(true); }} flipflops={2} />}
       {/* Soft studio light, rendered once on the device (no downloads). */}
+      {!lite && (
       <Environment resolution={128} frames={1} environmentIntensity={0.85}>
         <Lightformer form="rect" intensity={2.4} color="#fff4e8" position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[10, 10, 1]} />
         <Lightformer form="rect" intensity={1.8} color="#ffffff" position={[-5, 2, 2]} rotation-y={Math.PI / 2} scale={[5, 4, 1]} />
@@ -658,12 +661,13 @@ export default function Cake3D({ visual, spin, autoRotate, onReady }: Cake3DProp
         <Lightformer form="ring" intensity={1.6} color="#ffffff" position={[2, 3, 6]} scale={2.5} />
         <Lightformer form="rect" intensity={0.5} color="#f6e6d6" position={[0, -3, 0]} rotation-x={-Math.PI / 2} scale={[10, 10, 1]} />
       </Environment>
-      <ambientLight intensity={0.18} />
-      <hemisphereLight args={['#fff6ea', '#d9c7b0', 0.35]} />
+      )}
+      <ambientLight intensity={lite ? 0.55 : 0.18} />
+      <hemisphereLight args={['#fff6ea', '#d9c7b0', lite ? 0.7 : 0.35]} />
       <directionalLight position={[2.5, 4, 2]} intensity={1.35} castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.02} />
       <directionalLight position={[-3, 2, -2]} intensity={0.35} color="#ffe1ec" />
       <CakeModel v={visual} spin={spin} />
-      <ContactShadows position={[0, -0.161, 0]} opacity={0.45} scale={maxR * 6} blur={2.6} far={1.2} />
+      {!lowPower && <ContactShadows position={[0, -0.161, 0]} opacity={0.45} scale={maxR * 6} blur={2.6} far={1.2} />}
       <OrbitControls
         target={[0, lookY, 0]}
         enablePan={false}
