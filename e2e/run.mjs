@@ -108,6 +108,19 @@ async function main() {
     await axe(customer, 'home');
     await shot(customer, '01-home');
 
+    // Real-product pages: Demo tab, My cakes, Account (cloud is off for test robots, so it says so).
+    await customer.goto(`${BASE}#/demo`);
+    check('demo tab offers the sample customer and bakery', await customer.getByRole('link', { name: /Mag-order bilang customer/ }).waitFor({ timeout: 10000 }).then(() => true, () => false));
+    await axe(customer, 'demo tab');
+    await customer.goto(`${BASE}#/me`);
+    check('my cakes shows an empty state', await customer.getByText(/Wala pang request/).waitFor({ timeout: 10000 }).then(() => true, () => false));
+    await customer.goto(`${BASE}#/account`);
+    check('account page loads (offline mode for robots)', await customer.getByRole('heading', { name: 'Account' }).waitFor({ timeout: 10000 }).then(() => true, () => false));
+    await axe(customer, 'account');
+    await customer.goto(BASE);
+    await customer.getByRole('button', { name: 'Menu' }).click();
+    check('phone menu opens with main links', await customer.getByRole('link', { name: 'Mga cake ko' }).waitFor({ timeout: 10000 }).then(() => true, () => false));
+
     await customer.goto(`${BASE}#/b/sample`);
     // One page: no Next buttons. Designs are there before anything is typed.
     check('order form is one page (no Next button)', (await customer.getByRole('button', { name: 'Sunod' }).count()) === 0);

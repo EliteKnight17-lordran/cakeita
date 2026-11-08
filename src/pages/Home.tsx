@@ -8,6 +8,7 @@ import { toPublicMenu } from '../domain/pricing';
 import { createSampleBakery } from '../domain/starterMenus';
 import { toVisual } from '../domain/visual';
 import { useDb } from '../data/store';
+import { useInstall } from '../lib/install';
 import { usePrefs, useTx } from '../lib/prefs';
 
 const HERO_MENU = toPublicMenu(createSampleBakery());
@@ -17,6 +18,7 @@ export default function Home() {
   const tx = useTx();
   const prefs = usePrefs();
   const db = useDb();
+  const install = useInstall();
   return (
     <Layout>
       <div className="space-y-12">
@@ -39,6 +41,11 @@ export default function Home() {
               {tx('Try the demo', 'Subukan ang demo')} <IconArrow />
             </Link>
           </div>
+          {install && (
+            <button type="button" className="btn-ghost mx-auto" onClick={install}>
+              {tx('Install Cakeita on this phone', 'I-install ang Cakeita sa phone')}
+            </button>
+          )}
           <p className="text-sm text-ink-soft">
             {db.bakery ? tx('Welcome back.', 'Welcome back.') : tx('Are you a baker?', 'Baker ka ba?')}{' '}
             <Link to="/baker" className="font-semibold text-berry underline underline-offset-4">

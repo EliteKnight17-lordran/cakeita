@@ -13,6 +13,24 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.0',
+    date: '2026-11-09',
+    en: [
+      'Accounts: sign in with Facebook, Google or an emailed link. Customers still order without one.',
+      'Bakers with an account get a short link, a live inbox (requests arrive by themselves), quotes that reach the customer live, and confirmations back. Messenger links keep working.',
+      'Real bakers can put themselves on the "bakers near me" map; they show before the sample shops.',
+      'New menu: Find bakers, My cakes, For bakers, Demo. Everything pretend now lives in the Demo tab, with an offline demo mode.',
+      'Install Cakeita on your phone, and it opens with no signal after one visit.',
+    ],
+    tl: [
+      'Accounts: mag-sign in gamit ang Facebook, Google o link sa email. Puwede pa ring mag-order ang customer nang walang account.',
+      'Ang baker na may account ay may maikling link, live inbox, quote na live na nakikita ng customer, at live na confirmation. Gumagana pa rin ang Messenger links.',
+      'Puwede nang ilagay ng totoong baker ang sarili sa mapa; nauuna sila sa mga sample shop.',
+      'Bagong menu: Maghanap ng baker, Mga cake ko, Para sa baker, Demo. Nasa Demo tab na ang lahat ng pang-demo, may offline demo mode.',
+      'I-install ang Cakeita sa phone; bumubukas kahit walang signal pagkatapos ng unang bisita.',
+    ],
+  },
+  {
     version: '1.2.3',
     date: '2026-11-08',
     en: [

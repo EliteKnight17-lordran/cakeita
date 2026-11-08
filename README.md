@@ -43,10 +43,17 @@ npm run dev          # http://localhost:5173
 | GitHub repo | Done | Source code and CI | Free |
 | Vercel account (sign in with GitHub) | For a public link | Free static hosting + the optional AI route | Free (Hobby) |
 | Google AI Studio key (`GEMINI_API_KEY`) | Optional | Smarter reading of messages and inspo photos | Free tier |
-| Firebase / database | **Not needed** | Links carry the data; nothing is stored on a server | — |
+| Firebase project (Auth + Firestore, Spark plan) | For accounts | Sign-in (Facebook, Google, email link), cloud inbox, live quotes, real bakers on the map. Config is in `src/cloud/config.ts` (public by design). Paste `firestore.rules` into Firestore → Rules. Without it, everything still works through Messenger links | Free (Spark) |
 | Map pictures | Nothing to set up | CARTO Voyager tiles (OpenStreetMap data), falls back to OpenStreetMap tiles. Needs internet; prices and the list work without it | Free, with attribution |
 
 Without a Gemini key, everything still works with the built-in offline Taglish reader.
+
+### Accounts (Firebase)
+
+1. Authentication → Sign-in method: enable **Google**, **Email/Password** with **Email link**, and **Facebook** (needs a Meta app's App ID and secret; paste Firebase's OAuth redirect URI into the Meta app, set its privacy policy URL, switch it to Live).
+2. Authentication → Settings → Authorized domains: add your Vercel domain.
+3. Firestore → Rules: paste `firestore.rules` and Publish. Test them locally with `npm run test:rules` (needs `firebase-tools`).
+4. Customers never need an account. A device can switch the cloud off in the **Demo** tab (offline demo mode); test robots run offline automatically.
 
 ### Environment variables
 
@@ -108,12 +115,13 @@ Frosting and decorations scale with cake size. The customer's estimate and the b
 
 ## Known limits
 
-- **The map bakeries are fictional samples** for the demo. Real bakers send a listing from **My link → Get on the map**, and the team adds them to `src/data/directory.ts`. Self-serve listing would need a small database later (that is a decision for after the pilot).
+- **The sample map bakeries are fictional** and labeled. Real bakers who sign in can list themselves (pin rounded to about 100 m); they show first on the map.
+- Anyone can send a request to a listed baker without an account. Spam protection (Firebase App Check) is a next step.
 - Map pictures need internet. Free map tiles have fair-use limits, fine for a pilot, not for a big launch.
 
 - The 3D cake is a concept, not a photo. Every view says so.
 - Sample ingredient prices are estimates (Metro Manila, late 2026, unverified) and are labeled "estimate, edit me".
-- Data is per device (browser storage). Bakers should use **Download backup**. Moving between phones uses links, not live sync.
+- Without an account, data is per device (browser storage). With an account, the bakery and "My cakes" sync to Firestore; the phone stays the working copy, so it keeps working offline.
 - A bakery link carries the menu; after big price changes the baker shares the new link. The baker always re-checks the price at approval.
 - Trademarked characters are turned into generic themes; bakers should use licensed toppers.
 - Voice price updates use the browser's speech recognition (Chrome on Android works; iPhone Safari support varies).
