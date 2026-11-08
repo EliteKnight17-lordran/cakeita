@@ -9,7 +9,6 @@ import type { PublicMenu } from '../domain/types.js';
  */
 
 export const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 
 export interface GeminiInput {
   apiKey: string;
@@ -21,7 +20,7 @@ export interface GeminiInput {
   timeoutMs?: number;
 }
 
-export type GeminiResult = { ok: true; reading: AiReading; attempts: number } | { ok: false; error: string; attempts: number };
+export type GeminiResult = { ok: true; reading: AiReading; attempts: number; model?: string } | { ok: false; error: string; attempts: number };
 
 export function buildPrompt(menu: PublicMenu, text: string, hasImage: boolean): string {
   const parts = menu.components.map((c) => ({ id: c.id, name: c.name, category: c.category }));
@@ -59,10 +58,25 @@ export function extractJson(raw: string): unknown {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
+/**
+ * Models to try, best first. Google retires and gates models over time (since Sept 2026 the
+ * 2.5 models only serve keys that used them before), so a 404/403/429 on one model moves on
+ * to the next instead of failing. GEMINI_MODEL (comma-separated) overrides the list.
+ */
+export const DEFAULT_GEMINI_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
+/** Kept for older imports: the first model tried. */
+export const DEFAULT_GEMINI_MODEL = DEFAULT_GEMINI_MODELS[0]!;
+
+export function modelList(model?: string): string[] {
+  const list = (model ?? '')
+    .split(',')
+    .map((m) => m.trim().replace(/[^a-zA-Z0-9.\-_]/g, ''))
+    .filter(Boolean);
+  return list.length ? list : DEFAULT_GEMINI_MODELS;
+}
+
 export async function readWithGemini(input: GeminiInput): Promise<GeminiResult> {
   const fetchFn = input.fetchFn ?? fetch;
-  const model = (input.model || DEFAULT_GEMINI_MODEL).replace(/[^a-zA-Z0-9.\-_]/g, '');
-  const url = `${GEMINI_ENDPOINT}/${model}:generateContent`;
   const prompt = buildPrompt(input.menu, input.text, !!input.image);
   const contentParts: unknown[] = [{ text: prompt }];
   if (input.image) contentParts.push({ inline_data: { mime_type: input.image.mimeType, data: input.image.base64 } });
@@ -72,32 +86,46 @@ export async function readWithGemini(input: GeminiInput): Promise<GeminiResult> 
   });
 
   let lastError = 'unknown error';
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), input.timeoutMs ?? 12_000);
-    try {
-      const res = await fetchFn(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-goog-api-key': input.apiKey },
-        body,
-        signal: ctrl.signal,
-      });
-      if (!res.ok) {
-        lastError = `Gemini HTTP ${res.status}`;
-        // 4xx (bad key, quota) won't fix itself on retry.
-        if (res.status >= 400 && res.status < 500 && res.status !== 429) break;
-        continue;
+  let attempts = 0;
+  models: for (const model of modelList(input.model)) {
+    const url = `${GEMINI_ENDPOINT}/${model}:generateContent`;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      attempts++;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), input.timeoutMs ?? 12_000);
+      try {
+        const res = await fetchFn(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': input.apiKey },
+          body,
+          signal: ctrl.signal,
+        });
+        if (!res.ok) {
+          lastError = `Gemini HTTP ${res.status}`;
+          // Model missing, not allowed for this key, or out of quota: try the next model.
+          if (res.status === 404 || res.status === 403 || res.status === 429) continue models;
+          // Other 4xx (bad key, bad request) won't fix itself.
+          if (res.status >= 400 && res.status < 500) break models;
+          continue;
+        }
+        const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+        const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
+        const parsed = aiReadingSchema.safeParse(extractJson(text));
+        if (parsed.success) return { ok: true, reading: parsed.data, attempts, model };
+        lastError = 'AI reply did not match the expected format';
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') {
+          // A slow model will be slow again; don't make the customer wait twice.
+          lastError = 'AI took too long';
+          break models;
+        }
+        lastError = 'AI reply was not valid JSON';
+      } finally {
+        clearTimeout(timer);
       }
-      const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-      const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
-      const parsed = aiReadingSchema.safeParse(extractJson(text));
-      if (parsed.success) return { ok: true, reading: parsed.data, attempts: attempt };
-      lastError = 'AI reply did not match the expected format';
-    } catch (e) {
-      lastError = (e as Error).name === 'AbortError' ? 'AI took too long' : 'AI reply was not valid JSON';
-    } finally {
-      clearTimeout(timer);
     }
+    // Two bad replies from a working model: another model won't be faster for the customer.
+    break;
   }
-  return { ok: false, error: lastError, attempts: 2 };
+  return { ok: false, error: lastError, attempts };
 }

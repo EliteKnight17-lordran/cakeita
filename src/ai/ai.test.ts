@@ -4,7 +4,7 @@ import { readRequest } from '../domain/requestReader';
 import { aiReadingSchema, cakeRequestSchema, confirmLinkSchema } from '../domain/schemas';
 import { createBakeryFromStarter, createSampleBakery } from '../domain/starterMenus';
 import { decodePayload, encodePayload } from '../lib/codec';
-import { buildPrompt, extractJson, readWithGemini } from './gemini';
+import { buildPrompt, DEFAULT_GEMINI_MODELS, extractJson, modelList, readWithGemini } from './gemini';
 import { mergeReading } from './merge';
 import { RateLimiter } from './rateLimit';
 
@@ -60,11 +60,28 @@ describe('readWithGemini', () => {
     const r = await readWithGemini({ apiKey: 'k', text: 'x', menu, fetchFn });
     expect(r).toMatchObject({ ok: true, attempts: 2 });
   });
-  it('does not retry a bad API key (4xx)', async () => {
-    const fetchFn = vi.fn().mockResolvedValue(new Response('{}', { status: 403 }));
+  it('does not retry a bad API key (400)', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response('{}', { status: 400 }));
     const r = await readWithGemini({ apiKey: 'bad', text: 'x', menu, fetchFn });
-    expect(r).toMatchObject({ ok: false, error: 'Gemini HTTP 403' });
+    expect(r).toMatchObject({ ok: false, error: 'Gemini HTTP 400' });
     expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+  it('moves to the next model when one is retired, gated or out of quota', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('{}', { status: 404 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 403 }))
+      .mockResolvedValueOnce(reply('{"componentIds":[]}'));
+    const r = await readWithGemini({ apiKey: 'k', text: 'x', menu, fetchFn });
+    expect(r).toMatchObject({ ok: true, model: DEFAULT_GEMINI_MODELS[2] });
+    const urls = fetchFn.mock.calls.map((c) => String(c[0]));
+    expect(urls[0]).toContain(DEFAULT_GEMINI_MODELS[0]);
+    expect(urls[1]).toContain(DEFAULT_GEMINI_MODELS[1]);
+  });
+  it('GEMINI_MODEL can list its own models, comma-separated', () => {
+    expect(modelList(' gemini-x , gemini-y ')).toEqual(['gemini-x', 'gemini-y']);
+    expect(modelList('')).toEqual(DEFAULT_GEMINI_MODELS);
+    expect(modelList('bad/../name')).toEqual(['bad..name']);
   });
   it('times out slow calls', async () => {
     const fetchFn = vi.fn((_u: unknown, init?: RequestInit) => new Promise<Response>((_res, rej) => {

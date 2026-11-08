@@ -55,7 +55,7 @@ Copy `.env.example` to `.env.local` for local work. On Vercel, set them in Proje
 | Name | Where | Notes |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | Server only | From https://aistudio.google.com/apikey. Never prefix with `VITE_`. |
-| `GEMINI_MODEL` | Server only | Defaults to `gemini-2.5-flash`. Check the current free Flash model name at https://ai.google.dev/gemini-api/docs/models before the demo. |
+| `GEMINI_MODEL` | Server only | Optional, comma-separated list tried in order. Defaults to `gemini-3.6-flash, gemini-3.5-flash-lite, gemini-2.5-flash`; a retired, gated or rate-limited model falls through to the next. |
 
 ## Deploy (free)
 
