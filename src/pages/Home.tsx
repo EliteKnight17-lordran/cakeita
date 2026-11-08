@@ -32,11 +32,11 @@ export default function Home() {
             )}
           </p>
           <div className="mx-auto flex max-w-md flex-col gap-2.5 pt-1 sm:max-w-none sm:flex-row sm:justify-center">
-            <Link to="/b/sample" className="btn min-h-14 px-7 text-[1.05rem]">
-              {tx('Order a cake', 'Mag-order ng cake')} <IconArrow />
+            <Link to="/near" className="btn min-h-14 px-7 text-[1.05rem]">
+              <IconPin /> {tx('Find a baker near me', 'Maghanap ng baker na malapit')}
             </Link>
-            <Link to="/near" className="btn-secondary min-h-14 px-6 text-[1.05rem]">
-              <IconPin /> {tx('Find bakers near me', 'Maghanap ng baker na malapit')}
+            <Link to="/demo" className="btn-secondary min-h-14 px-6 text-[1.05rem]">
+              {tx('Try the demo', 'Subukan ang demo')} <IconArrow />
             </Link>
           </div>
           <p className="text-sm text-ink-soft">
@@ -83,9 +83,10 @@ export default function Home() {
           </div>
           <ul className="space-y-2.5 text-[0.95rem]">
             {[
-              tx('Free. No sign-up. Works on a basic phone and weak signal.', 'Libre. Walang sign-up. Gumagana sa simpleng phone at mahinang signal.'),
+              tx('Free. Customers order without signing up. Works on a basic phone and weak signal.', 'Libre. Walang sign-up para sa customer. Gumagana sa simpleng phone at mahinang signal.'),
               tx('AI only reads the request. Prices always come from your own costs.', 'Binabasa lang ng AI ang request. Galing lagi sa sarili mong gastos ang presyo.'),
               tx('No payments inside the app, so no fake payment screens.', 'Walang bayaran sa app, kaya walang pekeng payment screen.'),
+              tx('Bakers sign in with Facebook, Google or email: a live inbox, short link and a spot on the map.', 'Nagsa-sign in ang baker gamit ang Facebook, Google o email: live inbox, maikling link at puwesto sa mapa.'),
               tx('Bigger text button at the top for Lolo and Lola.', 'May button sa taas para lumaki ang letra, para kay Lolo at Lola.'),
             ].map((t) => (
               <li key={t} className="flex gap-2.5">

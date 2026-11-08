@@ -4,6 +4,7 @@ import { publicMenuSchema } from '../domain/schemas';
 import type { PublicMenu } from '../domain/types';
 import { localBakeryFor, useDb } from '../data/store';
 import { decodePayload, type LinkError } from '../lib/codec';
+import { cloudEnabled } from '../cloud/config';
 
 export type MenuState = { status: 'loading' } | { status: 'ok'; menu: PublicMenu } | { status: 'error'; error: LinkError | 'missing' | 'mismatch' };
 
@@ -26,6 +27,20 @@ export function useMenu(slug: string, code: string | null): MenuState {
         if (r.ok && r.value.slug === slug) setState({ status: 'ok', menu: r.value });
         else setState({ status: 'error', error: r.ok ? 'mismatch' : r.error });
         return;
+      }
+      // Short link (#/b/my-bakery): the menu lives in the cloud.
+      if (cloudEnabled()) {
+        try {
+          const { fetchMenu } = await import('../cloud/data');
+          const menu = await fetchMenu(slug);
+          if (!alive) return;
+          if (menu) {
+            setState({ status: 'ok', menu });
+            return;
+          }
+        } catch {
+          /* offline: fall through */
+        }
       }
       if (alive) setState({ status: 'error', error: 'missing' });
     })();

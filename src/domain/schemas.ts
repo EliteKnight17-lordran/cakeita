@@ -74,6 +74,7 @@ export const publicMenuSchema = z.object({
   notOffered: z.array(z.object({ name: shortText(60), keywords: z.array(shortText(40)).max(20) })).max(60),
   isSample: z.boolean(),
   publishedAt: z.string().max(40),
+  owner: z.string().regex(/^[A-Za-z0-9]{10,128}$/).optional().catch(undefined),
 });
 
 export const cakeRequestSchema = z.object({

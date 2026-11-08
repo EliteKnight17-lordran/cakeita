@@ -1,0 +1,104 @@
+rules_version = '2';
+
+// Cakeita security rules. Paste into Firebase console -> Firestore Database -> Rules -> Publish.
+// Data layout and reasons are in src/cloud/data.ts. Payloads are JSON text, re-checked by the app.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isUid(uid) { return signedIn() && request.auth.uid == uid; }
+    function text(v, max) { return v is string && v.size() <= max; }
+    function stamp(v) { return v is string && v.size() <= 40; }
+    function menuDoc(slug) { return /databases/$(database)/documents/menus/$(slug); }
+    function quoteDoc(id) { return /databases/$(database)/documents/quotes/$(id); }
+
+    // Private bakery: costs, margins, recipes. Only the owner.
+    match /bakeries/{uid} {
+      allow read, delete: if isUid(uid);
+      allow create, update: if isUid(uid)
+        && request.resource.data.keys().hasOnly(['data', 'slug', 'updatedAt'])
+        && text(request.resource.data.data, 400000)
+        && text(request.resource.data.slug, 40)
+        && stamp(request.resource.data.updatedAt);
+    }
+
+    // Public menu and map pin. Link names (slugs) are first come, first served.
+    match /menus/{slug} {
+      allow read: if true;
+      allow create: if signedIn()
+        && slug.matches('^[a-z0-9-]{1,40}$')
+        && request.resource.data.ownerUid == request.auth.uid
+        && validMenu();
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid
+        && validMenu();
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      function validMenu() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['ownerUid', 'slug', 'name', 'listed', 'lat', 'lng', 'area', 'deliveryKm', 'menu', 'updatedAt'])
+          && d.slug == slug
+          && text(d.name, 80)
+          && d.listed is bool
+          && (d.lat == null || (d.lat is number && d.lat >= -90 && d.lat <= 90))
+          && (d.lng == null || (d.lng is number && d.lng >= -180 && d.lng <= 180))
+          && text(d.area, 80)
+          && d.deliveryKm is number && d.deliveryKm >= 0 && d.deliveryKm <= 100
+          && text(d.menu, 100000)
+          && stamp(d.updatedAt);
+      }
+    }
+
+    // Customer -> baker. No account needed to send; only the baker can read.
+    match /requests/{id} {
+      allow create: if id.matches('^[A-Za-z0-9-]{4,64}$')
+        && request.resource.data.keys().hasOnly(['bakerUid', 'slug', 'req', 'createdAt'])
+        && text(request.resource.data.req, 20000)
+        && stamp(request.resource.data.createdAt)
+        && exists(menuDoc(request.resource.data.slug))
+        && get(menuDoc(request.resource.data.slug)).data.ownerUid == request.resource.data.bakerUid;
+      allow read, delete: if signedIn() && resource.data.bakerUid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // Baker -> customer. Readable by id only (ids are long and random); never listed.
+    match /quotes/{id} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.bakerUid == request.auth.uid
+        && validQuote();
+      allow update: if signedIn()
+        && resource.data.bakerUid == request.auth.uid
+        && request.resource.data.bakerUid == request.auth.uid
+        && validQuote();
+      allow delete: if signedIn() && resource.data.bakerUid == request.auth.uid;
+
+      function validQuote() {
+        return request.resource.data.keys().hasOnly(['bakerUid', 'quote', 'updatedAt'])
+          && text(request.resource.data.quote, 30000)
+          && stamp(request.resource.data.updatedAt);
+      }
+    }
+
+    // Customer -> baker: "Yes, I'll take it." Only for a quote that exists, only once.
+    match /confirmations/{id} {
+      allow create: if exists(quoteDoc(id))
+        && request.resource.data.keys().hasOnly(['bakerUid', 'conf', 'createdAt'])
+        && request.resource.data.bakerUid == get(quoteDoc(id)).data.bakerUid
+        && text(request.resource.data.conf, 2000)
+        && stamp(request.resource.data.createdAt);
+      allow read, delete: if signedIn() && resource.data.bakerUid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // A customer's own "My cakes" list.
+    match /users/{uid} {
+      allow read, delete: if isUid(uid);
+      allow create, update: if isUid(uid)
+        && request.resource.data.keys().hasOnly(['myRequests', 'updatedAt'])
+        && text(request.resource.data.myRequests, 200000)
+        && stamp(request.resource.data.updatedAt);
+    }
+  }
+}

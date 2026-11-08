@@ -116,6 +116,10 @@ export interface Bakery {
   settings: BakerySettings;
   isSample: boolean;
   updatedAt: string;
+  /** Firebase account that owns this bakery, once the baker signs in. */
+  cloudUid?: string;
+  /** Where the bakery is, for the "bakers near me" map. Only shown when listed is true. */
+  location?: { lat: number; lng: number; area: string; deliveryKm: number; listed: boolean };
 }
 
 /** What the customer (or baker) picked. IDs only, never prices. */
@@ -176,6 +180,8 @@ export interface PublicMenu {
   notOffered: Array<{ name: string; keywords: string[] }>;
   isSample: boolean;
   publishedAt: string;
+  /** Account that receives requests in the cloud inbox (absent = link-only bakery). */
+  owner?: string;
 }
 
 export type OrderStatus =
@@ -235,7 +241,7 @@ export interface OrderEvent {
 
 export interface Order extends CakeRequest {
   status: OrderStatus;
-  source: 'link' | 'same-device' | 'pasted-dm';
+  source: 'link' | 'same-device' | 'pasted-dm' | 'cloud';
   quote: ApprovedQuote | null;
   confirmedAt: string | null;
   customerNote: string;

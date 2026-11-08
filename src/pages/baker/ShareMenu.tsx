@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { QR, ShareBox } from '../../components/ShareBox';
 import { Field, Notice } from '../../components/ui';
 import { IconCheck, IconPin, IconPrint } from '../../components/icons';
-import { useDb } from '../../data/store';
+import { repo, useDb } from '../../data/store';
 import { copyText, menuLink } from '../../lib/links';
 import { useTx } from '../../lib/prefs';
 import { BakerShell } from './BakerShell';
@@ -36,9 +37,15 @@ export default function ShareMenu() {
             </a>
           </>
         )}
-        {link && <GetOnMap link={link} name={db.bakery.name} city={db.bakery.city} />}
+        {link && (db.bakery.cloudUid && !db.bakery.isSample ? <ListOnMap /> : <GetOnMap link={link} name={db.bakery.name} city={db.bakery.city} />)}
+        {!db.bakery.cloudUid && !db.bakery.isSample && (
+          <Notice tone="info" title={tx('Get a short link and a live inbox', 'Kumuha ng maikling link at live inbox')}>
+            {tx('Sign in and your link becomes short, requests land in your inbox by themselves, and you can list yourself on the map. ', 'Mag-sign in para maikli ang link mo, kusang dumarating ang requests, at puwede kang mapasama sa mapa. ')}
+            <Link to="/account" className="font-semibold underline">{tx('Sign in', 'Mag-sign in')}</Link>
+          </Notice>
+        )}
         <Notice tone="info" title={tx('When you change prices', 'Kapag binago mo ang presyo')}>
-          {tx('Your menu travels inside the link, so share the new link after big price changes. You always check and approve the final price anyway.', 'Nasa loob ng link ang menu mo, kaya i-share ang bagong link kapag malaki ang binago sa presyo. Ikaw pa rin ang nag-a-approve ng final na presyo.')}
+          {db.bakery.cloudUid ? tx('Your link always shows your latest menu. You still check and approve every final price.', 'Laging bago ang menu sa link mo. Ikaw pa rin ang nag-a-approve ng bawat final na presyo.') : tx('Your menu travels inside the link, so share the new link after big price changes. You always check and approve the final price anyway.', 'Nasa loob ng link ang menu mo, kaya i-share ang bagong link kapag malaki ang binago sa presyo. Ikaw pa rin ang nag-a-approve ng final na presyo.')}
         </Notice>
       </div>
     </BakerShell>
@@ -92,6 +99,49 @@ function GetOnMap({ link, name, city }: { link: string; name: string; city: stri
           {tx('Copy my map listing', 'I-copy ang listing ko')}
         </button>
       </div>
+      {status && <p className="text-sm font-semibold" aria-live="polite">{status}</p>}
+    </section>
+  );
+}
+
+/** Signed-in bakers list themselves on the map directly; it updates with every menu change. */
+function ListOnMap() {
+  const tx = useTx();
+  const db = useDb();
+  const b = db.bakery!;
+  const loc = b.location ?? { lat: 0, lng: 0, area: b.city, deliveryKm: 5, listed: false };
+  const [status, setStatus] = useState('');
+  const save = (patch: Partial<NonNullable<typeof b.location>>) => repo.setBakery({ ...b, location: { ...loc, ...patch } });
+  const hasPin = !!(loc.lat || loc.lng);
+  const locate = () => {
+    setStatus('');
+    navigator.geolocation?.getCurrentPosition(
+      // Rounded to about 100 m so a home baker's exact house is never shown.
+      (p) => save({ lat: Math.round(p.coords.latitude * 1000) / 1000, lng: Math.round(p.coords.longitude * 1000) / 1000 }),
+      () => setStatus(tx('Location is off. Turn it on for this site, then try again.', 'Naka-off ang location. I-on para sa site na ito at subukan ulit.')),
+      { timeout: 10_000 },
+    );
+  };
+  return (
+    <section className="card space-y-3" aria-labelledby="map-h">
+      <h2 id="map-h" className="font-display text-xl font-semibold">
+        <IconPin className="-mt-1 mr-1.5 inline text-berry" size={20} />
+        {tx('Be on the map', 'Mapasama sa mapa')}
+      </h2>
+      <p>{tx('Customers nearby compare bakers and see your price for their exact cake, worked out from your own costs.', 'Ikinukumpara ng customer ang mga baker at makikita ang presyo mo para sa cake nila, mula sa sarili mong gastos.')}</p>
+      <Field id="map-area" label={tx('Area customers see', 'Area na makikita ng customer')} hint={tx('Baking from home? Use your barangay or a landmark, not your house address.', 'Sa bahay nagbe-bake? Barangay o landmark ang ilagay, hindi ang address ng bahay.')}>
+        <input id="map-area" className="input" maxLength={80} value={loc.area} onChange={(e) => save({ area: e.target.value })} aria-describedby="map-area-hint" />
+      </Field>
+      <Field id="map-km" label={tx('Delivery distance (km, 0 = pickup only)', 'Layo ng delivery (km, 0 = pickup lang)')}>
+        <input id="map-km" type="number" inputMode="numeric" min={0} max={50} className="input" value={loc.deliveryKm} onChange={(e) => save({ deliveryKm: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })} />
+      </Field>
+      <button type="button" className="btn-ghost" onClick={locate}>
+        {hasPin ? <><IconCheck className="text-ok-ink" /> {tx('Pin set, about 100 m (update)', 'Naka-pin, mga 100 m (i-update)')}</> : <><IconPin /> {tx('Set my pin', 'I-set ang pin ko')}</>}
+      </button>
+      <label className="flex items-center gap-3">
+        <input type="checkbox" className="h-5 w-5 accent-[#8c2246]" checked={loc.listed} disabled={!hasPin} onChange={(e) => save({ listed: e.target.checked })} />
+        <span>{hasPin ? tx('Show my bakery on the map', 'Ipakita ang bakery ko sa mapa') : tx('Set your pin first to appear on the map', 'I-set muna ang pin para lumabas sa mapa')}</span>
+      </label>
       {status && <p className="text-sm font-semibold" aria-live="polite">{status}</p>}
     </section>
   );

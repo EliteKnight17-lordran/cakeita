@@ -22,6 +22,8 @@ export interface MyRequest {
   requestLink: string;
   quoteLink?: string;
   status: 'sent' | 'quoted' | 'confirmed';
+  /** Sent to a bakery with a cloud inbox: the quote arrives here live. */
+  cloud?: boolean;
 }
 
 export interface DbState {

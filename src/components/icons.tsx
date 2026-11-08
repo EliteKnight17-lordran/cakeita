@@ -31,3 +31,8 @@ export const IconWrench = (p: P) => <Svg {...p}><path d="M14.5 6.5a4 4 0 00-5.3 
 export const IconArrow = (p: P) => <Svg {...p}><path d="M5 12h14M13 6l6 6-6 6" /></Svg>;
 export const IconChevron = (p: P) => <Svg {...p}><path d="M6 9l6 6 6-6" /></Svg>;
 export const IconHeart = (p: P) => <Svg {...p}><path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" /></Svg>;
+export const IconUser = (p: P) => <Svg {...p}><circle cx="12" cy="8.5" r="3.8" /><path d="M4.5 20a7.5 7.5 0 0115 0" /></Svg>;
+export const IconMenu = (p: P) => <Svg {...p}><path d="M4 7h16M4 12h16M4 17h16" /></Svg>;
+export const IconCloud = (p: P) => <Svg {...p}><path d="M7 18h10a4 4 0 00.6-8A6 6 0 006.2 11 3.5 3.5 0 007 18z" /></Svg>;
+export const IconMail = (p: P) => <Svg {...p}><rect x="3.5" y="5.5" width="17" height="13" rx="2" /><path d="M4 7l8 6 8-6" /></Svg>;
+export const IconPlay = (p: P) => <Svg {...p}><path d="M8 5.5v13l10.5-6.5z" /></Svg>;

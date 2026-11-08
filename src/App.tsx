@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { CloudSync } from './cloud/CloudSync';
 import { Layout } from './components/Layout';
 import { setPrefs } from './lib/prefs';
 import Home from './pages/Home';
@@ -15,6 +16,9 @@ const Insights = lazy(() => import('./pages/baker/Insights'));
 const ShareMenu = lazy(() => import('./pages/baker/ShareMenu'));
 const OrderDetail = lazy(() => import('./pages/baker/OrderDetail'));
 const Import = lazy(() => import('./pages/baker/Import'));
+const Account = lazy(() => import('./pages/Account'));
+const Demo = lazy(() => import('./pages/Demo'));
+const MyCakes = lazy(() => import('./pages/MyCakes'));
 
 function DevFlag() {
   const loc = useLocation();
@@ -41,10 +45,14 @@ export default function App() {
   return (
     <HashRouter>
       <DevFlag />
+      <CloudSync />
       <Suspense fallback={<div className="p-10 text-center text-ink-soft">Loading…</div>}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/demo" element={<Demo />} />
+          <Route path="/me" element={<MyCakes />} />
           <Route path="/b/:slug" element={<CustomerFlow />} />
           <Route path="/near" element={<NearBakers />} />
           <Route path="/o/:id" element={<QuotePage />} />

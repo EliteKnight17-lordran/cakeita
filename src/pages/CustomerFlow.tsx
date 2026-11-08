@@ -27,6 +27,7 @@ import { linkErrorText } from '../lib/codec';
 import { requestLink } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
 import { celebrate } from '../lib/celebrate';
+import { cloudEnabled } from '../cloud/config';
 import { useMedia } from '../lib/useMedia';
 import { MiniCake } from './MiniCake';
 import { currentCake, offlineReading } from './customerCake';
@@ -199,7 +200,18 @@ function Flow({ menu }: { menu: PublicMenu }) {
       tx('Open my request:', 'Buksan ang request ko:'),
     ].filter(Boolean);
     const message = lines.join('\n');
-    repo.addMyRequest({ id: req.id, bakerySlug: menu.slug, bakeryName: menu.name, createdAt: req.createdAt, summary: description, requestLink: link, status: 'sent' });
+    // Bakers with an account get it in their inbox right away (the Messenger message still goes too).
+    let cloud = false;
+    if (menu.owner && cloudEnabled()) {
+      try {
+        const { sendRequest } = await import('../cloud/data');
+        await Promise.race([sendRequest(req as CakeRequest, menu.owner), new Promise((_, rej) => setTimeout(() => rej(new Error('slow')), 8000))]);
+        cloud = true;
+      } catch {
+        cloud = false;
+      }
+    }
+    repo.addMyRequest({ id: req.id, bakerySlug: menu.slug, bakeryName: menu.name, createdAt: req.createdAt, summary: description, requestLink: link, status: 'sent', cloud });
     // Same device as the baker (demo laptop or a baker testing their own link): drop it straight in the inbox.
     const own = repo.get().bakery;
     if (own && own.slug === menu.slug) repo.upsertOrder(requestToOrder(req, 'same-device'));
@@ -232,6 +244,11 @@ function Flow({ menu }: { menu: PublicMenu }) {
               `I-tap ang Ipadala at piliin ang Messenger. Titingnan ito ng ${menu.name} at ipapadala ang final na presyo. Hindi pa ito order.`,
             )}
           </Bubble>
+          {repo.get().myRequests.find((r) => r.id === draft.sentId)?.cloud && (
+            <Notice tone="ok" title={tx('Delivered to the baker’s inbox', 'Nasa inbox na ng baker')}>
+              {tx('They got it in Cakeita already. Their quote will show up under My cakes the moment they approve it. Sending it on Messenger too helps them reply faster.', 'Natanggap na nila sa Cakeita. Lalabas ang quote nila sa "Mga cake ko" pag in-approve nila. Mas mabilis ang sagot kung ipapadala mo rin sa Messenger.')}
+            </Notice>
+          )}
           {visual && <CakeView visual={visual} description={description} interactive={false} />}
           {draft.sentLink && draft.sentMessage && (
             <ShareBox url={draft.sentLink} message={draft.sentMessage} title={tx('Cake request', 'Cake request')} contact={menu.contact} qrLabel={tx('QR code of your request for the baker to scan', 'QR code ng request mo para i-scan ng baker')} />

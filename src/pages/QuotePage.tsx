@@ -1,4 +1,5 @@
 import { celebrate } from '../lib/celebrate';
+import { cloudEnabled } from '../cloud/config';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { describeCake } from '../cake/describe';
@@ -26,6 +27,7 @@ export default function QuotePage() {
 
   useEffect(() => {
     let alive = true;
+    let stop: (() => void) | null = null;
     (async () => {
       if (code) {
         const r = await decodePayload(code, quoteLinkSchema);
@@ -37,10 +39,25 @@ export default function QuotePage() {
       // Same device as the baker (demo): build it from the local order.
       const order = repo.get().orders.find((o) => o.id === id);
       const bakery = repo.get().bakery;
-      if (order && bakery) setQuote(quoteLinkPayload(bakery, order));
+      if (order && bakery) {
+        setQuote(quoteLinkPayload(bakery, order));
+        return;
+      }
+      // Otherwise the quote may be waiting in the cloud; it also appears live when the baker approves.
+      if (cloudEnabled()) {
+        try {
+          const { listenQuote } = await import('../cloud/data');
+          const off = await listenQuote(id, (q) => alive && setQuote(q));
+          if (alive) stop = off;
+          else off();
+        } catch {
+          /* offline */
+        }
+      }
     })();
     return () => {
       alive = false;
+      stop?.();
     };
   }, [code, id, db.orders, tx]);
 
@@ -96,6 +113,15 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
     celebrate(e?.currentTarget);
     const c = { v: 1 as const, orderId: quote.orderId, price: quote.price, confirmedAt: new Date().toISOString(), note: note.slice(0, 300), customerName: quote.customerName };
     setLink(await confirmLink(c));
+    // Tell the baker right away if they have a cloud inbox (the Messenger link still works too).
+    if (cloudEnabled()) {
+      import('../cloud/data')
+        .then(async ({ quoteOwner, sendConfirmation }) => {
+          const owner = await quoteOwner(c.orderId);
+          if (owner) await sendConfirmation(c, owner);
+        })
+        .catch(() => {});
+    }
     // Demo on one device: apply immediately.
     const res = applyConfirmation(repo.get().orders.find((o) => o.id === quote.orderId), c);
     if (res.ok) repo.upsertOrder(res.order);

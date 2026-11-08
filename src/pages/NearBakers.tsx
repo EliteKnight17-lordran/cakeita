@@ -1,4 +1,5 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { cloudEnabled } from '../cloud/config';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Cake2D } from '../cake/Cake2D';
 import { describeCake } from '../cake/describe';
@@ -6,7 +7,7 @@ import { Layout } from '../components/Layout';
 import { IconAlert, IconArrow, IconCheck, IconPin, IconStore, IconTruck } from '../components/icons';
 import { Chip, Notice } from '../components/ui';
 import { DEFAULT_SPOT, formatKm, type LatLng } from '../domain/geo';
-import { matchBakeries, sortMatches, type BakeryMatch, type MatchSort } from '../domain/matching';
+import { matchBakeries, sortMatches, type BakeryMatch, type ListedBakery, type MatchSort } from '../domain/matching';
 import { formatPeso } from '../domain/money';
 import { toPublicMenu } from '../domain/pricing';
 import { createSampleBakery, SAMPLE_BASE_CAKES, SAMPLE_COMPONENTS } from '../domain/starterMenus';
@@ -69,7 +70,20 @@ export default function NearBakers() {
     SAMPLE_BASE_CAKES.find((b) => b.id === id)?.name ??
     id;
 
-  const listed = useMemo(() => listedBakeries(), []);
+  // Real bakers (accounts that chose to be listed) first, then the labeled sample shops.
+  const [real, setReal] = useState<ListedBakery[]>([]);
+  useEffect(() => {
+    if (!cloudEnabled()) return;
+    let alive = true;
+    import('../cloud/data')
+      .then((m) => m.fetchListings())
+      .then((l) => alive && setReal(l))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const listed = useMemo(() => [...real, ...listedBakeries()], [real]);
   const all = useMemo(() => {
     if (!cake.selection) return [];
     const want = { selection: cake.selection, servings: cake.wants.servings, budget: cake.wants.budget, eventDate: cake.eventDate };

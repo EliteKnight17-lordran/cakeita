@@ -11,6 +11,8 @@ export function appBase(): string {
 
 export async function menuLink(bakery: Bakery): Promise<string> {
   if (bakery.isSample && bakery.slug === 'sample') return `${appBase()}#/b/sample`;
+  // Bakers with an account get a short link; the menu is read from the cloud.
+  if (bakery.cloudUid) return `${appBase()}#/b/${encodeURIComponent(bakery.slug)}`;
   return `${appBase()}#/b/${encodeURIComponent(bakery.slug)}?m=${await encodePayload(toPublicMenu(bakery))}`;
 }
 

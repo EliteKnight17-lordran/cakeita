@@ -1,5 +1,7 @@
-import { useRef, type ReactNode } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { useAccount } from '../cloud/account';
+import { IconMenu, IconUser } from './icons';
 import { setPrefs, usePrefs, useTx } from '../lib/prefs';
 import { DevPanel } from './DevPanel';
 
@@ -26,6 +28,19 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
   const prefs = usePrefs();
   const tx = useTx();
   const taps = useRef<number[]>([]);
+  const account = useAccount();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const loc = useLocation();
+  useEffect(() => setMenuOpen(false), [loc.pathname]);
+  const links = [
+    { to: '/near', label: tx('Find bakers', 'Maghanap ng baker') },
+    { to: '/me', label: tx('My cakes', 'Mga cake ko') },
+    { to: '/baker', label: tx('For bakers', 'Para sa baker') },
+    { to: '/demo', label: 'Demo' },
+  ];
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `inline-flex min-h-11 items-center rounded-lg px-3 text-[0.95rem] font-medium ${isActive ? 'text-berry' : 'text-ink hover:text-berry'}`;
+  const user = account.status === 'signed-in' ? account.user : null;
 
   // Hidden way to open the developer panel on a phone: tap the logo 5 times quickly.
   const onLogoTap = () => {
@@ -52,6 +67,13 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
           <Link to="/" onClick={onLogoTap} aria-label="Cakeita home">
             <Logo />
           </Link>
+          <nav aria-label={tx('Main', 'Pangunahing menu')} className="hidden items-center lg:flex">
+            {links.map((l) => (
+              <NavLink key={l.to} to={l.to} className={linkClass} end={l.to === '/baker' ? false : true}>
+                {l.label}
+              </NavLink>
+            ))}
+          </nav>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -73,8 +95,30 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
                 A<span className="text-lg">A</span>
               </span>
             </button>
+            {account.status !== 'off' && (
+              <Link to="/account" className="btn-ghost !px-2" aria-label={user ? tx(`Account: ${user.name || user.email}`, `Account: ${user.name || user.email}`) : tx('Sign in', 'Mag-sign in')}>
+                {user?.photo ? <img src={user.photo} alt="" className="h-7 w-7 rounded-full object-cover" referrerPolicy="no-referrer" /> : <IconUser />}
+                <span className="hidden text-sm sm:inline">{user ? tx('Account', 'Account') : tx('Sign in', 'Sign in')}</span>
+              </Link>
+            )}
+            <button type="button" className="btn-ghost lg:hidden" aria-expanded={menuOpen} aria-controls="main-menu" aria-label={tx('Menu', 'Menu')} onClick={() => setMenuOpen((o) => !o)}>
+              <IconMenu />
+            </button>
           </div>
         </div>
+        {menuOpen && (
+          <nav id="main-menu" aria-label={tx('Main', 'Pangunahing menu')} className={`mx-auto ${w} px-2 pb-3 lg:hidden`}>
+            <ul className="grid grid-cols-2 gap-1">
+              {links.map((l) => (
+                <li key={l.to}>
+                  <NavLink to={l.to} className={linkClass} end={l.to !== '/baker'}>
+                    {l.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
         {nav && <nav className="mx-auto max-w-3xl px-2 pb-2">{nav}</nav>}
       </header>
       <main id="main" className={`page-in mx-auto ${w} px-4 pb-28 pt-7 sm:pt-9`}>

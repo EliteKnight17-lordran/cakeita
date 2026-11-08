@@ -241,6 +241,7 @@ export function toPublicMenu(bakery: Bakery, now = new Date()): PublicMenu {
       .filter((c) => !c.canMake)
       .map((c) => ({ name: c.name, keywords: c.keywords })),
     isSample: bakery.isSample,
+    ...(bakery.cloudUid ? { owner: bakery.cloudUid } : {}),
     publishedAt: now.toISOString(),
   };
 }
