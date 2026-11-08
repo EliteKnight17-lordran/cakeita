@@ -21,6 +21,8 @@ Home bakers quote custom cakes by hand in Messenger, one message at a time. Cust
 - **Lugi alerts.** When butter goes up, Cakeita shows which menu prices no longer earn the target margin and suggests a new price.
 - **Zero server, zero cost.** Requests and quotes travel as links inside Messenger. Data stays on each phone. Hosting is a free static site.
 - **Taglish and elders.** Taglish by default, English toggle, and a big-text mode for Lolo and Lola.
+- **One page to order.** Type the cake like a Messenger message; designs, 3D cake and price update as you type. No Next-Next-Next.
+- **Bakers near me.** A map compares nearby bakers for *the same cake*, each priced from that baker's own costs, and flags who can't make it, can't make the date, or doesn't deliver. One tap sends the request to the chosen baker.
 
 ## Try it
 
@@ -30,6 +32,7 @@ npm run dev          # http://localhost:5173
 ```
 
 - Customer: open `/#/b/sample` (the sample bakery, clearly labeled as demo data).
+- Map: open `/#/near`, or tap **Compare bakers near me** on the order page. The 12 shops on the map are fictional samples.
 - Baker: open `/#/baker` and tap **Use the demo bakery**, or set up your own in 3 steps.
 - **Developer panel:** add `?dev=1` to the URL (e.g. `http://localhost:5173/?dev=1#/b/sample`) or tap the Cakeita logo 5 times. It can fill a customer scenario and jump to any step, load a demo board, approve/confirm everything, reset data, and simulate "no WebGL" or "AI off".
 
@@ -41,6 +44,7 @@ npm run dev          # http://localhost:5173
 | Vercel account (sign in with GitHub) | For a public link | Free static hosting + the optional AI route | Free (Hobby) |
 | Google AI Studio key (`GEMINI_API_KEY`) | Optional | Smarter reading of messages and inspo photos | Free tier |
 | Firebase / database | **Not needed** | Links carry the data; nothing is stored on a server | — |
+| Map pictures | Nothing to set up | CARTO Voyager tiles (OpenStreetMap data), falls back to OpenStreetMap tiles. Needs internet; prices and the list work without it | Free, with attribution |
 
 Without a Gemini key, everything still works with the built-in offline Taglish reader.
 
@@ -71,7 +75,7 @@ Copy `.env.example` to `.env.local` for local work. On Vercel, set them in Proje
 | --- | --- |
 | `npm run dev` | Dev server |
 | `npm run check` | Typecheck + lint + unit tests + build (what CI runs) |
-| `npm test` | 135 unit tests (Vitest) |
+| `npm test` | 144 unit tests (Vitest) |
 | `npm run build && npm run e2e` | End-to-end walkthrough on 4 simulated phones + accessibility scans (Playwright + axe) |
 
 ## How it works
@@ -103,6 +107,9 @@ price = cost ÷ (1 − target margin), rounded UP to the nearest ₱50, never be
 Frosting and decorations scale with cake size. The customer's estimate and the baker's suggested price are computed the same way and always match (tested for every cake size in every starter menu).
 
 ## Known limits
+
+- **The map bakeries are fictional samples** for the demo. Real bakers send a listing from **My link → Get on the map**, and the team adds them to `src/data/directory.ts`. Self-serve listing would need a small database later (that is a decision for after the pilot).
+- Map pictures need internet. Free map tiles have fair-use limits, fine for a pilot, not for a big launch.
 
 - The 3D cake is a concept, not a photo. Every view says so.
 - Sample ingredient prices are estimates (Metro Manila, late 2026, unverified) and are labeled "estimate, edit me".

@@ -1,15 +1,15 @@
 # QA report
 
-**Build:** v1.0.1 · **Date:** 2026-11-06 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+**Build:** v1.2.0 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
 
 ## Results
 
 | Suite | Result |
 | --- | --- |
-| Unit tests (Vitest) | **135 / 135 passed** |
+| Unit tests (Vitest) | **144 / 144 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
-| End-to-end checks (4 phones) | **41 / 41 passed** |
+| End-to-end checks (4 phones) | **51 / 51 passed** |
 | Accessibility (axe, 12 screens) | **0 serious or critical issues** |
 | JavaScript errors during e2e | 0 on all phones |
 | `npm audit` | 0 known vulnerabilities |
@@ -44,3 +44,12 @@
 | --- | --- | --- | --- |
 | English/Taglish choice reverted when a second tab (e.g. a Messenger link) was open | User on the live Vercel build | Prefs now sync across tabs (`storage` event, re-read on tab focus) and merge over the saved value before writing | e2e: "language picked in another tab reaches this tab", "language stays after reload…" (fails on v1.0.0, passes on v1.0.1) |
 | Vercel build showed TS2835 for `api/parse.ts`; the function would fail to import in Node ESM | Vercel build log | `.js` extensions on the server import chain; test moved out of `api/`; Node pinned to 22.x | Unit test checks every relative import in the chain ends in `.js`; compiled with `tsc --module nodenext` and ran GET/POST in plain Node |
+
+## v1.2.0 (2026-11-08)
+
+| Change | How it was checked |
+| --- | --- |
+| One-page order form (live designs, sticky price) | e2e: no Next button, designs before typing, live reading, sprinkles re-price, send blocks empty name |
+| Nearby bakers map | Unit: distance, translation to each baker's menu, map estimate = baker's own approval price for every sample shop, no costs leak in listings, sorting. e2e: price pins, list, filters, axe scan, same price after "Request from" |
+| Realistic 3D cake | Visual check of drip, fondant, buttercream, semi-naked, fruits, candles. Auto lowers resolution and turns off shadows when a phone can't keep up |
+| Map tiles offline | e2e serves blank tiles; the page and list still work. Real tiles could not be loaded from the build sandbox, so **check the map pictures on the live Vercel link** |

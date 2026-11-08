@@ -211,3 +211,85 @@ h3 {
     display: none;
   }
 }
+
+/* ---------- Nearby bakers map ---------- */
+.cakeita-map {
+  height: 22rem;
+  width: 100%;
+  border-radius: 1.5rem;
+  z-index: 0;
+  /* Shown under the map pictures, and on its own when offline. */
+  background:
+    radial-gradient(circle at 30% 30%, rgb(255 214 228 / 0.6), transparent 40%),
+    radial-gradient(circle at 75% 70%, rgb(220 239 255 / 0.8), transparent 45%),
+    repeating-linear-gradient(0deg, transparent 0 39px, rgb(217 184 166 / 0.25) 39px 40px),
+    repeating-linear-gradient(90deg, transparent 0 39px, rgb(217 184 166 / 0.25) 39px 40px),
+    #fff8f0;
+  font-family: var(--font-sans);
+}
+@media (min-width: 640px) {
+  .cakeita-map {
+    height: 28rem;
+  }
+}
+.pin {
+  display: inline-block;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  font: 700 13px/1.3 var(--font-sans);
+  box-shadow: 0 2px 6px rgb(60 20 30 / 0.25);
+  position: relative;
+}
+.pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: inherit;
+  border-top-color: var(--pin-bg);
+  border-bottom: 0;
+}
+.pin-ok {
+  --pin-bg: #e3f5e8;
+  background: #e3f5e8;
+  color: #155a2b;
+}
+.pin-over {
+  --pin-bg: #fff3d6;
+  background: #fff3d6;
+  color: #6e4500;
+}
+.pin-no {
+  --pin-bg: #ece7e4;
+  background: #ece7e4;
+  color: #4a3b3f;
+}
+.pin-selected {
+  --pin-bg: #b3164f;
+  background: #b3164f;
+  color: #fff;
+  font-size: 15px;
+  padding: 4px 11px;
+}
+.pin-you {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1a5fd0;
+  border: 4px solid #fff;
+  box-shadow: 0 0 0 6px rgb(26 95 208 / 0.25);
+}
+.pin-dot {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #c9aea2;
+  vertical-align: -1px;
+}

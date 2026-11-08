@@ -1,13 +1,13 @@
-import { forwardRef, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { analyzeRequest, type Reading } from '../ai/client';
+import { aiAvailable, analyzeRequest, type Reading } from '../ai/client';
 import { describeCake } from '../cake/describe';
 import { CakeView } from '../cake/CakeView';
 import { Cake2D } from '../cake/Cake2D';
 import { Layout } from '../components/Layout';
 import { ShareBox } from '../components/ShareBox';
-import { Bubble, Chip, Field, Notice, SampleBadge, Stepper } from '../components/ui';
-import { buildDesigns, normalizeSelection, type DesignOption, type Wants } from '../domain/designs';
+import { Bubble, Chip, Field, Notice, SampleBadge } from '../components/ui';
+import { normalizeSelection, type DesignOption } from '../domain/designs';
 import { addDays, earliestDate } from '../domain/insights';
 import { formatPeso } from '../domain/money';
 import { requestToOrder } from '../domain/orders';
@@ -17,12 +17,14 @@ import { cakeRequestSchema } from '../domain/schemas';
 import type { CakeRequest, PublicMenu, Selection } from '../domain/types';
 import { toVisual } from '../domain/visual';
 import { SCENARIOS } from '../data/demoScenarios';
-import { clearDraft, STEPS, useDraft, type Draft, type Step } from '../data/draft';
+import { clearDraft, useDraft, type Draft } from '../data/draft';
 import { newId, repo } from '../data/store';
 import { resizeImage, type SmallImage } from '../lib/image';
 import { linkErrorText } from '../lib/codec';
+import { popConfetti } from '../lib/confetti';
 import { requestLink } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
+import { currentCake, offlineReading } from './customerCake';
 import { useMenu } from './useMenu';
 
 const OCCASIONS: Array<[string, string, string]> = [
@@ -35,37 +37,7 @@ const OCCASIONS: Array<[string, string, string]> = [
   ['Other', 'Iba pa', '✨'],
 ];
 
-const Heading = forwardRef<HTMLHeadingElement, { children: ReactNode }>(function Heading({ children }, ref) {
-  return (
-    <h1 ref={ref} tabIndex={-1} className="font-display text-2xl font-bold leading-tight outline-none sm:text-3xl">
-      {children}
-    </h1>
-  );
-});
-
 const PALETTE = COLOR_WORDS.map(([, name, hex]) => ({ name, hex }));
-
-export function wantsFrom(draft: Draft): Wants {
-  const r = draft.reading;
-  return {
-    servings: draft.servings ?? r?.servings ?? null,
-    budget: draft.noBudget ? null : draft.budget ?? r?.budget ?? null,
-    tiers: r?.tiers ?? null,
-    sizeIn: r?.sizeIn ?? null,
-    flavorId: r?.flavorId ?? null,
-    coveringId: r?.coveringId ?? null,
-    componentIds: r?.componentIds ?? [],
-    textOnCake: r?.textOnCake ?? '',
-  };
-}
-
-function lookFromReading(r: Reading | null, occasion: string) {
-  return {
-    colors: (r?.colors ?? []).slice(0, 2).map((c) => c.hex),
-    textOnCake: r?.textOnCake ?? '',
-    candles: r?.age ? Math.min(10, r.age) : occasion === 'Birthday' ? 1 : 0,
-  };
-}
 
 export default function CustomerFlow() {
   const { slug = 'sample' } = useParams();
@@ -109,66 +81,63 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const [photo, setPhoto] = useState<SmallImage | null>(null);
   const [photoError, setPhotoError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const headingRef = useRef<HTMLHeadingElement>(null);
+  const [errors, setErrors] = useState<Partial<Record<'date' | 'name' | 'contact' | 'consent' | 'form', string>>>({});
+  const [smartAvailable, setSmartAvailable] = useState(false);
+  const doneRef = useRef<HTMLHeadingElement>(null);
   const today = useMemo(() => new Date(), []);
   const minDate = earliestDate(menu.leadTimeDays, today);
-  const stepIndex = STEPS.indexOf(draft.step);
 
-  // Move focus to the new question for screen readers and keyboard users.
   useEffect(() => {
-    headingRef.current?.focus();
-    setError('');
-  }, [draft.step]);
+    if (!prefs.aiOff) aiAvailable().then(setSmartAvailable).catch(() => setSmartAvailable(false));
+  }, [prefs.aiOff]);
 
-  const go = (step: Step) => update({ step });
-  const back = () => go(STEPS[Math.max(0, stepIndex - 1)]!);
-
-  const wants = wantsFrom(draft);
-  const designs = useMemo(() => buildDesigns(menu, wants), [menu, JSON.stringify(wants)]); // eslint-disable-line react-hooks/exhaustive-deps
-  const selection = draft.selection ?? designs.options.find((o) => o.tier === draft.tier)?.selection ?? designs.options[0]?.selection ?? null;
+  // Live reading: the offline Taglish reader runs on every keystroke (fast, no network).
+  const liveReading = useMemo(() => offlineReading(draft.description, menu), [draft.description, menu]);
+  const cake = currentCake(menu, draft, today, liveReading);
+  const { reading, hasText, occasion, eventDate, wants, look, designs, selection, isCustom } = cake;
+  const wantsKey = JSON.stringify(wants);
   const estimate = selection ? estimateFromMenu(menu, selection) : null;
-  const visual = selection ? toVisual(menu, selection, draft.look) : null;
-  const colorNames = draft.look.colors.map((h) => PALETTE.find((p) => p.hex === h)?.name ?? '').filter(Boolean);
+  const visual = selection ? toVisual(menu, selection, look) : null;
+  const colorNames = look.colors.map((h) => PALETTE.find((p) => p.hex === h)?.name ?? '').filter(Boolean);
   const description = visual ? describeCake(visual, prefs.lang, colorNames) : '';
 
-  const runReading = async (text: string, nextStep: Step, prefill = false) => {
+  // When the request changes (people, budget, message), the suggested designs change too:
+  // drop a hand-made selection so the cake on screen always matches what was asked.
+  const firstWants = useRef(wantsKey);
+  useEffect(() => {
+    if (firstWants.current === wantsKey) return;
+    firstWants.current = wantsKey;
+    if (draft.selection) update({ selection: null });
+  }, [wantsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (draft.step === 'done') doneRef.current?.focus();
+  }, [draft.step]);
+
+  const smartRead = async (img: SmallImage | null) => {
     setBusy(true);
     try {
-      const reading = await analyzeRequest(text, menu, {
-        image: photo ? { mimeType: photo.mimeType, base64: photo.base64 } : null,
-        allowAi: !prefs.aiOff,
-      });
-      update((d) => {
-        const occasion = d.occasion || reading.occasion;
-        return {
-          description: text,
-          reading,
-          occasion: prefill ? reading.occasion || d.occasion : occasion,
-          servings: prefill ? reading.servings ?? d.servings : d.servings,
-          budget: prefill ? reading.budget ?? d.budget : d.budget,
-          eventDate: prefill && reading.eventDate && reading.eventDate >= minDate ? reading.eventDate : d.eventDate,
-          look: lookFromReading(reading, occasion),
-          selection: null,
-          tier: 'classic',
-          step: nextStep,
-        };
-      });
+      const r = await analyzeRequest(draft.description, menu, { image: img ? { mimeType: img.mimeType, base64: img.base64 } : null, allowAi: !prefs.aiOff });
+      update({ reading: r, readingFor: draft.description });
     } finally {
       setBusy(false);
     }
   };
 
-  const pickDesign = (o: DesignOption) => update({ tier: o.tier, selection: o.selection });
-
   const submit = async () => {
     if (!selection) return;
-    if (!draft.name.trim() || draft.contact.trim().length < 5) {
-      setError(tx('Please add your name and a way to reach you.', 'Pakilagay ang pangalan mo at paano ka makokontak.'));
-      return;
-    }
-    if (!draft.consent) {
-      setError(tx('Please tick the box so we can send this to the baker.', 'Pakicheck ang box para maipadala namin ito sa baker.'));
+    const e: typeof errors = {};
+    if (!eventDate) e.date = tx('Pick the date you need the cake.', 'Piliin kung kailan kailangan ang cake.');
+    else if (eventDate < minDate) e.date = tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.');
+    if (!draft.name.trim()) e.name = tx('Please add your name.', 'Pakilagay ang pangalan mo.');
+    if (draft.contact.trim().length < 5) e.contact = tx('Please add your Messenger name or mobile number.', 'Pakilagay ang Messenger name o mobile number mo.');
+    if (!draft.consent) e.consent = tx('Please tick the box so we can send this to the baker.', 'Pakicheck ang box para maipadala namin ito sa baker.');
+    setErrors(e);
+    const first = (['date', 'name', 'contact', 'consent'] as const).find((k) => e[k]);
+    if (first) {
+      const el = document.getElementById(first === 'consent' ? 'consent' : first);
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      el?.focus({ preventScroll: true });
       return;
     }
     const servings = wants.servings ?? menu.baseCakes.find((b) => b.id === selection.baseCakeId)?.servings ?? 1;
@@ -177,24 +146,24 @@ function Flow({ menu }: { menu: PublicMenu }) {
       bakerySlug: menu.slug,
       createdAt: new Date().toISOString(),
       customer: { name: draft.name.trim().slice(0, 80), contact: draft.contact.trim().slice(0, 120) },
-      occasion: (draft.occasion || draft.reading?.occasion || 'Other').slice(0, 40),
-      eventDate: draft.eventDate || minDate,
+      occasion: (occasion || 'Other').slice(0, 40),
+      eventDate,
       servings: Math.max(1, Math.min(500, Math.round(servings))),
       budget: wants.budget,
       description: [draft.description, draft.note && `Note: ${draft.note}`].filter(Boolean).join('\n').slice(0, 1000),
-      tier: draft.selection && designs.options.every((o) => JSON.stringify(o.selection) !== JSON.stringify(draft.selection)) ? 'custom' : draft.tier,
+      tier: isCustom ? 'custom' : draft.tier,
       selection: normalizeSelection(menu, selection).selection,
-      look: { ...draft.look, textOnCake: draft.look.textOnCake.slice(0, 40) },
-      theme: (draft.reading?.theme ?? '').slice(0, 60),
-      licensedNote: (draft.reading?.licensedNote ?? '').slice(0, 240),
-      unavailable: (draft.reading?.unavailable ?? []).slice(0, 20),
+      look: { ...look, textOnCake: look.textOnCake.slice(0, 40) },
+      theme: (reading.theme ?? '').slice(0, 60),
+      licensedNote: (reading.licensedNote ?? '').slice(0, 240),
+      unavailable: (reading.unavailable ?? []).slice(0, 20),
       estimate: menu.showEstimates ? estimate : null,
       hasInspoPhoto: !!photo,
       lang: prefs.lang,
     };
     const valid = cakeRequestSchema.safeParse(req);
     if (!valid.success) {
-      setError(tx('Something is missing. Please check your answers.', 'May kulang pa. Pakicheck ang mga sagot mo.'));
+      setErrors({ form: tx('Something is missing. Please check your answers.', 'May kulang pa. Pakicheck ang mga sagot mo.') });
       return;
     }
     const link = await requestLink(req);
@@ -213,6 +182,8 @@ function Flow({ menu }: { menu: PublicMenu }) {
     const own = repo.get().bakery;
     if (own && own.slug === menu.slug) repo.upsertOrder(requestToOrder(req, 'same-device'));
     update({ sentId: req.id, sentLink: link, sentMessage: message, step: 'done' });
+    window.scrollTo({ top: 0 });
+    popConfetti(40);
   };
 
   const header = (
@@ -225,276 +196,14 @@ function Flow({ menu }: { menu: PublicMenu }) {
     </div>
   );
 
-  const nav = (canNext: boolean, onNext: () => void, nextLabel = tx('Next', 'Sunod')) => (
-    <div className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-cream/95 p-3 backdrop-blur">
-      <div className="mx-auto flex max-w-3xl gap-2">
-        {stepIndex > 0 && (
-          <button type="button" className="btn-secondary" onClick={back}>
-            ← {tx('Back', 'Bumalik')}
-          </button>
-        )}
-        <button type="button" className="btn flex-1" disabled={!canNext || busy} onClick={onNext}>
-          {busy ? tx('Reading…', 'Binabasa…') : nextLabel}
-        </button>
-      </div>
-    </div>
-  );
-
-  const total = STEPS.length - 2;
-  const stepper = stepIndex > 0 && draft.step !== 'done' && <Stepper step={stepIndex} total={total} label={tx('Your cake request', 'Ang cake request mo')} />;
-
-  // ---------------- steps ----------------
-  let body: ReactNode = null;
-  let footer: ReactNode = null;
-
-  switch (draft.step) {
-    case 'welcome': {
-      body = (
-        <div className="space-y-5">
-          <Heading ref={headingRef}>{tx("Let's find a cake that fits your budget", 'Hanapin natin ang cake na pasok sa budget mo')}</Heading>
-          <Bubble from="app">
-            {tx(
-              "Answer a few quick questions. You'll see 3 cake designs you can turn around in 3D, with an estimated price. The baker confirms the final price.",
-              'Sagutin lang ang ilang tanong. Makikita mo ang 3 cake design na puwede mong ikutin sa 3D, may tantyang presyo. Ang baker ang magko-confirm ng final na presyo.',
-            )}
-          </Bubble>
-          <div className="card space-y-3">
-            <p className="font-bold">{tx('Already wrote a message? Paste it here and we fill in the rest.', 'May message ka na? I-paste dito at kami na ang bahala.')}</p>
-            <label htmlFor="paste" className="sr-only">
-              {tx('Your message', 'Ang message mo')}
-            </label>
-            <textarea
-              id="paste"
-              className="input min-h-28"
-              placeholder={tx('e.g. 2 tier pink cake for 30 pax, budget 2.5k, Dec 12', 'hal. 2 tier pink cake, 30 pax, budget 2.5k, Dec 12')}
-              value={draft.description}
-              onChange={(e) => update({ description: e.target.value })}
-              maxLength={2000}
-            />
-            <button type="button" className="btn-secondary w-full" disabled={!draft.description.trim() || busy} onClick={() => runReading(draft.description, 'occasion', true)}>
-              {busy ? tx('Reading…', 'Binabasa…') : tx('Read my message', 'Basahin ang message ko')}
-            </button>
-            {menu.isSample && (
-              <div>
-                <p className="hint mb-2">{tx('Or try a sample message:', 'O subukan ang sample na message:')}</p>
-                <div className="flex flex-wrap gap-2">
-                  {SCENARIOS.slice(0, 4).map((s) => (
-                    <button key={s.key} type="button" className="btn-ghost" onClick={() => update({ description: s.message })}>
-                      {s.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <p className="text-sm text-ink-soft">
-            {tx('Free to use. No payment happens here. Your photo is never saved.', 'Libre. Walang bayaran dito. Hindi sine-save ang photo mo.')}
-          </p>
-        </div>
-      );
-      footer = nav(true, () => go('occasion'), tx('Start', 'Simulan'));
-      break;
-    }
-    case 'occasion': {
-      body = (
+  if (draft.step === 'done') {
+    return (
+      <Layout>
+        {header}
         <div className="space-y-4">
-          <Heading ref={headingRef}>{tx("What's the occasion?", 'Para saan ang cake?')}</Heading>
-          <div className="flex flex-wrap gap-2" role="group" aria-label={tx('Occasion', 'Okasyon')}>
-            {OCCASIONS.map(([en, tl, icon]) => (
-              <Chip key={en} pressed={draft.occasion === en} onClick={() => update({ occasion: en, look: { ...draft.look, candles: en === 'Birthday' ? draft.look.candles || 1 : draft.look.candles } })}>
-                <span aria-hidden="true">{icon}</span> {tx(en, tl)}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      );
-      footer = nav(!!draft.occasion, () => go('date'));
-      break;
-    }
-    case 'date': {
-      const tooSoon = !!draft.eventDate && draft.eventDate < minDate;
-      body = (
-        <div className="space-y-4">
-          <Heading ref={headingRef}>{tx('When do you need it?', 'Kailan kailangan?')}</Heading>
-          <Field id="date" label={tx('Date', 'Petsa')} hint={tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
-            <input id="date" type="date" className="input" min={minDate} max={addDays(today, 365)} value={draft.eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" />
-          </Field>
-          <div className="flex flex-wrap gap-2">
-            {[menu.leadTimeDays, 7, 14].map((d, i) => {
-              const day = addDays(today, Math.max(d, menu.leadTimeDays));
-              return (
-                <button key={i} type="button" className="btn-ghost" onClick={() => update({ eventDate: day })}>
-                  {new Date(`${day}T00:00:00`).toLocaleDateString(prefs.lang === 'tl' ? 'fil-PH' : 'en-PH', { weekday: 'short', month: 'short', day: 'numeric' })}
-                </button>
-              );
-            })}
-          </div>
-          {tooSoon && <Notice tone="warn">{tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.')}</Notice>}
-        </div>
-      );
-      footer = nav(!!draft.eventDate && !tooSoon, () => go('servings'));
-      break;
-    }
-    case 'servings': {
-      const opts = [8, 12, 20, 30, 45];
-      body = (
-        <div className="space-y-4">
-          <Heading ref={headingRef}>{tx('How many people will eat?', 'Ilan ang kakain?')}</Heading>
-          <div className="flex flex-wrap gap-2" role="group" aria-label={tx('Number of people', 'Bilang ng tao')}>
-            {opts.map((n) => (
-              <Chip key={n} pressed={draft.servings === n} onClick={() => update({ servings: n })}>
-                {n} {tx('people', 'tao')}
-              </Chip>
-            ))}
-          </div>
-          <Field id="servings" label={tx('Or type a number', 'O i-type ang bilang')}>
-            <input id="servings" type="number" inputMode="numeric" min={1} max={500} className="input" value={draft.servings ?? ''} onChange={(e) => update({ servings: e.target.value ? Math.max(1, Math.min(500, Number(e.target.value))) : null })} />
-          </Field>
-        </div>
-      );
-      footer = nav(!!draft.servings && draft.servings > 0, () => go('budget'));
-      break;
-    }
-    case 'budget': {
-      const opts = [800, 1500, 2500, 4000];
-      body = (
-        <div className="space-y-4">
-          <Heading ref={headingRef}>{tx("What's your budget?", 'Magkano ang budget mo?')}</Heading>
-          <Bubble from="app">{tx("So we can design a cake that fits. It's okay if you're not sure.", 'Para makagawa kami ng design na pasok sa budget mo. Okay lang kung hindi ka pa sigurado.')}</Bubble>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Budget">
-            {opts.map((n) => (
-              <Chip key={n} pressed={!draft.noBudget && draft.budget === n} onClick={() => update({ budget: n, noBudget: false })}>
-                {formatPeso(n)}
-              </Chip>
-            ))}
-            <Chip pressed={draft.noBudget} onClick={() => update({ noBudget: !draft.noBudget })}>
-              {tx('No budget yet', 'Wala pa akong budget')}
-            </Chip>
-          </div>
-          {!draft.noBudget && (
-            <Field id="budget" label={tx('Or type an amount (₱)', 'O i-type ang halaga (₱)')}>
-              <input id="budget" type="number" inputMode="numeric" min={100} max={500000} step={50} className="input" value={draft.budget ?? ''} onChange={(e) => update({ budget: e.target.value ? Math.max(0, Math.min(500000, Number(e.target.value))) : null })} />
-            </Field>
-          )}
-        </div>
-      );
-      footer = nav(draft.noBudget || (draft.budget ?? 0) >= 100, () => go('describe'));
-      break;
-    }
-    case 'describe': {
-      const r = draft.reading;
-      body = (
-        <div className="space-y-4">
-          <Heading ref={headingRef}>{tx('Describe your dream cake', 'Ilarawan ang gusto mong cake')}</Heading>
-          <Field id="desc" label={tx('Colors, flavor, design, words on the cake (Taglish OK)', 'Kulay, flavor, design, nakasulat sa cake (Taglish OK)')} hint={tx('Example: ube, pastel pink, fresh flowers, "Happy 80th Lola"', 'Halimbawa: ube, pastel pink, may bulaklak, "Happy 80th Lola"')}>
-            <textarea id="desc" className="input min-h-32" maxLength={2000} value={draft.description} onChange={(e) => update({ description: e.target.value })} aria-describedby="desc-hint" />
-          </Field>
-          <div className="card space-y-2">
-            <p className="font-bold">{tx('Inspo photo (optional)', 'Inspo photo (optional)')}</p>
-            <input
-              id="photo"
-              type="file"
-              accept="image/*"
-              className="block w-full text-base file:mr-3 file:min-h-11 file:rounded-xl file:border-0 file:bg-berry-soft file:px-4 file:font-bold file:text-berry-dark"
-              aria-label={tx('Choose an inspo photo', 'Pumili ng inspo photo')}
-              onChange={async (e) => {
-                setPhotoError('');
-                const f = e.target.files?.[0];
-                if (!f) return;
-                try {
-                  setPhoto(await resizeImage(f));
-                } catch {
-                  setPhotoError(tx("We couldn't open that photo. Try a screenshot of it instead.", 'Hindi mabuksan ang photo. Subukan ang screenshot nito.'));
-                }
-              }}
-            />
-            {photo && (
-              <div className="flex items-center gap-3">
-                <img src={photo.dataUrl} alt={tx('Your inspo photo', 'Ang inspo photo mo')} className="h-24 w-24 rounded-2xl object-cover" />
-                <button type="button" className="btn-ghost" onClick={() => setPhoto(null)}>
-                  {tx('Remove', 'Alisin')}
-                </button>
-              </div>
-            )}
-            {photoError && <Notice tone="warn">{photoError}</Notice>}
-            <p className="hint">{tx('Your photo stays on your phone unless smart reading is on. It is never saved.', 'Nasa phone mo lang ang photo maliban kung naka-on ang smart reading. Hindi ito sine-save.')}</p>
-          </div>
-          {r && r.found.length > 0 && <ReadSummary reading={r} menu={menu} />}
-        </div>
-      );
-      footer = nav(true, () => runReading(draft.description, 'designs'), draft.description.trim() || photo ? tx('Show me designs', 'Ipakita ang designs') : tx('Surprise me', 'Kayo na ang bahala'));
-      break;
-    }
-    case 'designs': {
-      const r = draft.reading;
-      body = (
-        <div className="space-y-4">
-          <Heading ref={headingRef}>{tx('Pick a design', 'Pumili ng design')}</Heading>
-          {r?.aiNote === 'photo-not-read' && <Notice tone="info">{tx('We could not read your photo automatically. Please describe it in words, and send the photo to the baker too.', 'Hindi namin nabasa ang photo. Ilarawan mo sa salita, at i-send din ang photo sa baker.')}</Notice>}
-          {r && <ReadSummary reading={r} menu={menu} compact />}
-          {designs.budgetTooLow && wants.budget != null && (
-            <Notice tone="warn" title={tx('Your budget is a bit low for this many people', 'Medyo kulang ang budget para sa ganitong dami')}>
-              {tx(`The simplest cake that feeds ${wants.servings ?? 'everyone'} starts at about ${formatPeso(designs.lowestPrice)}. You can pick fewer people or ask the baker.`, `Ang pinakasimpleng cake para sa ${wants.servings ?? 'lahat'} ay mga ${formatPeso(designs.lowestPrice)}. Puwedeng bawasan ang tao o itanong sa baker.`)}
-            </Notice>
-          )}
-          {visual && <CakeView visual={visual} description={description} />}
-          <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={tx('Designs', 'Mga design')}>
-            {designs.options.map((o) => (
-              <DesignCard key={o.tier} option={o} menu={menu} look={draft.look} selected={JSON.stringify(selection) === JSON.stringify(o.selection)} onPick={() => pickDesign(o)} budget={wants.budget} />
-            ))}
-          </div>
-        </div>
-      );
-      footer = nav(!!selection, () => {
-        if (!draft.selection && selection) update({ selection, step: 'customize' });
-        else go('customize');
-      }, tx('Customize this', 'I-customize ito'));
-      break;
-    }
-    case 'customize': {
-      body = selection && visual ? (
-        <div className="space-y-4">
-          <Heading ref={headingRef}>{tx('Make it yours', 'Gawin mong sa iyo')}</Heading>
-          <CakeView visual={visual} description={description} />
-          <PriceBar menu={menu} estimate={estimate} budget={wants.budget} />
-          <Customizer menu={menu} selection={selection} look={draft.look} servings={wants.servings} onChange={(sel, look) => update({ selection: sel, look })} />
-        </div>
-      ) : null;
-      footer = nav(!!selection, () => go('contact'));
-      break;
-    }
-    case 'contact': {
-      body = (
-        <div className="space-y-4">
-          <Heading ref={headingRef}>{tx('Where can the baker reach you?', 'Saan ka makokontak ng baker?')}</Heading>
-          <Field id="name" label={tx('Your name', 'Pangalan mo')}>
-            <input id="name" className="input" autoComplete="name" maxLength={80} value={draft.name} onChange={(e) => update({ name: e.target.value })} />
-          </Field>
-          <Field id="contact" label={tx('Messenger name or mobile number', 'Messenger name o mobile number')}>
-            <input id="contact" className="input" autoComplete="tel" maxLength={120} value={draft.contact} onChange={(e) => update({ contact: e.target.value })} />
-          </Field>
-          <Field id="note" label={tx('Anything else? (optional)', 'May iba pa? (optional)')}>
-            <textarea id="note" className="input min-h-20" maxLength={300} value={draft.note} onChange={(e) => update({ note: e.target.value })} />
-          </Field>
-          <label className="flex items-start gap-3 rounded-2xl border-2 border-line bg-white p-3">
-            <input type="checkbox" className="mt-1 h-6 w-6 accent-[#b3164f]" checked={draft.consent} onChange={(e) => update({ consent: e.target.checked })} />
-            <span>
-              {tx(
-                'I agree to send my name, contact and this request to the baker. No payment happens in Cakeita.',
-                'Pumapayag ako na ipadala ang pangalan, contact at request na ito sa baker. Walang bayaran sa Cakeita.',
-              )}
-            </span>
-          </label>
-          {error && <Notice tone="danger">{error}</Notice>}
-        </div>
-      );
-      footer = nav(true, submit, tx('Send to baker', 'Ipadala sa baker'));
-      break;
-    }
-    case 'done': {
-      body = (
-        <div className="space-y-4">
-          <Heading ref={headingRef}>{tx('Done! Now send it to the baker', 'Ayos! Ipadala na sa baker')}</Heading>
+          <h1 ref={doneRef} tabIndex={-1} className="font-display text-2xl font-bold leading-tight outline-none sm:text-3xl">
+            {tx('Done! Now send it to the baker', 'Ayos! Ipadala na sa baker')}
+          </h1>
           <Bubble from="app">
             {tx(
               `Tap Send and choose Messenger. ${menu.name} will check it and send you the final price. This is not an order yet.`,
@@ -512,24 +221,271 @@ function Flow({ menu }: { menu: PublicMenu }) {
                 {tx('Check status', 'Tingnan ang status')}
               </Link>
             )}
+            <button type="button" className="btn-ghost" onClick={() => update({ step: 'order', sentId: null, sentLink: null, sentMessage: null })}>
+              {tx('Edit this request', 'I-edit ang request')}
+            </button>
             <button type="button" className="btn-ghost" onClick={() => { setPhoto(null); clearDraft(menu.slug); }}>
               {tx('Start a new request', 'Bagong request')}
             </button>
           </div>
         </div>
-      );
-      break;
-    }
+      </Layout>
+    );
   }
+
+  const tooSoon = !!eventDate && eventDate < minDate;
+  const over = budgetGap(estimate, wants.budget);
 
   return (
     <Layout>
       {header}
-      {stepper}
-      {body}
-      {footer}
+      <div className="space-y-5">
+        <div className="space-y-1">
+          <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">{tx('Design your cake', 'I-design ang cake mo')}</h1>
+          <p className="text-ink-soft">
+            {tx('One page. Type it like you would in Messenger, and the designs and prices update as you go.', 'Isang page lang. I-type na parang nasa Messenger ka, at kusang magbabago ang design at presyo.')}
+          </p>
+        </div>
+
+        {/* 1. The message */}
+        <section className="card space-y-3" aria-labelledby="sec-msg">
+          <h2 id="sec-msg" className="font-display text-lg font-bold">
+            <span aria-hidden="true">💬</span> {tx('What cake do you want?', 'Anong cake ang gusto mo?')}
+          </h2>
+          <label htmlFor="desc" className="sr-only">
+            {tx('Describe your cake (Taglish OK)', 'Ilarawan ang cake (Taglish OK)')}
+          </label>
+          <textarea
+            id="desc"
+            className="input min-h-24"
+            maxLength={2000}
+            placeholder={tx('e.g. 2 tier pink ube cake, chocolate drip, flowers, 30 pax, budget 2.5k, "Happy 7th Mia"', 'hal. 2 tier pink na ube cake, chocolate drip, bulaklak, 30 pax, budget 2.5k, "Happy 7th Mia"')}
+            value={draft.description}
+            onChange={(e) => update({ description: e.target.value })}
+          />
+          {menu.isSample && !hasText && (
+            <div>
+              <p className="hint mb-2">{tx('Or tap a sample:', 'O pumili ng sample:')}</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.slice(0, 4).map((s) => (
+                  <button key={s.key} type="button" className="btn-ghost" onClick={() => update({ description: s.message })}>
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="btn-ghost cursor-pointer">
+              <span aria-hidden="true">📷</span> {photo ? tx('Change inspo photo', 'Palitan ang inspo photo') : tx('Add inspo photo', 'Magdagdag ng inspo photo')}
+              <input
+                id="photo"
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={async (e) => {
+                  setPhotoError('');
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  try {
+                    const img = await resizeImage(f);
+                    setPhoto(img);
+                    if (smartAvailable) await smartRead(img);
+                  } catch {
+                    setPhotoError(tx("We couldn't open that photo. Try a screenshot of it instead.", 'Hindi mabuksan ang photo. Subukan ang screenshot nito.'));
+                  }
+                }}
+              />
+            </label>
+            {smartAvailable && hasText && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
+              <button type="button" className="btn-ghost" disabled={busy} onClick={() => smartRead(photo)}>
+                ✨ {busy ? tx('Reading…', 'Binabasa…') : tx('Smart read', 'Smart read')}
+              </button>
+            )}
+            {photo && (
+              <span className="inline-flex items-center gap-2">
+                <img src={photo.dataUrl} alt={tx('Your inspo photo', 'Ang inspo photo mo')} className="h-11 w-11 rounded-xl object-cover" />
+                <button type="button" className="btn-ghost" onClick={() => setPhoto(null)}>
+                  {tx('Remove', 'Alisin')}
+                </button>
+              </span>
+            )}
+          </div>
+          {photoError && <Notice tone="warn">{photoError}</Notice>}
+          {reading.aiNote === 'photo-not-read' && <Notice tone="info">{tx('We could not read your photo automatically. Please describe it in words, and send the photo to the baker too.', 'Hindi namin nabasa ang photo. Ilarawan mo sa salita, at i-send din ang photo sa baker.')}</Notice>}
+          {hasText && <ReadSummary reading={reading} menu={menu} compact />}
+        </section>
+
+        {/* 2. The basics, all on one card */}
+        <section className="card space-y-4" aria-labelledby="sec-basics">
+          <h2 id="sec-basics" className="font-display text-lg font-bold">
+            <span aria-hidden="true">📝</span> {tx('The basics', 'Ang basics')}
+          </h2>
+          <div>
+            <p className="label" id="occ-label">{tx('Occasion', 'Okasyon')}</p>
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-labelledby="occ-label">
+              {OCCASIONS.map(([en, tl, icon]) => (
+                <Chip key={en} pressed={occasion === en} onClick={() => update({ occasion: draft.occasion === en ? '' : en })}>
+                  <span aria-hidden="true">{icon}</span> <span className="whitespace-nowrap">{tx(en, tl)}</span>
+                </Chip>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Field id="servings" label={tx('How many people?', 'Ilan ang kakain?')}>
+                <input id="servings" type="number" inputMode="numeric" min={1} max={500} className="input" placeholder={tx('e.g. 20', 'hal. 20')} value={wants.servings ?? ''} onChange={(e) => update({ servings: e.target.value ? Math.max(1, Math.min(500, Number(e.target.value))) : null })} />
+              </Field>
+              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={tx('Quick pick: people', 'Mabilis na pili: tao')}>
+                {[8, 12, 20, 30, 45].map((n) => (
+                  <Chip key={n} pressed={wants.servings === n} onClick={() => update({ servings: n })}>
+                    {n} {tx('people', 'tao')}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Field id="budget" label={tx('Budget (₱)', 'Budget (₱)')}>
+                <input id="budget" type="number" inputMode="numeric" min={100} max={500000} step={50} className="input" placeholder={tx('e.g. 2500', 'hal. 2500')} disabled={draft.noBudget} value={draft.noBudget ? '' : wants.budget ?? ''} onChange={(e) => update({ budget: e.target.value ? Math.max(0, Math.min(500000, Number(e.target.value))) : null, noBudget: false })} />
+              </Field>
+              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={tx('Quick pick: budget', 'Mabilis na pili: budget')}>
+                {[800, 1500, 2500, 4000].map((n) => (
+                  <Chip key={n} pressed={!draft.noBudget && wants.budget === n} onClick={() => update({ budget: n, noBudget: false })}>
+                    {formatPeso(n)}
+                  </Chip>
+                ))}
+                <Chip pressed={draft.noBudget} onClick={() => update({ noBudget: !draft.noBudget })}>
+                  {tx('Not sure', 'Hindi pa alam')}
+                </Chip>
+              </div>
+            </div>
+          </div>
+          <div>
+            <Field id="date" label={tx('When do you need it?', 'Kailan kailangan?')} hint={tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
+              <input id="date" type="date" className="input" min={minDate} max={addDays(today, 365)} value={eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" aria-invalid={!!errors.date || tooSoon} />
+            </Field>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {[menu.leadTimeDays, 7, 14].map((d, i) => {
+                const day = addDays(today, Math.max(d, menu.leadTimeDays));
+                return (
+                  <button key={i} type="button" data-quick-date className="btn-ghost" aria-pressed={eventDate === day} onClick={() => update({ eventDate: day })}>
+                    {new Date(`${day}T00:00:00`).toLocaleDateString(prefs.lang === 'tl' ? 'fil-PH' : 'en-PH', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </button>
+                );
+              })}
+            </div>
+            {(errors.date || tooSoon) && (
+              <div className="mt-2">
+                <Notice tone="warn">{errors.date ?? tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.')}</Notice>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 3. Designs, live */}
+        <section className="space-y-3" aria-labelledby="sec-designs">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <h2 id="sec-designs" className="font-display text-lg font-bold">
+              <span aria-hidden="true">🎂</span> {tx('Pick a design', 'Pumili ng design')}
+            </h2>
+            <Link to={`/near?from=${encodeURIComponent(menu.slug)}`} className="btn-ghost">
+              <span aria-hidden="true">📍</span> {tx('Compare bakers near me', 'Ikumpara ang malapit na baker')}
+            </Link>
+          </div>
+          {designs.budgetTooLow && wants.budget != null && (
+            <Notice tone="warn" title={tx('Your budget is a bit low for this many people', 'Medyo kulang ang budget para sa ganitong dami')}>
+              {tx(`The simplest cake that feeds ${wants.servings ?? 'everyone'} starts at about ${formatPeso(designs.lowestPrice)}. You can pick fewer people or ask the baker.`, `Ang pinakasimpleng cake para sa ${wants.servings ?? 'lahat'} ay mga ${formatPeso(designs.lowestPrice)}. Puwedeng bawasan ang tao o itanong sa baker.`)}
+            </Notice>
+          )}
+          {visual && <CakeView visual={visual} description={description} />}
+          <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={tx('Designs', 'Mga design')}>
+            {designs.options.map((o) => (
+              <DesignCard key={o.tier} option={o} menu={menu} look={look} selected={!isCustom && JSON.stringify(selection) === JSON.stringify(o.selection)} onPick={() => update({ tier: o.tier, selection: null })} budget={wants.budget} />
+            ))}
+          </div>
+          {isCustom && (
+            <p className="text-sm">
+              <span className="tag bg-ube text-ink">{tx('Your custom design', 'Sarili mong design')}</span>{' '}
+              <button type="button" className="text-berry underline" onClick={() => update({ selection: null })}>
+                {tx('Go back to the suggestions', 'Bumalik sa mga suggestion')}
+              </button>
+            </p>
+          )}
+          {selection && (
+            <details className="card group" open={isCustom || undefined}>
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 font-display text-lg font-bold">
+                <span>
+                  <span aria-hidden="true">🎨</span> {tx('Customize it', 'I-customize')}
+                  <span className="block text-sm font-normal text-ink-soft">{tx('Size, flavor, frosting, colors, toppings, words', 'Laki, flavor, frosting, kulay, toppings, sulat')}</span>
+                </span>
+                <span aria-hidden="true" className="text-2xl transition group-open:rotate-180">⌄</span>
+              </summary>
+              <div className="mt-4">
+                <Customizer menu={menu} selection={selection} look={look} servings={wants.servings} onChange={(sel, l) => update({ selection: sel, look: l, lookTouched: draft.lookTouched || JSON.stringify(l) !== JSON.stringify(look) })} />
+              </div>
+            </details>
+          )}
+        </section>
+
+        {/* 4. Contact */}
+        <section className="card space-y-3" aria-labelledby="sec-contact">
+          <h2 id="sec-contact" className="font-display text-lg font-bold">
+            <span aria-hidden="true">📨</span> {tx('Where can the baker reach you?', 'Saan ka makokontak ng baker?')}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field id="name" label={tx('Your name', 'Pangalan mo')}>
+              <input id="name" className="input" autoComplete="name" maxLength={80} value={draft.name} aria-invalid={!!errors.name} onChange={(e) => update({ name: e.target.value })} />
+            </Field>
+            <Field id="contact" label={tx('Messenger name or mobile number', 'Messenger name o mobile number')}>
+              <input id="contact" className="input" autoComplete="tel" maxLength={120} value={draft.contact} aria-invalid={!!errors.contact} onChange={(e) => update({ contact: e.target.value })} />
+            </Field>
+          </div>
+          <Field id="note" label={tx('Anything else? (optional)', 'May iba pa? (optional)')}>
+            <input id="note" className="input" maxLength={300} value={draft.note} onChange={(e) => update({ note: e.target.value })} />
+          </Field>
+          <label className="flex items-start gap-3 rounded-2xl border-2 border-line bg-white p-3">
+            <input id="consent" type="checkbox" className="mt-1 h-6 w-6 accent-[#b3164f]" checked={draft.consent} onChange={(e) => update({ consent: e.target.checked })} />
+            <span>
+              {tx('I agree to send my name, contact and this request to the baker. No payment happens in Cakeita.', 'Pumapayag ako na ipadala ang pangalan, contact at request na ito sa baker. Walang bayaran sa Cakeita.')}
+            </span>
+          </label>
+          {(errors.name || errors.contact || errors.consent || errors.form) && (
+            <Notice tone="danger">{[errors.name, errors.contact, errors.consent, errors.form].filter(Boolean).join(' ')}</Notice>
+          )}
+          <p className="text-sm text-ink-soft">{tx('Free to use. No payment happens here. Your photo is never saved.', 'Libre. Walang bayaran dito. Hindi sine-save ang photo mo.')}</p>
+        </section>
+      </div>
+
+      {/* Sticky price + send */}
+      <div className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-cream p-3">
+        <div className="mx-auto flex max-w-3xl items-center gap-3">
+          <div className="min-w-0 flex-1" aria-live="polite">
+            {menu.showEstimates && estimate != null ? (
+              <>
+                <p className="text-xs font-semibold text-ink-soft">{tx('Estimated price', 'Tantyang presyo')}</p>
+                <p className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="price text-2xl" data-testid="live-price">{formatPeso(estimate)}</span>
+                  {wants.budget != null && (
+                    <span className={`text-xs font-bold ${over > 0 ? 'text-amber-ink' : 'text-ok-ink'}`}>{over > 0 ? `+${formatPeso(over)} ${tx('over', 'lampas')}` : tx('Fits budget', 'Pasok sa budget')}</span>
+                  )}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm font-semibold">{tx('The baker gives the price', 'Ang baker ang magbibigay ng presyo')}</p>
+            )}
+          </div>
+          <button type="button" className="btn shrink-0" disabled={!selection} onClick={submit}>
+            {tx('Send to baker', 'Ipadala sa baker')} →
+          </button>
+        </div>
+      </div>
     </Layout>
   );
+}
+
+function budgetGap(estimate: number | null, budget: number | null): number {
+  if (estimate == null || budget == null) return 0;
+  return Math.max(0, estimate - budget);
 }
 
 function ReadSummary({ reading: r, menu, compact = false }: { reading: Reading; menu: PublicMenu; compact?: boolean }) {
@@ -614,28 +570,6 @@ function DesignCard({ option, menu, look, selected, onPick, budget }: { option: 
       )}
       {option.servingsShort && <p className="mt-1 text-sm font-semibold text-amber-ink">{tx('Not enough for everyone. Ask the baker for cupcakes on the side.', 'Kulang para sa lahat. Itanong sa baker kung may cupcakes.')}</p>}
     </button>
-  );
-}
-
-function PriceBar({ menu, estimate, budget }: { menu: PublicMenu; estimate: number | null; budget: number | null }) {
-  const tx = useTx();
-  if (!menu.showEstimates || estimate == null) {
-    return <Notice tone="info">{tx('The baker will send you the price after checking.', 'Ipapadala ng baker ang presyo pagkatapos i-check.')}</Notice>;
-  }
-  const over = budget != null && estimate > budget;
-  return (
-    <div className="card flex items-center justify-between gap-3" aria-live="polite">
-      <div>
-        <p className="text-sm font-semibold text-ink-soft">{tx('Estimated price', 'Tantyang presyo')}</p>
-        <p className="price">{formatPeso(estimate)}</p>
-        <p className="text-xs text-ink-soft">{tx('Final price is confirmed by the baker.', 'Ang baker ang magko-confirm ng final na presyo.')}</p>
-      </div>
-      {budget != null && (
-        <span className={`tag ${over ? 'bg-amber-bg text-amber-ink' : 'bg-ok-bg text-ok-ink'}`}>
-          {over ? `+${formatPeso(estimate - budget)} ${tx('over', 'lampas')}` : tx('Fits budget', 'Pasok sa budget')}
-        </span>
-      )}
-    </div>
   );
 }
 

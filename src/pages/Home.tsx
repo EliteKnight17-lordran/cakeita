@@ -65,6 +65,9 @@ export default function Home() {
           <Link to="/b/sample" className="btn min-h-16 text-lg">
             🎂 {tx("I'm ordering a cake", 'Mag-oorder ako ng cake')}
           </Link>
+          <Link to="/near" className="btn-secondary min-h-16 text-lg sm:col-span-2 sm:order-last">
+            📍 {tx('Find bakers near me', 'Maghanap ng baker na malapit')}
+          </Link>
           <Link to="/baker" className="btn-secondary min-h-16 text-lg">
             👩‍🍳 {db.bakery ? tx('Open my bakery', 'Buksan ang bakery ko') : tx("I'm a baker", 'Baker ako')}
           </Link>

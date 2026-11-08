@@ -1,13 +1,17 @@
-import { ContactShadows, OrbitControls } from '@react-three/drei';
+import { ContactShadows, Environment, Lightformer, OrbitControls, PerformanceMonitor } from '@react-three/drei';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { shade, type CakeVisual } from '../domain/visual';
+import { candleStripes, crumbBump, frostingBump, strawberrySkin } from './textures';
 
 /**
  * Parametric 3D cake. Every mesh comes from the same parts list that is priced,
  * so the picture can't promise something the price doesn't include.
- * Works offline: no HDR maps, no web fonts, no model files.
+ * Works offline: no HDR maps, no web fonts, no model files. Lighting comes from
+ * soft "studio" light panels rendered once on the device, and the frosting
+ * texture is drawn on a canvas.
  */
 
 const K = 0.12; // world units per inch
@@ -43,10 +47,18 @@ function useTextTexture(text: string, color: string, style: 'piped' | 'acrylic')
       ctx.strokeStyle = '#7a5c0a';
       ctx.strokeText(text, 512, 128);
       ctx.fillStyle = '#d9b13b';
+      ctx.fillText(text, 512, 128);
     } else {
+      // Piped icing: a soft shadow under the line gives it some height.
+      ctx.fillStyle = 'rgba(40,20,20,0.28)';
+      ctx.fillText(text, 516, 134);
       ctx.fillStyle = color;
+      ctx.fillText(text, 512, 128);
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, 510, 125);
+      ctx.globalAlpha = 1;
     }
-    ctx.fillText(text, 512, 128);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
@@ -55,77 +67,111 @@ function useTextTexture(text: string, color: string, style: 'piped' | 'acrylic')
 }
 
 function frostingMaterial(v: CakeVisual): THREE.MeshPhysicalMaterialParameters {
+  const kind = v.covering === 'fondant' || v.covering === 'ganache' || v.covering === 'whipped' || v.covering === 'naked' ? v.covering : 'buttercream';
+  const bumpMap = frostingBump(kind) ?? undefined;
   switch (v.covering) {
     case 'fondant':
-      return { color: v.frosting, roughness: 0.38, clearcoat: 0.35, clearcoatRoughness: 0.5 };
+      return { color: v.frosting, roughness: 0.42, clearcoat: 0.12, clearcoatRoughness: 0.6, sheen: 0.4, sheenColor: '#ffffff', sheenRoughness: 0.5, bumpMap, bumpScale: 0.6 };
     case 'ganache':
-      return { color: v.frosting, roughness: 0.25, clearcoat: 0.6, clearcoatRoughness: 0.2 };
+      return { color: v.frosting, roughness: 0.16, clearcoat: 0.9, clearcoatRoughness: 0.12, bumpMap, bumpScale: 0.4 };
     case 'whipped':
-      return { color: v.frosting, roughness: 0.95 };
+      return { color: v.frosting, roughness: 0.82, sheen: 0.7, sheenColor: '#ffffff', sheenRoughness: 0.8, bumpMap, bumpScale: 2.2 };
     case 'naked':
-      return { color: '#fffaf0', roughness: 0.9, transparent: true, opacity: 0.45 };
+      return { color: '#fffaf0', roughness: 0.75, transparent: true, opacity: 0.5, bumpMap, bumpScale: 1.6 };
     default:
-      return { color: v.frosting, roughness: 0.7 };
+      return { color: v.frosting, roughness: 0.58, sheen: 0.45, sheenColor: '#fff6ee', sheenRoughness: 0.6, bumpMap, bumpScale: 1.6 };
   }
+}
+
+/** A frosted tier with a soft, rounded top edge (real frosting never has a sharp rim). */
+function useTierGeometry(r: number, h: number) {
+  return useMemo(() => {
+    const e = Math.min(0.03, h * 0.16, r * 0.2);
+    const pts: THREE.Vector2[] = [new THREE.Vector2(0.0001, 0), new THREE.Vector2(r - 0.004, 0), new THREE.Vector2(r, 0.005)];
+    pts.push(new THREE.Vector2(r, h - e));
+    for (let i = 1; i <= 8; i++) {
+      const t = (i / 8) * (Math.PI / 2);
+      pts.push(new THREE.Vector2(r - e + Math.cos(t) * e, h - e + Math.sin(t) * e));
+    }
+    pts.push(new THREE.Vector2(0.0001, h));
+    return new THREE.LatheGeometry(pts, 112);
+  }, [r, h]);
 }
 
 function Tier({ v, r, h, y, isTop }: { v: CakeVisual; r: number; h: number; y: number; isTop: boolean }) {
   const mat = frostingMaterial(v);
-  const border = v.covering === 'buttercream' || v.covering === 'whipped';
-  const pearlCount = Math.round((2 * Math.PI * r) / 0.035);
+  const geo = useTierGeometry(r, h);
+  const crumb = crumbBump() ?? undefined;
+  const piped = v.covering === 'buttercream' || v.covering === 'whipped';
+  const pearlCount = Math.round((2 * Math.PI * r) / 0.04);
   return (
     <group position={[0, y, 0]}>
       {v.covering === 'naked' ? (
         <>
           {[0, 1, 2].map((i) => (
-            <mesh key={i} position={[0, h * (i / 3) + h / 6 - 0.006, 0]} castShadow>
-              <cylinderGeometry args={[r - 0.004, r - 0.004, h / 3 - 0.02, 64]} />
-              <meshStandardMaterial color={v.sponge} roughness={0.95} />
+            <mesh key={i} position={[0, h * (i / 3) + h / 6 - 0.006, 0]} castShadow receiveShadow>
+              <cylinderGeometry args={[r - 0.004, r - 0.004, h / 3 - 0.02, 72]} />
+              <meshStandardMaterial color={v.sponge} roughness={0.95} bumpMap={crumb} bumpScale={3} />
             </mesh>
           ))}
           {[1, 2].map((i) => (
             <mesh key={`f${i}`} position={[0, (h * i) / 3, 0]}>
-              <cylinderGeometry args={[r, r, 0.03, 64]} />
-              <meshStandardMaterial color="#fffaf0" roughness={0.8} />
+              <cylinderGeometry args={[r, r, 0.03, 72]} />
+              <meshPhysicalMaterial color="#fff8ee" roughness={0.6} sheen={0.5} sheenColor="#ffffff" />
             </mesh>
           ))}
           <mesh position={[0, h / 2, 0]}>
-            <cylinderGeometry args={[r + 0.003, r + 0.003, h, 64, 1, true]} />
-            <meshPhysicalMaterial {...mat} side={THREE.DoubleSide} />
+            <cylinderGeometry args={[r + 0.003, r + 0.003, h, 72, 1, true]} />
+            <meshPhysicalMaterial {...mat} side={THREE.DoubleSide} depthWrite={false} />
           </mesh>
           <mesh position={[0, h - 0.004, 0]}>
-            <cylinderGeometry args={[r, r, 0.012, 64]} />
-            <meshStandardMaterial color="#fffaf0" roughness={0.8} />
+            <cylinderGeometry args={[r, r, 0.012, 72]} />
+            <meshPhysicalMaterial color="#fff8ee" roughness={0.6} sheen={0.5} sheenColor="#ffffff" />
           </mesh>
         </>
       ) : (
-        <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[r, r, h, 96, 1]} />
+        <mesh geometry={geo} castShadow receiveShadow>
           <meshPhysicalMaterial {...mat} />
         </mesh>
       )}
-      {border && (
-        <mesh position={[0, 0.02, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[r, 0.022, 10, 96]} />
-          <meshStandardMaterial color={v.accent} roughness={0.7} />
-        </mesh>
-      )}
-      {border && isTop && (
-        <mesh position={[0, h, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[r - 0.01, 0.016, 10, 96]} />
-          <meshStandardMaterial color={v.accent} roughness={0.7} />
+      {piped && <ShellBorder r={r} y={0.012} color={v.accent} size={1} />}
+      {piped && isTop && !v.drip && <ShellBorder r={r - 0.022} y={h - 0.004} color={v.accent} size={0.75} />}
+      {v.covering === 'fondant' && (
+        <mesh position={[0, 0.02, 0]}>
+          <cylinderGeometry args={[r + 0.0025, r + 0.0025, 0.036, 112, 1, true]} />
+          <meshPhysicalMaterial color={v.accent} roughness={0.32} sheen={1} sheenColor={shade(v.accent, 0.4)} sheenRoughness={0.3} side={THREE.DoubleSide} />
         </mesh>
       )}
       {v.pearls && (
         <Instances count={pearlCount} seed={3} build={(i, m) => {
           const a = (i / pearlCount) * Math.PI * 2;
-          m.position.set(Math.cos(a) * (r + 0.012), 0.03, Math.sin(a) * (r + 0.012));
+          m.position.set(Math.cos(a) * (r + 0.012), v.covering === 'fondant' ? 0.045 : 0.03, Math.sin(a) * (r + 0.012));
         }}>
-          <sphereGeometry args={[0.016, 12, 12]} />
-          <meshPhysicalMaterial color="#fdf8ee" roughness={0.2} clearcoat={1} />
+          <sphereGeometry args={[0.019, 14, 10]} />
+          <meshPhysicalMaterial color="#fdf8ee" roughness={0.15} clearcoat={1} clearcoatRoughness={0.1} sheen={0.6} sheenColor="#fff2f8" />
         </Instances>
       )}
     </group>
+  );
+}
+
+/** Piped shell border, like a real buttercream border (many small teardrops in a ring). */
+function ShellBorder({ r, y, color, size }: { r: number; y: number; color: string; size: number }) {
+  const n = Math.max(18, Math.round((2 * Math.PI * r) / (0.036 * size)));
+  const build = useMemo(
+    () => (i: number, o: THREE.Object3D) => {
+      const a = (i / n) * Math.PI * 2;
+      o.position.set(Math.cos(a) * (r + 0.006), y + 0.006 * size, Math.sin(a) * (r + 0.006));
+      o.rotation.set(0, -a + Math.PI / 2, -0.35);
+      o.scale.set(1.6 * size, 0.95 * size, 1.05 * size);
+    },
+    [n, r, y, size],
+  );
+  return (
+    <Instances count={n} seed={1} build={build}>
+      <sphereGeometry args={[0.019, 14, 10]} />
+      <meshPhysicalMaterial color={color} roughness={0.55} sheen={0.5} sheenColor="#ffffff" />
+    </Instances>
   );
 }
 
@@ -184,76 +230,186 @@ function Sprinkles({ r, y }: { r: number; y: number }) {
 }
 
 function Drip({ r, y, color }: { r: number; y: number; color: string }) {
+  const gold = color === '#d4af37';
   const drips = useMemo(() => {
     const rnd = seeded(5);
-    const n = Math.max(10, Math.round(r * 40));
-    return Array.from({ length: n }, (_, i) => ({ a: (i / n) * Math.PI * 2 + rnd() * 0.1, len: 0.05 + rnd() * 0.14 }));
+    const n = Math.max(14, Math.round(r * 52));
+    return Array.from({ length: n }, (_, i) => ({ a: (i / n) * Math.PI * 2 + (rnd() - 0.5) * 0.12, len: 0.03 + rnd() ** 1.6 * 0.17, w: 0.009 + rnd() * 0.007 }));
   }, [r]);
+  const stem = useMemo(() => new THREE.CylinderGeometry(1, 1, 1, 10, 1, true).translate(0, -0.5, 0), []);
+  const buildStem = useMemo(
+    () => (i: number, o: THREE.Object3D) => {
+      const d = drips[i]!;
+      o.position.set(Math.cos(d.a) * (r + 0.004), y + 0.004, Math.sin(d.a) * (r + 0.004));
+      o.scale.set(d.w, d.len + 0.004, d.w);
+    },
+    [drips, r, y],
+  );
+  const buildBulb = useMemo(
+    () => (i: number, o: THREE.Object3D) => {
+      const d = drips[i]!;
+      o.position.set(Math.cos(d.a) * (r + 0.004), y - d.len, Math.sin(d.a) * (r + 0.004));
+      o.scale.set(d.w * 1.25, d.w * 1.45, d.w * 1.25);
+    },
+    [drips, r, y],
+  );
+  const mat = <meshPhysicalMaterial color={color} roughness={gold ? 0.25 : 0.14} clearcoat={gold ? 0.3 : 1} clearcoatRoughness={0.08} metalness={gold ? 0.9 : 0} />;
   return (
     <group>
-      <mesh position={[0, y + 0.006, 0]}>
-        <cylinderGeometry args={[r + 0.006, r + 0.006, 0.02, 96]} />
-        <meshPhysicalMaterial color={color} roughness={0.2} clearcoat={0.8} metalness={color === '#d4af37' ? 0.7 : 0} />
+      {/* glossy pool on top, with a rounded lip where it spills over */}
+      <mesh position={[0, y + 0.004, 0]} receiveShadow>
+        <cylinderGeometry args={[r - 0.004, r - 0.004, 0.014, 112]} />
+        {mat}
       </mesh>
-      {drips.map((d, i) => (
-        <mesh key={i} position={[Math.cos(d.a) * (r + 0.006), y - d.len / 2, Math.sin(d.a) * (r + 0.006)]}>
-          <capsuleGeometry args={[0.014, d.len, 4, 8]} />
-          <meshPhysicalMaterial color={color} roughness={0.2} clearcoat={0.8} metalness={color === '#d4af37' ? 0.7 : 0} />
-        </mesh>
-      ))}
+      <mesh position={[0, y + 0.002, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[r - 0.004, 0.009, 12, 112]} />
+        {mat}
+      </mesh>
+      <instancedMesh args={[stem, undefined, drips.length]} castShadow ref={(m) => fill(m, drips.length, buildStem)}>
+        {mat}
+      </instancedMesh>
+      <Instances count={drips.length} seed={1} build={buildBulb}>
+        <sphereGeometry args={[1, 12, 10]} />
+        {mat}
+      </Instances>
     </group>
   );
 }
 
-function Flower({ position, color, size = 1 }: { position: [number, number, number]; color: string; size?: number }) {
+function fill(m: THREE.InstancedMesh | null, n: number, build: (i: number, o: THREE.Object3D) => void) {
+  if (!m) return;
+  const o = new THREE.Object3D();
+  for (let i = 0; i < n; i++) {
+    o.position.set(0, 0, 0);
+    o.rotation.set(0, 0, 0);
+    o.scale.set(1, 1, 1);
+    build(i, o);
+    o.updateMatrix();
+    m.setMatrixAt(i, o.matrix);
+  }
+  m.instanceMatrix.needsUpdate = true;
+}
+
+/** Rose parts merged into a few meshes (built once, shared by every rose) so phones draw them fast. */
+let roseParts: { inner: THREE.BufferGeometry; outer: THREE.BufferGeometry; leaves: THREE.BufferGeometry } | null = null;
+function getRoseParts() {
+  if (roseParts) return roseParts;
+  const petal = new THREE.SphereGeometry(1, 12, 8, 0, Math.PI * 0.95, 0, Math.PI * 0.42);
+  const inner: THREE.BufferGeometry[] = [];
+  const outer: THREE.BufferGeometry[] = [];
+  const o = new THREE.Object3D();
+  const holder = new THREE.Object3D();
+  holder.add(o);
+  [3, 5, 7].forEach((n, k) => {
+    for (let i = 0; i < n; i++) {
+      const rad = 0.019 + k * 0.007;
+      holder.rotation.set(0, (i / n) * Math.PI * 2 + k * 0.6, 0);
+      o.position.set(0.004 + k * 0.009, 0.012 - k * 0.006, 0);
+      o.rotation.set(0, Math.PI / 2, -(0.25 + k * 0.42));
+      o.scale.set(rad, rad * 1.15, rad);
+      holder.updateMatrixWorld(true);
+      (k === 0 ? inner : outer).push(petal.clone().applyMatrix4(o.matrixWorld));
+    }
+  });
+  const bud = new THREE.SphereGeometry(1, 12, 10).applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(0, 0.012, 0), new THREE.Quaternion(), new THREE.Vector3(0.015, 0.02, 0.015)));
+  inner.push(bud);
+  const sh = new THREE.Shape();
+  sh.moveTo(0, 0);
+  sh.quadraticCurveTo(0.025, 0.02, 0, 0.065);
+  sh.quadraticCurveTo(-0.025, 0.02, 0, 0);
+  const leaves = [0.4, 2.6].map((a) => {
+    o.position.set(Math.cos(a) * 0.03, -0.002, Math.sin(a) * 0.03);
+    o.rotation.set(-Math.PI / 2 + 0.25, 0, a - Math.PI / 2);
+    o.scale.set(1, 1, 1);
+    holder.rotation.set(0, 0, 0);
+    holder.updateMatrixWorld(true);
+    return new THREE.ShapeGeometry(sh, 6).applyMatrix4(o.matrixWorld);
+  });
+  roseParts = { inner: mergeGeometries(inner.map((g) => g.toNonIndexed()))!, outer: mergeGeometries(outer.map((g) => g.toNonIndexed()))!, leaves: mergeGeometries(leaves.map((g) => g.toNonIndexed()))! };
+  return roseParts;
+}
+
+/** A rose made of cupped petals in a spiral, with two leaves. */
+function Rose({ position, color, size = 1, turn = 0 }: { position: [number, number, number]; color: string; size?: number; turn?: number }) {
+  const parts = getRoseParts();
+  const inner = shade(color, -0.12);
   return (
-    <group position={position} scale={size}>
-      {Array.from({ length: 6 }, (_, i) => {
-        const a = (i / 6) * Math.PI * 2;
-        return (
-          <mesh key={i} position={[Math.cos(a) * 0.035, 0, Math.sin(a) * 0.035]} rotation={[0, -a, 0.5]} scale={[1.3, 0.5, 0.9]}>
-            <sphereGeometry args={[0.032, 12, 10]} />
-            <meshStandardMaterial color={color} roughness={0.6} />
-          </mesh>
-        );
-      })}
-      <mesh position={[0, 0.012, 0]}>
-        <sphereGeometry args={[0.02, 12, 10]} />
-        <meshStandardMaterial color="#f5d34a" roughness={0.6} />
+    <group position={position} scale={size * 2.3} rotation={[0, turn, 0]}>
+      <mesh geometry={parts.inner} castShadow>
+        <meshPhysicalMaterial color={inner} roughness={0.5} sheen={0.8} sheenColor="#ffffff" side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[0.07, -0.01, 0.02]} rotation={[0.3, 0.6, 0.3]} scale={[1.6, 0.3, 0.7]}>
-        <sphereGeometry args={[0.03, 10, 8]} />
-        <meshStandardMaterial color="#5f9e5f" roughness={0.7} />
+      <mesh geometry={parts.outer} castShadow>
+        <meshPhysicalMaterial color={color} roughness={0.5} sheen={0.9} sheenColor="#ffffff" sheenRoughness={0.4} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh geometry={parts.leaves}>
+        <meshStandardMaterial color="#4f8a4b" roughness={0.55} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );
 }
 
+/** Little sprigs of baby's breath between the roses. */
+function BabysBreath({ position }: { position: [number, number, number] }) {
+  const build = useMemo(
+    () => (_i: number, o: THREE.Object3D, rnd: () => number) => {
+      const a = rnd() * Math.PI * 2;
+      const d = rnd() * 0.07;
+      o.position.set(Math.cos(a) * d, rnd() * 0.05, Math.sin(a) * d);
+    },
+    [],
+  );
+  return (
+    <group position={position}>
+      <Instances count={22} seed={17} build={build}>
+        <sphereGeometry args={[0.009, 8, 6]} />
+        <meshStandardMaterial color="#fffdf8" roughness={0.8} />
+      </Instances>
+    </group>
+  );
+}
+
+/** Piped rosettes: a spiral of icing that rises as it closes, like a real 1M tip swirl. */
 function Rosettes({ r, y, color }: { r: number; y: number; color: string }) {
-  const n = Math.max(8, Math.round(r * 22));
+  const n = Math.max(6, Math.round(r * 10));
+  const geo = useMemo(() => {
+    const pts: THREE.Vector3[] = [];
+    for (let i = 0; i <= 60; i++) {
+      const t = i / 60;
+      const ang = t * Math.PI * 2 * 2.3;
+      const rad = 0.058 * (1 - 0.8 * t);
+      pts.push(new THREE.Vector3(Math.cos(ang) * rad, 0.016 + 0.05 * t, Math.sin(ang) * rad));
+    }
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 90, 0.019, 8, false);
+  }, []);
+  const build = useMemo(
+    () => (i: number, o: THREE.Object3D) => {
+      const a = (i / n) * Math.PI * 2;
+      o.position.set(Math.cos(a) * (r - 0.08), y, Math.sin(a) * (r - 0.08));
+      o.rotation.set(0, a * 3, 0);
+    },
+    [n, r, y],
+  );
   return (
-    <group>
-      {Array.from({ length: n }, (_, i) => {
-        const a = (i / n) * Math.PI * 2;
-        return (
-          <group key={i} position={[Math.cos(a) * (r - 0.045), y + 0.02, Math.sin(a) * (r - 0.045)]}>
-            <mesh rotation={[Math.PI / 2, 0, 0]}>
-              <torusGeometry args={[0.022, 0.014, 8, 16]} />
-              <meshStandardMaterial color={color} roughness={0.7} />
-            </mesh>
-            <mesh position={[0, 0.012, 0]}>
-              <sphereGeometry args={[0.016, 10, 8]} />
-              <meshStandardMaterial color={shade(color, 0.15)} roughness={0.7} />
-            </mesh>
-          </group>
-        );
-      })}
-    </group>
+    <instancedMesh args={[geo, undefined, n]} castShadow ref={(m) => {
+      if (!m) return;
+      const o = new THREE.Object3D();
+      const rnd = seeded(2);
+      for (let i = 0; i < n; i++) {
+        build(i, o);
+        o.rotation.y += rnd();
+        o.updateMatrix();
+        m.setMatrixAt(i, o.matrix);
+      }
+      m.instanceMatrix.needsUpdate = true;
+    }}>
+      <meshPhysicalMaterial color={color} roughness={0.55} sheen={0.6} sheenColor="#ffffff" />
+    </instancedMesh>
   );
 }
 
 function Candles({ n, r, y, color }: { n: number; r: number; y: number; color: string }) {
-  const ring = n === 1 ? 0 : Math.min(r * 0.55, 0.05 + n * 0.012);
+  const ring = n === 1 ? 0 : Math.min(r * 0.6, 0.08 + n * 0.02);
+  const stripes = candleStripes(color) ?? undefined;
   return (
     <group>
       {Array.from({ length: n }, (_, i) => {
@@ -261,14 +417,22 @@ function Candles({ n, r, y, color }: { n: number; r: number; y: number; color: s
         const x = Math.cos(a) * ring;
         const z = Math.sin(a) * ring;
         return (
-          <group key={i} position={[x, y, z]}>
+          <group key={i} position={[x, y, z]} scale={1.7}>
             <mesh position={[0, 0.07, 0]} castShadow>
-              <cylinderGeometry args={[0.009, 0.009, 0.14, 12]} />
-              <meshStandardMaterial color={i % 2 ? '#fffaf3' : color} roughness={0.5} />
+              <cylinderGeometry args={[0.008, 0.009, 0.14, 16]} />
+              <meshPhysicalMaterial map={stripes} roughness={0.35} clearcoat={0.4} />
             </mesh>
-            <mesh position={[0, 0.16, 0]}>
-              <coneGeometry args={[0.012, 0.04, 12]} />
-              <meshStandardMaterial color="#ffb400" emissive="#ff9a00" emissiveIntensity={1.6} />
+            <mesh position={[0, 0.146, 0]}>
+              <cylinderGeometry args={[0.0012, 0.0012, 0.014, 4]} />
+              <meshBasicMaterial color="#2a2018" />
+            </mesh>
+            <mesh position={[0, 0.165, 0]} scale={[0.008, 0.017, 0.008]}>
+              <sphereGeometry args={[1, 12, 10]} />
+              <meshStandardMaterial color="#ffd36b" emissive="#ff9a1f" emissiveIntensity={2.2} toneMapped={false} />
+            </mesh>
+            <mesh position={[0, 0.165, 0]}>
+              <sphereGeometry args={[0.028, 12, 10]} />
+              <meshBasicMaterial color="#ffc861" transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
             </mesh>
           </group>
         );
@@ -278,31 +442,35 @@ function Candles({ n, r, y, color }: { n: number; r: number; y: number; color: s
 }
 
 function Fruits({ r, y }: { r: number; y: number }) {
+  const skin = strawberrySkin() ?? undefined;
+  const berryGeo = useMemo(() => {
+    const prof = [[0.0001, 0], [0.01, 0.006], [0.021, 0.02], [0.028, 0.036], [0.027, 0.05], [0.019, 0.059], [0.0001, 0.062]].map(([x, yy]) => new THREE.Vector2(x, yy));
+    return new THREE.LatheGeometry(prof, 20);
+  }, []);
   const items = useMemo(() => {
     const rnd = seeded(21);
-    return Array.from({ length: 9 }, (_, i) => {
+    return Array.from({ length: 10 }, (_, i) => {
       const a = rnd() * Math.PI * 2;
-      const d = (0.3 + rnd() * 0.6) * (r - 0.06);
-      return { x: Math.cos(a) * d, z: Math.sin(a) * d, berry: i % 3 === 0, rot: rnd() * 0.8 };
+      const d = (0.2 + rnd() * 0.62) * (r - 0.1);
+      return { x: Math.cos(a) * d, z: Math.sin(a) * d, berry: i % 3 === 0, rot: rnd() * 0.9, spin: rnd() * Math.PI * 2 };
     });
   }, [r]);
   return (
     <group position={[0, y, 0]}>
       {items.map((f, i) =>
         f.berry ? (
-          <mesh key={i} position={[f.x, 0.02, f.z]}>
-            <sphereGeometry args={[0.022, 12, 10]} />
-            <meshStandardMaterial color="#2c3e8f" roughness={0.4} />
+          <mesh key={i} position={[f.x, 0.028, f.z]} castShadow>
+            <sphereGeometry args={[0.028, 16, 12]} />
+            <meshPhysicalMaterial color="#34407a" roughness={0.55} sheen={0.8} sheenColor="#9aa7d6" />
           </mesh>
         ) : (
-          <group key={i} position={[f.x, 0.035, f.z]} rotation={[f.rot, 0, f.rot]}>
-            <mesh rotation={[Math.PI, 0, 0]}>
-              <coneGeometry args={[0.03, 0.07, 12]} />
-              <meshStandardMaterial color="#d23a3a" roughness={0.45} />
+          <group key={i} position={[f.x, 0.06, f.z]} rotation={[Math.PI - 0.6 - f.rot * 0.4, f.spin, 0]} scale={1.9}>
+            <mesh geometry={berryGeo} position={[0, -0.031, 0]} castShadow>
+              <meshPhysicalMaterial map={skin} roughness={0.3} clearcoat={0.6} clearcoatRoughness={0.2} />
             </mesh>
-            <mesh position={[0, 0.036, 0]}>
-              <cylinderGeometry args={[0.03, 0.02, 0.01, 8]} />
-              <meshStandardMaterial color="#3f8f3f" />
+            <mesh position={[0, 0.032, 0]}>
+              <cylinderGeometry args={[0.022, 0.012, 0.005, 7]} />
+              <meshStandardMaterial color="#3f7f35" roughness={0.6} />
             </mesh>
           </group>
         ),
@@ -351,6 +519,24 @@ function GoldLeaf({ r, y, h }: { r: number; y: number; h: number }) {
   );
 }
 
+/** White porcelain cake stand: plate with a lip, stem and foot. */
+function CakeStand({ r }: { r: number }) {
+  const geo = useMemo(() => {
+    const R = r * 1.3;
+    const F = Math.max(0.12, R * 0.5);
+    const pts = [
+      [0.0001, -0.16], [F, -0.16], [F + 0.006, -0.154], [F * 0.75, -0.142], [0.04, -0.12], [0.032, -0.05], [0.036, -0.012], [0.07, 0.012],
+      [R * 0.9, 0.026], [R, 0.034], [R + 0.004, 0.044], [R - 0.004, 0.05], [R * 0.95, 0.047], [0.0001, 0.047],
+    ].map(([x, y]) => new THREE.Vector2(x, y));
+    return new THREE.LatheGeometry(pts, 96);
+  }, [r]);
+  return (
+    <mesh geometry={geo} castShadow receiveShadow>
+      <meshPhysicalMaterial color="#fbf8f3" roughness={0.18} clearcoat={0.8} clearcoatRoughness={0.1} />
+    </mesh>
+  );
+}
+
 function CakeModel({ v, spin }: { v: CakeVisual; spin: number }) {
   const group = useRef<THREE.Group>(null);
   const target = useRef(spin);
@@ -382,18 +568,11 @@ function CakeModel({ v, spin }: { v: CakeVisual; spin: number }) {
 
   return (
     <group ref={group}>
-      {/* cake stand */}
-      <mesh position={[0, 0.03, 0]} receiveShadow castShadow>
-        <cylinderGeometry args={[base.r * 1.22, base.r * 1.18, 0.03, 64]} />
-        <meshPhysicalMaterial color="#f4ece1" roughness={0.3} clearcoat={0.4} />
-      </mesh>
-      <mesh position={[0, -0.06, 0]}>
-        <cylinderGeometry args={[0.05, 0.08, 0.15, 24]} />
-        <meshPhysicalMaterial color="#efe5d8" roughness={0.3} />
-      </mesh>
-      <mesh position={[0, -0.13, 0]}>
-        <cylinderGeometry args={[base.r * 0.55, base.r * 0.6, 0.02, 48]} />
-        <meshPhysicalMaterial color="#efe5d8" roughness={0.3} />
+      <CakeStand r={base.r} />
+      {/* cake board under the bottom tier */}
+      <mesh position={[0, 0.054, 0]} receiveShadow>
+        <cylinderGeometry args={[base.r + 0.03, base.r + 0.03, 0.012, 96]} />
+        <meshPhysicalMaterial color="#efe8de" metalness={0.55} roughness={0.32} clearcoat={0.5} />
       </mesh>
 
       {stack.map((s, i) => (
@@ -407,10 +586,16 @@ function CakeModel({ v, spin }: { v: CakeVisual; spin: number }) {
       {v.gold && <GoldLeaf r={top.r} y={top.y} h={top.h} />}
       {v.flowers && (
         <group>
-          <Flower position={[top.r * 0.55, topY + 0.03, top.r * 0.35]} color={v.accent} size={1.2} />
-          <Flower position={[top.r * 0.75, topY + 0.01, -top.r * 0.1]} color="#fffaf3" />
-          <Flower position={[top.r * 0.3, topY + 0.02, top.r * 0.7]} color={shade(v.accent, 0.3)} size={0.9} />
-          {stack.length > 1 && <Flower position={[base.r * 0.95, base.y + base.h * 0.9, base.r * 0.3]} color={v.accent} size={1.1} />}
+          <Rose position={[top.r * 0.5, topY + 0.006, top.r * 0.35]} color={v.accent} size={1.25} turn={0.3} />
+          <Rose position={[top.r * 0.78, topY + 0.004, -top.r * 0.12]} color="#fff6ef" size={1.05} turn={1.4} />
+          <Rose position={[top.r * 0.22, topY + 0.004, top.r * 0.72]} color={shade(v.accent, 0.35)} size={0.95} turn={2.2} />
+          <BabysBreath position={[top.r * 0.62, topY + 0.01, top.r * 0.62]} />
+          {stack.length > 1 && (
+            <>
+              <Rose position={[base.r * 0.92, base.y + base.h * 0.98, base.r * 0.3]} color={v.accent} size={1.1} turn={0.9} />
+              <BabysBreath position={[base.r * 0.86, base.y + base.h, base.r * 0.48]} />
+            </>
+          )}
         </group>
       )}
       {v.candles > 0 && <Candles n={v.candles} r={top.r} y={topY} color={v.accent} />}
@@ -452,21 +637,33 @@ export default function Cake3D({ visual, spin, autoRotate, onReady }: Cake3DProp
   const maxR = Math.max(...visual.tiers.map((t) => (t.d / 2) * K * 1.6));
   const dist = Math.max(1.8, Math.max(totalH * 2.7, maxR * 4.3));
   const lookY = totalH * 0.45;
+  // Start sharp; if this phone can't keep up, drop the resolution (and shadows) instead of stuttering.
+  const [dpr, setDpr] = useState(1.75);
+  const [lowPower, setLowPower] = useState(false);
   return (
     <Canvas
-      shadows
-      dpr={[1, 2]}
+      shadows={!lowPower}
+      dpr={dpr}
       frameloop={autoRotate ? 'always' : 'demand'}
       camera={{ position: [0, lookY + dist * 0.62, dist * 0.92], fov: 36, near: 0.05, far: 50 }}
       gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
       onCreated={({ gl }) => onReady?.(gl.domElement)}
     >
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={['#fff6ea', '#d9c7b0', 0.6]} />
-      <directionalLight position={[2.5, 4, 2]} intensity={1.6} castShadow shadow-mapSize={[1024, 1024]} />
-      <directionalLight position={[-3, 2, -2]} intensity={0.45} color="#ffe1ec" />
+      <PerformanceMonitor onDecline={() => setDpr(1)} onFallback={() => { setDpr(1); setLowPower(true); }} flipflops={2} />
+      {/* Soft studio light, rendered once on the device (no downloads). */}
+      <Environment resolution={128} frames={1} environmentIntensity={0.85}>
+        <Lightformer form="rect" intensity={2.4} color="#fff4e8" position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[10, 10, 1]} />
+        <Lightformer form="rect" intensity={1.8} color="#ffffff" position={[-5, 2, 2]} rotation-y={Math.PI / 2} scale={[5, 4, 1]} />
+        <Lightformer form="rect" intensity={1.1} color="#ffe3ee" position={[5, 1.5, -1]} rotation-y={-Math.PI / 2} scale={[5, 3, 1]} />
+        <Lightformer form="ring" intensity={1.6} color="#ffffff" position={[2, 3, 6]} scale={2.5} />
+        <Lightformer form="rect" intensity={0.5} color="#f6e6d6" position={[0, -3, 0]} rotation-x={-Math.PI / 2} scale={[10, 10, 1]} />
+      </Environment>
+      <ambientLight intensity={0.18} />
+      <hemisphereLight args={['#fff6ea', '#d9c7b0', 0.35]} />
+      <directionalLight position={[2.5, 4, 2]} intensity={1.35} castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.02} />
+      <directionalLight position={[-3, 2, -2]} intensity={0.35} color="#ffe1ec" />
       <CakeModel v={visual} spin={spin} />
-      <ContactShadows position={[0, -0.14, 0]} opacity={0.35} scale={maxR * 6} blur={2.4} far={1.5} />
+      <ContactShadows position={[0, -0.161, 0]} opacity={0.45} scale={maxR * 6} blur={2.6} far={1.2} />
       <OrbitControls
         target={[0, lookY, 0]}
         enablePan={false}

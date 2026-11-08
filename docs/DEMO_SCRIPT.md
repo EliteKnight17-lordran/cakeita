@@ -11,7 +11,7 @@
 ## Script
 
 1. **Problem (20 s).** "Home bakers quote every custom cake by hand in Messenger. The customer sends a ₱5,000 inspo with a ₱2,000 budget, the baker guesses a price, and either loses the sale or loses money when butter goes up."
-2. **Customer (60 s).** Judge scans the QR. Paste a sample message ("7th birthday, 2 tier"). Show the 3 designs, turn the cake in 3D, add sprinkles and watch the price move. Send to baker.
+2. **Customer (60 s).** Judge scans the QR. Everything is one page: tap a sample message ("7th birthday, 2 tiers") and the 3 designs, the 3D cake and the price appear as you type. Turn the cake, open **I-customize**, add sprinkles and watch the sticky price move. Tap **Compare bakers near me**: the same cake priced by 12 nearby (sample) bakers, green = fits budget. Go back and **Send to baker**.
 3. **Baker (60 s).** On the laptop, open the request. Point at the breakdown: ingredients, labor, margin. Type ₱500 to show "Lugi ka rito". Approve, send the quote link.
 4. **Close the loop (20 s).** Judge taps "Ito ang gusto ko". The order is on the board with a shopping list.
 5. **Why it wins (20 s).** "AI only reads, code prices, the baker decides. The picture comes from the same parts as the price, so it never over-promises. Zero server cost, works on weak signal, big text for Lola."

@@ -8,7 +8,7 @@ import { priceSelection, toPublicMenu } from '../domain/pricing';
 import { readRequest } from '../domain/requestReader';
 import { createSampleBakery } from '../domain/starterMenus';
 import { SCENARIOS } from '../data/demoScenarios';
-import { EMPTY_DRAFT, STEPS, writeDraft, type Step } from '../data/draft';
+import { EMPTY_DRAFT, writeDraft } from '../data/draft';
 import { demoOrders, scenarioOrder } from '../data/seed';
 import { localBakeryFor, repo, useDb } from '../data/store';
 import { setPrefs, usePrefs } from '../lib/prefs';
@@ -24,7 +24,6 @@ export function DevPanel() {
   const loc = useLocation();
   const [open, setOpen] = useState(false);
   const [scenario, setScenario] = useState(SCENARIOS[0]!.key);
-  const [step, setStep] = useState<Step>('designs');
   const [ai, setAi] = useState<string>('…');
   const [toast, setToast] = useState('');
 
@@ -39,7 +38,7 @@ export function DevPanel() {
 
   const slugInPath = /^\/b\/([^/?]+)/.exec(loc.pathname)?.[1] ?? 'sample';
 
-  const fillCustomer = (jump: Step) => {
+  const fillCustomer = (withContact: boolean) => {
     const s = SCENARIOS.find((x) => x.key === scenario)!;
     const bakery = localBakeryFor(slugInPath) ?? createSampleBakery();
     const menu = toPublicMenu(bakery);
@@ -47,7 +46,7 @@ export function DevPanel() {
     const reading: Reading = { ...r, summary: '', usedAi: false, aiNote: '' };
     writeDraft(menu.slug, {
       ...EMPTY_DRAFT,
-      step: jump,
+      step: 'order',
       occasion: s.occasion,
       eventDate: addDays(new Date(), Math.max(s.inDays, bakery.leadTimeDays)),
       servings: s.servings,
@@ -55,13 +54,15 @@ export function DevPanel() {
       noBudget: s.budget == null,
       description: s.message,
       reading,
+      readingFor: s.message,
       look: { colors: r.colors.slice(0, 2).map((c) => c.hex), textOnCake: r.textOnCake.slice(0, 32), candles: r.age ? Math.min(10, r.age) : 1 },
-      name: s.customer.name,
-      contact: s.customer.contact,
-      consent: true,
+      name: withContact ? s.customer.name : '',
+      contact: withContact ? s.customer.contact : '',
+      consent: withContact,
     });
     if (!loc.pathname.startsWith(`/b/${menu.slug}`)) nav(`/b/${menu.slug}${menu.slug === 'sample' ? '' : loc.search}`);
-    say(`Customer filled: ${s.title} → ${jump}`);
+    say(`Customer filled: ${s.title}`);
+    window.setTimeout(() => document.getElementById(withContact ? 'sec-contact' : 'sec-designs')?.scrollIntoView({ block: 'start' }), 300);
   };
 
   const ensureBakery = () => {
@@ -124,22 +125,12 @@ export function DevPanel() {
                 ))}
               </select>
             </label>
-            <label className="block">
-              Jump to step
-              <select className="input mt-1" value={step} onChange={(e) => setStep(e.target.value as Step)}>
-                {STEPS.filter((s) => s !== 'done').map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn-ghost" onClick={() => fillCustomer(step)}>
+              <button type="button" className="btn-ghost" onClick={() => fillCustomer(false)}>
                 Fill + jump
               </button>
-              <button type="button" className="btn-ghost" onClick={() => fillCustomer('contact')}>
-                Fill to last step
+              <button type="button" className="btn-ghost" onClick={() => fillCustomer(true)}>
+                Fill all (ready to send)
               </button>
               <button type="button" className="btn-ghost" onClick={() => { writeDraft(slugInPath, EMPTY_DRAFT); say('Draft cleared'); }}>
                 Clear draft

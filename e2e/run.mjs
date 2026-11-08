@@ -22,6 +22,7 @@ mkdirSync(OUT, { recursive: true });
 const PORT = 4179;
 const BASE = `http://localhost:${PORT}/`;
 const axeSource = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
+const BLANK_TILE = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/58BAwAI/AL+hc2rNAAAAABJRU5ErkJggg==', 'base64');
 
 const results = [];
 let failures = 0;
@@ -57,6 +58,8 @@ async function axe(page, label) {
 async function phone(browser, name, opts = {}) {
   const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 1, ...opts });
   await ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+  // Map pictures come from the internet; serve a blank tile so the test is offline and repeatable.
+  await ctx.route(/basemaps\.cartocdn\.com|tile\.openstreetmap\.org/, (r) => r.fulfill({ contentType: 'image/png', body: BLANK_TILE }));
   const page = await ctx.newPage();
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push(e.message));
@@ -105,42 +108,57 @@ async function main() {
     await shot(customer, '01-home');
 
     await customer.goto(`${BASE}#/b/sample`);
-    await customer.getByRole('button', { name: 'Simulan' }).click();
+    // One page: no Next buttons. Designs are there before anything is typed.
+    check('order form is one page (no Next button)', (await customer.getByRole('button', { name: 'Sunod' }).count()) === 0);
+    const designGroup = customer.getByRole('radiogroup', { name: 'Mga design' });
+    const cards = designGroup.getByRole('radio');
+    check('designs show before typing anything', await cards.first().waitFor({ timeout: 20000 }).then(() => true, () => false));
+    await customer.getByLabel(/Ilarawan ang cake/).fill('2 tier pink ube cake with chocolate drip and fresh flowers, "Happy 7th Mia"');
     await customer.getByRole('button', { name: /Birthday/ }).click();
-    await customer.getByRole('button', { name: 'Sunod' }).click();
-    await customer.locator('main button.btn-ghost').first().click(); // quick date
-    await customer.getByRole('button', { name: 'Sunod' }).click();
     await customer.getByRole('button', { name: '30 tao' }).click();
-    await customer.getByRole('button', { name: 'Sunod' }).click();
     await customer.getByRole('button', { name: '₱2,500' }).click();
-    await axe(customer, 'customer budget step');
-    await customer.getByRole('button', { name: 'Sunod' }).click();
-    await customer.getByLabel(/Kulay, flavor/).fill('2 tier pink ube cake with chocolate drip and fresh flowers, "Happy 7th Mia"');
-    await customer.getByRole('button', { name: 'Ipakita ang designs' }).click();
-    await customer.waitForSelector('[role="radiogroup"]');
-    const cards = customer.locator('[role="radiogroup"] [role="radio"]');
+    await customer.locator('[data-quick-date]').first().click();
     check('customer sees 2-3 designs', (await cards.count()) >= 2, `${await cards.count()} designs`);
     check('designs show budget fit labels', (await customer.getByText('Pasok sa budget').count()) >= 1);
-    check('unofficial understanding shown', await customer.getByText('Ang naintindihan namin').isVisible());
+    check('unofficial understanding shown live', await customer.getByText('Ang naintindihan namin').isVisible());
+    check('sticky price shows while filling in', await customer.getByTestId('live-price').isVisible());
     await customer.waitForTimeout(1200);
-    await axe(customer, 'customer designs');
+    await axe(customer, 'customer one-page form');
     await shot(customer, '02-designs');
 
-    await customer.getByRole('button', { name: 'I-customize ito' }).click();
-    const priceBefore = await customer.locator('.price').first().innerText();
+    await customer.getByText('I-customize').first().click();
+    const priceBefore = await customer.getByTestId('live-price').innerText();
     await customer.getByRole('button', { name: /Sprinkles/ }).click();
-    const priceAfter = await customer.locator('.price').first().innerText();
+    const priceAfter = await customer.getByTestId('live-price').innerText();
     check('adding sprinkles re-prices live', priceBefore !== priceAfter, `${priceBefore} → ${priceAfter}`);
     await customer.waitForTimeout(1000);
     await shot(customer, '03-customize');
-    await customer.getByRole('button', { name: 'Sunod' }).click();
-    await customer.getByRole('button', { name: 'Ipadala sa baker' }).click();
-    check('contact step blocks empty name', await customer.getByText(/Pakilagay ang pangalan/).isVisible());
+
+    // Nearby bakers map: same cake, each baker's own price.
+    await customer.getByRole('link', { name: /Ikumpara ang malapit na baker/ }).click();
+    await customer.getByRole('heading', { name: /Mga baker na malapit/ }).waitFor();
+    check('map loads with price pins', await waitTrue(async () => (await customer.locator('.leaflet-marker-icon .pin').count()) >= 2), `${await customer.locator('.leaflet-marker-icon .pin').count()} pins`);
+    const requestButtons = customer.getByRole('button', { name: /^Mag-request kay/ });
+    check('map lists bakers who can make it', (await requestButtons.count()) >= 1, `${await requestButtons.count()} bakers`);
+    const pinPrices = await customer.locator('.leaflet-marker-icon .pin').allInnerTexts();
+    check('pins show peso estimates', pinPrices.every((t) => /^₱[\d,]+$/.test(t.trim())), pinPrices.join(' '));
+    await customer.getByRole('button', { name: 'Kahit gaano kalayo' }).click();
+    await customer.getByLabel('Yung kaya lang gawin').uncheck();
+    check('unticking shows bakers who cannot make all of it', await waitTrue(async () => (await customer.getByText(/Hindi gumagawa ng|masyadong maaga/).count()) >= 1));
+    await customer.waitForTimeout(800);
+    await axe(customer, 'nearby bakers map');
+    await shot(customer, '13-near-map');
+    await customer.goBack();
+    await designGroup.waitFor();
+    check('cake survives the trip to the map and back', (await customer.getByLabel(/Ilarawan ang cake/).inputValue()).includes('Happy 7th Mia'));
+
+    await customer.getByRole('button', { name: /Ipadala sa baker/ }).click();
+    check('send blocks empty name', await customer.getByText(/Pakilagay ang pangalan/).isVisible());
     await customer.getByLabel('Pangalan mo').fill('Ana Test');
     await customer.getByLabel(/Messenger name o mobile/).fill('0917 123 4567');
-    await customer.getByRole('checkbox').check();
+    await customer.locator('#consent').check();
     await axe(customer, 'customer contact');
-    await customer.getByRole('button', { name: 'Ipadala sa baker' }).click();
+    await customer.getByRole('button', { name: /Ipadala sa baker/ }).click();
     await customer.getByRole('heading', { name: /Ipadala na sa baker/ }).waitFor();
     const requestUrl = await linkFromShareBox(customer);
     check('request link created', !!requestUrl && requestUrl.includes('#/baker/import?r='), `${requestUrl?.length} chars`);
@@ -237,10 +255,19 @@ async function main() {
     await tester.getByRole('button', { name: 'Open developer panel' }).click();
     await tester.getByLabel('No WebGL (2D cake)').check();
     await tester.getByRole('button', { name: 'Fill + jump' }).click();
-    await tester.waitForSelector('[role="radiogroup"]');
+    await tester.getByRole('radiogroup', { name: 'Mga design' }).waitFor();
     check('dev panel jumps straight to designs', true);
     check('2D fallback renders when WebGL is off', (await tester.locator('canvas').count()) === 0 && (await tester.locator('svg[role="img"]').count()) > 0);
     await shot(tester, '12-dev-2d');
+    // Request from a nearby baker on the map: their page shows the same price as the map card.
+    await tester.goto(`${BASE}#/near`);
+    const firstCard = tester.locator('article').first();
+    await firstCard.waitFor();
+    const cardPrice = (await firstCard.locator('.price').innerText()).trim();
+    await firstCard.getByRole('button', { name: /^Mag-request kay/ }).click();
+    await tester.getByTestId('live-price').waitFor();
+    check('requesting from the map keeps the map price', (await tester.getByTestId('live-price').innerText()).trim() === cardPrice, cardPrice);
+    check('map bakeries are labeled as samples', await tester.getByText('Sample bakery, demo data').first().isVisible());
     await tester.goto(`${BASE}#/o/fake?q=zzzz`);
     check('tampered quote link shows a friendly error', await waitTrue(() => tester.getByText('Hindi mabuksan ang quote').isVisible()));
 

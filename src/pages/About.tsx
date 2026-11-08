@@ -39,6 +39,7 @@ export default function About() {
             <li>{tx('Requests and quotes travel as links you send yourself in Messenger. Our servers do not keep them.', 'Ang request at quote ay mga link na ikaw mismo ang nagpapadala sa Messenger. Hindi ito iniimbak ng server namin.')}</li>
             <li>{tx('Inspo photos are shrunk on your phone and are never saved. If smart reading is on, the photo is sent once to the AI to read and then discarded.', 'Pinaliliit sa phone mo ang inspo photo at hindi sine-save. Kung naka-on ang smart reading, ipapadala ito minsan sa AI para basahin at pagkatapos ay itatapon.')}</li>
             <li>{tx('Cakeita never asks for or handles payments.', 'Hindi humihingi o humahawak ng bayad ang Cakeita.')}</li>
+            <li>{tx('Your location for the bakers map stays on your phone. Only the map pictures are downloaded.', 'Nasa phone mo lang ang location mo para sa mapa. Ang larawan lang ng mapa ang dina-download.')}</li>
           </ul>
         </S>
         <S title={tx('Limits we are honest about', 'Mga limitasyon')}>
@@ -47,6 +48,7 @@ export default function About() {
             <li>{tx('Sample ingredient prices are estimates. Bakers should enter their own.', 'Tantya lang ang sample prices. Dapat ilagay ng baker ang sarili nilang presyo.')}</li>
             <li>{tx('Data is per device. Use Download backup in Menu and prices.', 'Per device ang data. Gamitin ang Download backup sa Menu at presyo.')}</li>
             <li>{tx('Character themes are made generic. Bakers should use licensed toppers.', 'Ginagawang generic ang character themes. Gumamit ng licensed topper.')}</li>
+            <li>{tx('The bakeries on the map are fictional samples for the demo, with sample prices.', 'Sample lang (hindi totoo) ang mga bakery sa mapa para sa demo, at sample din ang presyo.')}</li>
           </ul>
         </S>
         <S title={tx('Update history', 'Mga update')}>

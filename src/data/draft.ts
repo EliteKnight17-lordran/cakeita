@@ -8,7 +8,8 @@ import type { CakeLook, DesignTier, Selection } from '../domain/types';
  * saved (privacy); it stays in memory only.
  */
 
-export const STEPS = ['welcome', 'occasion', 'date', 'servings', 'budget', 'describe', 'designs', 'customize', 'contact', 'done'] as const;
+/** One page to fill in, then the "send it to the baker" screen. */
+export const STEPS = ['order', 'done'] as const;
 export type Step = (typeof STEPS)[number];
 
 export interface Draft {
@@ -19,7 +20,12 @@ export interface Draft {
   budget: number | null;
   noBudget: boolean;
   description: string;
+  /** A smart (AI) reading, kept only while the message it read is unchanged. */
   reading: Reading | null;
+  /** The exact message `reading` was made from. */
+  readingFor: string;
+  /** True once the customer picks colors/words/candles by hand. */
+  lookTouched: boolean;
   tier: DesignTier;
   selection: Selection | null;
   look: CakeLook;
@@ -33,7 +39,7 @@ export interface Draft {
 }
 
 export const EMPTY_DRAFT: Draft = {
-  step: 'welcome',
+  step: 'order',
   occasion: '',
   eventDate: '',
   servings: null,
@@ -41,6 +47,8 @@ export const EMPTY_DRAFT: Draft = {
   noBudget: false,
   description: '',
   reading: null,
+  readingFor: '',
+  lookTouched: false,
   tier: 'classic',
   selection: null,
   look: { colors: [], textOnCake: '', candles: 0 },
@@ -63,6 +71,8 @@ function load(slug: string): Draft {
   try {
     const raw = sessionStorage.getItem(key(slug));
     if (raw) d = { ...EMPTY_DRAFT, ...(JSON.parse(raw) as Partial<Draft>) };
+    // Drafts saved by the old step-by-step form: anything not sent is the one-page form now.
+    if (!(STEPS as readonly string[]).includes(d.step)) d = { ...d, step: 'order' };
   } catch {
     /* ignore */
   }

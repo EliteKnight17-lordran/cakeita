@@ -7,6 +7,7 @@ import Home from './pages/Home';
 const CustomerFlow = lazy(() => import('./pages/CustomerFlow'));
 const QuotePage = lazy(() => import('./pages/QuotePage'));
 const About = lazy(() => import('./pages/About'));
+const NearBakers = lazy(() => import('./pages/NearBakers'));
 const Inbox = lazy(() => import('./pages/baker/Inbox'));
 const Board = lazy(() => import('./pages/baker/Board'));
 const MenuEditor = lazy(() => import('./pages/baker/MenuEditor'));
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/b/:slug" element={<CustomerFlow />} />
+          <Route path="/near" element={<NearBakers />} />
           <Route path="/o/:id" element={<QuotePage />} />
           <Route path="/baker" element={<Inbox />} />
           <Route path="/baker/board" element={<Board />} />

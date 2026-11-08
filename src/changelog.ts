@@ -13,6 +13,24 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.0',
+    date: '2026-11-08',
+    en: [
+      'New: one-page order. Type your cake like a Messenger message and the designs, 3D cake and price update as you type. No more Next, Next, Next.',
+      'New: "Bakers near me" map. Compare the same cake across nearby bakers, each priced from their own costs, with distance, lead time and delivery. Tap to send your request to the one you like.',
+      'New: more realistic 3D cake: soft studio lighting, rounded frosting edges, piped shell borders, swirl rosettes, roses, glossy drips, strawberries and a porcelain cake stand.',
+      'New for bakers: "Get on the map" in My link.',
+      'The 3D cake lowers its quality by itself on slow phones instead of stuttering.',
+    ],
+    tl: [
+      'Bago: isang page na lang ang pag-order. I-type ang cake na parang Messenger message at kusang magbabago ang design, 3D cake at presyo.',
+      'Bago: mapa ng "Mga baker na malapit". Ikumpara ang parehong cake sa mga baker sa malapit, bawat isa may presyo mula sa sarili nilang gastos, may layo, abiso at delivery. I-tap para ipadala ang request sa napili mo.',
+      'Bago: mas makatotohanang 3D cake: malambot na ilaw, bilugang gilid ng frosting, piped na border, rosettes, rosas, makintab na drip, strawberry at porcelain na cake stand.',
+      'Bago para sa baker: "Mapasama sa mapa" sa My link.',
+      'Kusang binababa ng 3D cake ang quality sa mabagal na phone para hindi mag-lag.',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '2026-11-07',
     en: [

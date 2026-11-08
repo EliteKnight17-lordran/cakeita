@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { createSampleBakery } from '../domain/starterMenus';
 import type { Bakery, Order, OrderEvent } from '../domain/types';
+import { directoryBakery } from './directory';
 
 /**
  * Local-first data store. Everything lives on the device (localStorage) and is
@@ -155,7 +156,7 @@ export function localBakeryFor(slug: string): Bakery | null {
   const own = repo.get().bakery;
   if (own && own.slug === slug) return own;
   if (slug === 'sample') return createSampleBakery();
-  return null;
+  return directoryBakery(slug);
 }
 
 export function newId(prefix: string): string {
