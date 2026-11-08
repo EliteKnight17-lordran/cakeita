@@ -52,8 +52,12 @@ service cloud.firestore {
     // Customer -> baker. No account needed to send; only the baker can read.
     match /requests/{id} {
       allow create: if id.matches('^[A-Za-z0-9-]{4,64}$')
-        && request.resource.data.keys().hasOnly(['bakerUid', 'slug', 'req', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['bakerUid', 'slug', 'req', 'createdAt', 'photo', 'notify'])
         && text(request.resource.data.req, 20000)
+        // Optional inspo photo: a small JPEG as a data URL (shrunk on the customer's phone).
+        // Optional: the customer's phone, to tell them when the quote is ready.
+        && (!('notify' in request.resource.data) || text(request.resource.data.notify, 2000))
+        && (!('photo' in request.resource.data) || (text(request.resource.data.photo, 400000) && request.resource.data.photo.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')))
         && stamp(request.resource.data.createdAt)
         && exists(menuDoc(request.resource.data.slug))
         && get(menuDoc(request.resource.data.slug)).data.ownerUid == request.resource.data.bakerUid;
@@ -90,6 +94,18 @@ service cloud.firestore {
         && stamp(request.resource.data.createdAt);
       allow read, delete: if signedIn() && resource.data.bakerUid == request.auth.uid;
       allow update: if false;
+    }
+
+    // Phones a baker turned notifications on for. Readable by exact id (the notify function reads it
+    // to send "new request"); a subscription is useless without the server's private key.
+    match /push/{uid} {
+      allow get: if true;
+      allow list: if false;
+      allow delete: if isUid(uid);
+      allow create, update: if isUid(uid)
+        && request.resource.data.keys().hasOnly(['subs', 'updatedAt'])
+        && text(request.resource.data.subs, 8000)
+        && stamp(request.resource.data.updatedAt);
     }
 
     // A customer's own "My cakes" list.

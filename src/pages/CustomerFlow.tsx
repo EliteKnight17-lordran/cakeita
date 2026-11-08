@@ -14,7 +14,7 @@ import { addDays, earliestDate } from '../domain/insights';
 import { formatPeso } from '../domain/money';
 import { MOTIF_KEYS, MOTIFS } from '../domain/motifs';
 import { requestToOrder } from '../domain/orders';
-import { estimateFromMenu } from '../domain/pricing';
+import { estimateFromMenu, isFullDate } from '../domain/pricing';
 import { COLOR_WORDS } from '../domain/requestReader';
 import { cakeRequestSchema } from '../domain/schemas';
 import type { CakeRequest, PublicMenu, Selection } from '../domain/types';
@@ -28,6 +28,8 @@ import { requestLink } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
 import { celebrate } from '../lib/celebrate';
 import { cloudEnabled } from '../cloud/config';
+import { sendNotify } from '../push/client';
+import { QuoteAlertToggle } from '../push/PushButtons';
 import { useMedia } from '../lib/useMedia';
 import { MiniCake } from './MiniCake';
 import { currentCake, offlineReading } from './customerCake';
@@ -104,6 +106,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<'date' | 'name' | 'contact' | 'consent' | 'form', string>>>({});
   const [smartAvailable, setSmartAvailable] = useState(false);
+  const [notifySub, setNotifySub] = useState<string | null>(null);
   const doneRef = useRef<HTMLHeadingElement>(null);
   const cakeRef = useRef<HTMLDivElement>(null);
   const wide = useMedia('(min-width: 1024px)');
@@ -170,6 +173,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
     const e: typeof errors = {};
     if (!eventDate) e.date = tx('Pick the date you need the cake.', 'Piliin kung kailan kailangan ang cake.');
     else if (eventDate < minDate) e.date = tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.');
+    else if (isFullDate(menu, eventDate)) e.date = tx('The baker is fully booked that day. Please pick another date.', 'Puno na ang baker sa araw na iyon. Pumili ng ibang petsa.');
     if (!draft.name.trim()) e.name = tx('Please add your name.', 'Pakilagay ang pangalan mo.');
     if (draft.contact.trim().length < 5) e.contact = tx('Please add your Messenger name or mobile number.', 'Pakilagay ang Messenger name o mobile number mo.');
     if (!draft.consent) e.consent = tx('Please tick the box so we can send this to the baker.', 'Pakicheck ang box para maipadala namin ito sa baker.');
@@ -208,27 +212,30 @@ function Flow({ menu }: { menu: PublicMenu }) {
       return;
     }
     const link = await requestLink(req);
+    // Bakers with an account get it in their inbox right away, with the inspo photo (the Messenger message still goes too).
+    let cloud = false;
+    let photoSent = false;
+    if (menu.owner && cloudEnabled()) {
+      try {
+        const { sendRequest } = await import('../cloud/data');
+        photoSent = await Promise.race([sendRequest(req as CakeRequest, menu.owner, photo?.dataUrl ?? null, notifySub), new Promise<boolean>((_, rej) => setTimeout(() => rej(new Error('slow')), 12000))]);
+        cloud = true;
+        // Ping the baker's phone (if they turned alerts on). Fire and forget.
+        sendNotify({ kind: 'request', bakerUid: menu.owner, id: req.id });
+      } catch {
+        cloud = false;
+      }
+    }
     const lines = [
       tx(`Hi ${menu.name}! Cake request from ${req.customer.name}:`, `Hi ${menu.name}! Cake request po mula kay ${req.customer.name}:`),
       `• ${req.occasion}, ${req.eventDate}, ${tx('for', 'para sa')} ${req.servings} ${tx('people', 'tao')}`,
       `• ${description}`,
       req.budget != null ? `• Budget: ${formatPeso(req.budget)}` : '',
       req.estimate != null ? `• ${tx('Estimate in the app', 'Tantya sa app')}: ${formatPeso(req.estimate)}` : '',
-      photo ? tx('• I will send my inspo photo here too.', '• Ise-send ko rin dito ang inspo photo ko.') : '',
+      photo ? (photoSent ? tx('• My inspo photo is with the request in Cakeita.', '• Kasama sa request sa Cakeita ang inspo photo ko.') : tx('• I will send my inspo photo here too.', '• Ise-send ko rin dito ang inspo photo ko.')) : '',
       tx('Open my request:', 'Buksan ang request ko:'),
     ].filter(Boolean);
     const message = lines.join('\n');
-    // Bakers with an account get it in their inbox right away (the Messenger message still goes too).
-    let cloud = false;
-    if (menu.owner && cloudEnabled()) {
-      try {
-        const { sendRequest } = await import('../cloud/data');
-        await Promise.race([sendRequest(req as CakeRequest, menu.owner), new Promise((_, rej) => setTimeout(() => rej(new Error('slow')), 8000))]);
-        cloud = true;
-      } catch {
-        cloud = false;
-      }
-    }
     repo.addMyRequest({ id: req.id, bakerySlug: menu.slug, bakeryName: menu.name, createdAt: req.createdAt, summary: description, requestLink: link, status: 'sent', cloud });
     // Same device as the baker (demo laptop or a baker testing their own link): drop it straight in the inbox.
     const own = repo.get().bakery;
@@ -291,6 +298,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
   }
 
   const tooSoon = !!eventDate && eventDate < minDate;
+  const booked = isFullDate(menu, eventDate);
   const over = budgetGap(estimate, wants.budget);
 
   // One 3D cake on the page: pinned beside the form on laptops, inside "Pick a design" on phones.
@@ -432,11 +440,13 @@ function Flow({ menu }: { menu: PublicMenu }) {
           </div>
           <div>
             <Field id="date" label={tx('When do you need it?', 'Kailan kailangan?')} hint={tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
-              <input id="date" type="date" className="input" min={minDate} max={addDays(today, 365)} value={eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" aria-invalid={!!errors.date || tooSoon} />
+              <input id="date" type="date" className="input" min={minDate} max={addDays(today, 365)} value={eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" aria-invalid={!!errors.date || tooSoon || booked} />
             </Field>
             <div className="mt-2 flex flex-wrap gap-2">
               {[menu.leadTimeDays, 7, 14].map((d, i) => {
-                const day = addDays(today, Math.max(d, menu.leadTimeDays));
+                // Skip days the baker is fully booked.
+                let day = addDays(today, Math.max(d, menu.leadTimeDays));
+                for (let k = 0; k < 30 && isFullDate(menu, day); k++) day = addDays(day, 1);
                 return (
                   <button key={i} type="button" data-quick-date className="btn-ghost" aria-pressed={eventDate === day} onClick={() => update({ eventDate: day })}>
                     {new Date(`${day}T00:00:00`).toLocaleDateString(prefs.lang === 'tl' ? 'fil-PH' : 'en-PH', { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -444,6 +454,11 @@ function Flow({ menu }: { menu: PublicMenu }) {
                 );
               })}
             </div>
+            {booked && !errors.date && (
+              <div className="mt-2">
+                <Notice tone="warn">{tx(`${menu.name} is fully booked that day. Please pick another date.`, `Puno na ang ${menu.name} sa araw na iyon. Pumili ng ibang petsa.`)}</Notice>
+              </div>
+            )}
             {(errors.date || tooSoon) && (
               <div className="mt-2">
                 <Notice tone="warn">{errors.date ?? tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.')}</Notice>
@@ -530,10 +545,11 @@ function Flow({ menu }: { menu: PublicMenu }) {
           <Field id="note" label={tx('Anything else? (optional)', 'May iba pa? (optional)')}>
             <input id="note" className="input" maxLength={300} value={draft.note} onChange={(e) => update({ note: e.target.value })} />
           </Field>
+          <QuoteAlertToggle show={!!menu.owner} value={notifySub} onChange={setNotifySub} />
           <label className="flex items-start gap-3 rounded-xl border border-line bg-[#fffdfa] p-3.5">
             <input id="consent" type="checkbox" className="mt-0.5 h-6 w-6 shrink-0 accent-[#8c2246]" checked={draft.consent} onChange={(e) => update({ consent: e.target.checked })} />
             <span>
-              {tx('I agree to send my name, contact and this request to the baker. No payment happens in Cakeita.', 'Pumapayag ako na ipadala ang pangalan, contact at request na ito sa baker. Walang bayaran sa Cakeita.')}
+              {tx('I agree to send my name, contact, this request and my inspo photo (if added) to the baker. No payment happens in Cakeita.', 'Pumapayag ako na ipadala sa baker ang pangalan, contact, request na ito at inspo photo ko (kung meron). Walang bayaran sa Cakeita.')}
             </span>
           </label>
           {(errors.name || errors.contact || errors.consent || errors.form) && (

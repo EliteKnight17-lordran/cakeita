@@ -1,3 +1,4 @@
+import { sendNotify } from '../push/client';
 import { useEffect, useSyncExternalStore } from 'react';
 import { applyConfirmation, quoteLinkPayload, requestToOrder } from '../domain/orders';
 import type { Bakery } from '../domain/types';
@@ -39,6 +40,26 @@ export function useSyncStatus(): SyncStatus {
     () => status,
     () => status,
   );
+}
+
+/** Customers' phones to notify when their quote is published, by order id (this phone only). */
+const NOTIFY = 'cakeita.cloud.notifySubs';
+function notifyMap(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(NOTIFY) ?? '{}') as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+function setNotify(id: string, sub: string | null) {
+  const m = notifyMap();
+  if (sub) m[id] = sub;
+  else delete m[id];
+  try {
+    localStorage.setItem(NOTIFY, JSON.stringify(Object.fromEntries(Object.entries(m).slice(-200))));
+  } catch {
+    /* ignore */
+  }
 }
 
 const PUSHED = 'cakeita.cloud.pushedQuotes';
@@ -140,8 +161,9 @@ export function CloudSync() {
     if (!mineBakery || !uid) return;
     const offs: Array<() => void> = [];
     let alive = true;
-    listenRequests(uid, (req) => {
+    listenRequests(uid, (req, notify) => {
       if (repo.get().orders.some((o) => o.id === req.id)) return;
+      if (notify) setNotify(req.id, notify);
       repo.upsertOrder(requestToOrder(req, 'cloud'));
     }).then((off) => (alive ? offs.push(off) : off()), () => {});
     listenConfirmations(uid, (c) => {
@@ -166,7 +188,22 @@ export function CloudSync() {
       if (done.has(key)) continue;
       const q = quoteLinkPayload(bakery, o);
       if (!q) continue;
-      publishQuote(uid, q).then(() => markPushed(key), (e) => setStatus({ error: errText(e) }));
+      publishQuote(uid, q).then(
+        () => {
+          markPushed(key);
+          // Tell the customer's phone, if they asked to be told.
+          const sub = notifyMap()[o.id];
+          if (sub) {
+            try {
+              sendNotify({ kind: 'quote', orderId: o.id, sub: JSON.parse(sub) });
+            } catch {
+              /* bad saved value */
+            }
+            setNotify(o.id, null);
+          }
+        },
+        (e) => setStatus({ error: errText(e) }),
+      );
     }
   }, [mineBakery, uid, bakery, db.orders]);
 

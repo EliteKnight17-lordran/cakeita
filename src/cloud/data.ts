@@ -92,13 +92,40 @@ export async function fetchListings(): Promise<ListedBakery[]> {
   return out;
 }
 
-export async function sendRequest(req: CakeRequest, ownerUid: string): Promise<void> {
+/** Returns whether the photo went too (it is skipped if the database rules are older than this app). */
+export async function sendRequest(req: CakeRequest, ownerUid: string, photo?: string | null, notify?: string | null): Promise<boolean> {
   const c = await loadCloud();
-  await c.m.fs.setDoc(c.m.fs.doc(c.db, 'requests', req.id), { bakerUid: ownerUid, slug: req.bakerySlug, req: JSON.stringify(req), createdAt: now() });
+  const ref = c.m.fs.doc(c.db, 'requests', req.id);
+  const base = { bakerUid: ownerUid, slug: req.bakerySlug, req: JSON.stringify(req), createdAt: now() };
+  const data = notify && notify.length <= 2000 ? { ...base, notify } : base;
+  if (photo && photo.length <= 400000) {
+    try {
+      await c.m.fs.setDoc(ref, { ...data, photo });
+      return true;
+    } catch (e) {
+      if (!String((e as { code?: string })?.code ?? '').includes('permission')) throw e;
+    }
+  }
+  try {
+    await c.m.fs.setDoc(ref, data);
+  } catch (e) {
+    // Database rules older than this app: send the plain request.
+    if (data === base || !String((e as { code?: string })?.code ?? '').includes('permission')) throw e;
+    await c.m.fs.setDoc(ref, base);
+  }
+  return false;
+}
+
+/** The inspo photo sent with a cloud request (baker only), or null. */
+export async function loadRequestPhoto(id: string): Promise<string | null> {
+  const c = await loadCloud();
+  const snap = await c.m.fs.getDoc(c.m.fs.doc(c.db, 'requests', id));
+  const p = snap.exists() ? snap.data().photo : null;
+  return typeof p === 'string' && p.startsWith('data:image/jpeg;base64,') ? p : null;
 }
 
 /** The baker's cloud inbox, live. */
-export async function listenRequests(uid: string, onReq: (r: CakeRequest) => void): Promise<() => void> {
+export async function listenRequests(uid: string, onReq: (r: CakeRequest, notify: string | null) => void): Promise<() => void> {
   const c = await loadCloud();
   const { collection, onSnapshot, query, where } = c.m.fs;
   return onSnapshot(
@@ -108,7 +135,8 @@ export async function listenRequests(uid: string, onReq: (r: CakeRequest) => voi
         if (ch.type === 'removed') return;
         try {
           const r = cakeRequestSchema.safeParse(JSON.parse(String(ch.doc.data().req)));
-          if (r.success && r.data.id === ch.doc.id) onReq(r.data as CakeRequest);
+          const n = ch.doc.data().notify;
+          if (r.success && r.data.id === ch.doc.id) onReq(r.data as CakeRequest, typeof n === 'string' ? n : null);
         } catch {
           /* ignore bad data */
         }
@@ -214,6 +242,16 @@ export async function deleteCloudData(uid: string, slug: string | null, quoteIds
     const m = await getDoc(doc(c.db, 'menus', slug));
     if (m.exists() && m.data().ownerUid === uid) jobs.push(deleteDoc(m.ref));
   }
-  jobs.push(deleteDoc(doc(c.db, 'bakeries', uid)), deleteDoc(doc(c.db, 'users', uid)));
+  jobs.push(deleteDoc(doc(c.db, 'bakeries', uid)), deleteDoc(doc(c.db, 'users', uid)), deleteDoc(doc(c.db, 'push', uid)));
   await Promise.all(jobs);
+}
+
+/** Turn on "new request" notifications for this phone (a baker can have up to 5 phones). */
+export async function savePushSub(uid: string, sub: import('../push/core').PushSub): Promise<void> {
+  const { mergeSubs, parseSubs } = await import('../push/core');
+  const c = await loadCloud();
+  const ref = c.m.fs.doc(c.db, 'push', uid);
+  const snap = await c.m.fs.getDoc(ref);
+  const list = mergeSubs(parseSubs(snap.exists() ? String(snap.data().subs ?? '[]') : '[]'), sub);
+  await c.m.fs.setDoc(ref, { subs: JSON.stringify(list), updatedAt: now() });
 }

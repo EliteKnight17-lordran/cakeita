@@ -243,7 +243,24 @@ export function toPublicMenu(bakery: Bakery, now = new Date()): PublicMenu {
     isSample: bakery.isSample,
     ...(bakery.cloudUid ? { owner: bakery.cloudUid } : {}),
     publishedAt: now.toISOString(),
+    ...(bakery.fullDates?.length ? { fullDates: upcomingDates(bakery.fullDates, now) } : {}),
   };
+}
+
+/** Today's date as YYYY-MM-DD in local time. */
+export function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Fully booked days from today on, sorted, unique, at most 120. */
+export function upcomingDates(dates: string[], now = new Date()): string[] {
+  const today = ymd(now);
+  return [...new Set(dates.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x) && x >= today))].sort().slice(0, 120);
+}
+
+/** Is the baker fully booked on this day? */
+export function isFullDate(menu: Pick<PublicMenu, 'fullDates'>, date: string): boolean {
+  return !!date && !!menu.fullDates?.includes(date);
 }
 
 /** Margin the baker actually earns at their current menu price for a plain cake. */

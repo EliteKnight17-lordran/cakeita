@@ -3,7 +3,8 @@ import { listedBakeries, directoryBakery, DIRECTORY_SLUGS } from '../data/direct
 import { buildDesigns } from './designs';
 import { DEFAULT_SPOT, distanceKm, formatKm } from './geo';
 import { matchBakeries, sortMatches, translateSelection } from './matching';
-import { estimateFromMenu, priceSelection, toPublicMenu } from './pricing';
+import { estimateFromMenu, isFullDate, priceSelection, toPublicMenu, upcomingDates } from './pricing';
+import { publicMenuSchema } from './schemas';
 import { createSampleBakery, SAMPLE_COMPONENTS } from './starterMenus';
 
 const sample = toPublicMenu(createSampleBakery(new Date('2026-11-01')));
@@ -95,5 +96,29 @@ describe('matching', () => {
     const sel = { baseCakeId: 'r6-2', componentIds: ['fl-vanilla', 'cv-buttercream'] };
     const prices = new Set(matchBakeries({ selection: sel, servings: 12, budget: null, eventDate: '' }, listedBakeries(), DEFAULT_SPOT, nameOf, today).map((m) => m.estimate));
     expect(prices.size).toBeGreaterThan(3);
+  });
+});
+
+describe('fully booked days', () => {
+  const now = new Date('2026-11-08T08:00:00');
+  const bakery = { ...createSampleBakery(now), fullDates: ['2026-11-01', '2026-11-20', '2026-11-20', 'bad', '2026-11-15'] };
+  const menu = toPublicMenu(bakery, now);
+
+  it('publishes only upcoming, unique, valid days', () => {
+    expect(menu.fullDates).toEqual(['2026-11-15', '2026-11-20']);
+    expect(upcomingDates(['2026-11-08', '2026-11-07'], now)).toEqual(['2026-11-08']);
+    expect(publicMenuSchema.parse(menu).fullDates).toEqual(['2026-11-15', '2026-11-20']);
+    expect(publicMenuSchema.parse({ ...menu, fullDates: 'nope' }).fullDates).toBeUndefined();
+    expect(toPublicMenu(createSampleBakery(now), now).fullDates).toBeUndefined();
+  });
+
+  it('marks a booked baker as not suitable for that date only', () => {
+    const listed = [{ menu, lat: DEFAULT_SPOT.lat, lng: DEFAULT_SPOT.lng, area: 'X', deliveryKm: 0, tags: [] }];
+    const sel = { baseCakeId: menu.baseCakes[1]!.id, componentIds: ['fl-vanilla', 'cv-buttercream'] };
+    const on = matchBakeries({ selection: sel, servings: 8, budget: null, eventDate: '2026-11-20' }, listed, DEFAULT_SPOT, nameOf, now)[0]!;
+    const off = matchBakeries({ selection: sel, servings: 8, budget: null, eventDate: '2026-11-21' }, listed, DEFAULT_SPOT, nameOf, now)[0]!;
+    expect([on.booked, on.suitable]).toEqual([true, false]);
+    expect([off.booked, off.suitable]).toEqual([false, true]);
+    expect(isFullDate(menu, '')).toBe(false);
   });
 });

@@ -1,16 +1,16 @@
 # QA report
 
-**Build:** v1.3.2 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+**Build:** v1.4.0 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
 
 ## Results
 
 | Suite | Result |
 | --- | --- |
-| Unit tests (Vitest) | **181 / 181 passed** |
+| Unit tests (Vitest) | **190 / 190 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
 | End-to-end checks (4 phones) | **63 / 63 passed** |
-| Firestore security rules (emulator) | **32 / 32 passed** |
+| Firestore security rules (emulator) | **42 / 42 passed** |
 | Accessibility (axe, 12 screens) | **0 serious or critical issues** |
 | JavaScript errors during e2e | 0 on all phones |
 | `npm audit` | 0 known vulnerabilities |
@@ -45,6 +45,15 @@
 | --- | --- | --- | --- |
 | English/Taglish choice reverted when a second tab (e.g. a Messenger link) was open | User on the live Vercel build | Prefs now sync across tabs (`storage` event, re-read on tab focus) and merge over the saved value before writing | e2e: "language picked in another tab reaches this tab", "language stays after reload…" (fails on v1.0.0, passes on v1.0.1) |
 | Vercel build showed TS2835 for `api/parse.ts`; the function would fail to import in Node ESM | Vercel build log | `.js` extensions on the server import chain; test moved out of `api/`; Node pinned to 22.x | Unit test checks every relative import in the chain ends in `.js`; compiled with `tsc --module nodenext` and ran GET/POST in plain Node |
+
+## v1.4.0 (2026-11-09)
+
+| Change | How it was checked |
+| --- | --- |
+| Inspo photo delivered with cloud requests | Emulator: customer attaches a photo, baker's order page shows it; rules accept only a JPEG data URL under 400 KB |
+| Fully booked days | Unit tests (publish, schema, map matching); browser check: baker marks a day, the order form warns and blocks it |
+| Phone alerts (Web Push, VAPID) | Unit tests for the notify logic (fresh quotes only, dead phones skipped, input validation); rules tests for alert phones. **Not checked:** a real push on a real phone (needs the keys in Vercel) |
+| Map tiles moved to OpenStreetMap | Stubbed-tile render on phone and laptop; hang test falls back and explains |
 
 ## v1.3.2 (2026-11-09)
 

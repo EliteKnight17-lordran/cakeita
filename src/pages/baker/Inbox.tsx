@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { describeCake } from '../../cake/describe';
 import { Cake2D } from '../../cake/Cake2D';
 import { Field, Notice } from '../../components/ui';
+import { BakerAlerts } from '../../push/PushButtons';
 import { IconAlert, IconCalc } from '../../components/icons';
 import { formatPeso } from '../../domain/money';
 import { toPublicMenu } from '../../domain/pricing';
@@ -90,6 +91,7 @@ export default function Inbox() {
     <BakerShell>
       <div className="space-y-5">
         <h1 className="font-display text-3xl font-semibold">{tx('Requests', 'Mga request')}</h1>
+        <BakerAlerts />
 
         <section className="card space-y-3" aria-labelledby="dm-h">
           <h2 id="dm-h" className="font-display text-xl font-semibold">

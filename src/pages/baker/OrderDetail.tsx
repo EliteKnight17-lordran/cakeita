@@ -18,6 +18,8 @@ import { copyText, quoteLink } from '../../lib/links';
 import { usePrefs, useTx } from '../../lib/prefs';
 import { Customizer } from '../CustomerFlow';
 import { celebrate } from '../../lib/celebrate';
+import { currentUid } from '../../cloud/account';
+import { cloudEnabled } from '../../cloud/config';
 import { BakerShell } from './BakerShell';
 import { StatusTag } from './Inbox';
 
@@ -158,7 +160,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
       )}
       {order.licensedNote && <Notice tone="warn" title={tx('Character request', 'May character')}>{order.licensedNote}</Notice>}
       {tooSoon && <Notice tone="warn">{tx(`Event is sooner than your ${bakery.leadTimeDays}-day notice.`, `Mas maaga sa ${bakery.leadTimeDays} araw na abiso mo ang event.`)}</Notice>}
-      {order.hasInspoPhoto && <Notice tone="info">{tx('The customer has an inspo photo. Ask them to send it in Messenger.', 'May inspo photo ang customer. Hingin sa Messenger.')}</Notice>}
+      {order.hasInspoPhoto && <InspoPhoto order={order} />}
       {order.customerNote && <Notice tone="ok" title={tx('Customer note', 'Note ng customer')}>{order.customerNote}</Notice>}
 
       <CakeView visual={visual} description={desc} />
@@ -362,5 +364,33 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
         </details>
       )}
     </div>
+  );
+}
+
+/** The customer's inspo photo: fetched from the cloud inbox when it came with the request. */
+function InspoPhoto({ order }: { order: Order }) {
+  const tx = useTx();
+  const [photo, setPhoto] = useState<string | null | 'loading'>(order.source === 'cloud' && cloudEnabled() && currentUid() ? 'loading' : null);
+  const [big, setBig] = useState(false);
+  useEffect(() => {
+    if (photo !== 'loading') return;
+    let alive = true;
+    import('../../cloud/data')
+      .then((m) => m.loadRequestPhoto(order.id))
+      .then((p) => alive && setPhoto(p), () => alive && setPhoto(null));
+    return () => {
+      alive = false;
+    };
+  }, [order.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (photo === 'loading') return <p className="text-sm text-ink-soft">{tx('Loading the inspo photo…', 'Nilo-load ang inspo photo…')}</p>;
+  if (!photo) return <Notice tone="info">{tx('The customer has an inspo photo. Ask them to send it in Messenger.', 'May inspo photo ang customer. Hingin sa Messenger.')}</Notice>;
+  return (
+    <figure className="card space-y-2">
+      <figcaption className="font-display text-lg">{tx("Customer's inspo photo", 'Inspo photo ng customer')}</figcaption>
+      <button type="button" className="block w-full" onClick={() => setBig((b) => !b)} aria-expanded={big} aria-label={big ? tx('Make the photo smaller', 'Paliitin ang photo') : tx('Make the photo bigger', 'Palakihin ang photo')}>
+        <img src={photo} alt={tx('Inspo photo sent by the customer', 'Inspo photo na pinadala ng customer')} className={`mx-auto rounded-xl object-contain ${big ? 'max-h-[80vh]' : 'max-h-64'}`} />
+      </button>
+      <p className="text-sm text-ink-soft">{tx('Price from your menu, not the photo. The photo may show more than the budget allows.', 'Sa menu mo ang presyo, hindi sa photo. Puwedeng mas mahal ang nasa photo kaysa sa budget.')}</p>
+    </figure>
   );
 }

@@ -51,6 +51,12 @@ await t('customer cannot overwrite a request', assertFails(setDoc(doc(anon, 'req
 await t('baker reads own inbox', assertSucceeds(getDocs(query(collection(ana, 'requests'), where('bakerUid', '==', 'anaUid0000001')))));
 await t('another baker cannot read it', assertFails(getDocs(query(collection(ben, 'requests'), where('bakerUid', '==', 'anaUid0000001')))));
 await t('customers cannot read requests', assertFails(getDoc(doc(anon, 'requests/rq-abc123def456'))));
+const jpg = 'data:image/jpeg;base64,' + 'A'.repeat(1000);
+await t('request with an inspo photo', assertSucceeds(setDoc(doc(anon, 'requests/rq-photo1'), { ...reqDoc('anaUid0000001'), photo: jpg })));
+await t('photo must be a JPEG data URL', assertFails(setDoc(doc(anon, 'requests/rq-photo2'), { ...reqDoc('anaUid0000001'), photo: 'https://evil.example/x.jpg' })));
+await t('oversized photo rejected', assertFails(setDoc(doc(anon, 'requests/rq-photo3'), { ...reqDoc('anaUid0000001'), photo: 'data:image/jpeg;base64,' + 'A'.repeat(400000) })));
+await t('request can carry the customer\'s alert phone', assertSucceeds(setDoc(doc(anon, 'requests/rq-notif1'), { ...reqDoc('anaUid0000001'), notify: '{"endpoint":"https://x"}' })));
+await t('baker reads the photo', assertSucceeds(getDoc(doc(ana, 'requests/rq-photo1'))));
 await t('oversized request rejected', assertFails(setDoc(doc(anon, 'requests/rq-big'), { ...reqDoc('anaUid0000001'), req: 'x'.repeat(20001) })));
 
 await t('baker publishes a quote', assertSucceeds(setDoc(doc(ana, 'quotes/rq-abc123def456'), { bakerUid: 'anaUid0000001', quote: '{}', updatedAt: now })));
@@ -67,6 +73,11 @@ await t('others cannot read confirmations', assertFails(getDoc(doc(anon, 'confir
 
 await t('customer saves own My cakes', assertSucceeds(setDoc(doc(ben, 'users/benUid0000001'), { myRequests: '[]', updatedAt: now })));
 await t('others cannot read it', assertFails(getDoc(doc(ana, 'users/benUid0000001'))));
+await t('baker saves alert phones', assertSucceeds(setDoc(doc(ana, 'push/anaUid0000001'), { subs: '[]', updatedAt: now })));
+await t('notify function can read them by id', assertSucceeds(getDoc(doc(anon, 'push/anaUid0000001'))));
+await t('nobody can list alert phones', assertFails(getDocs(collection(anon, 'push'))));
+await t('cannot set someone else\'s alert phones', assertFails(setDoc(doc(ben, 'push/anaUid0000001'), { subs: '[]', updatedAt: now })));
+await t('alert list size limited', assertFails(setDoc(doc(ana, 'push/anaUid0000001'), { subs: 'x'.repeat(8001), updatedAt: now })));
 await t('baker deletes own menu', assertSucceeds(deleteDoc(doc(ana, 'menus/ana-bakes'))));
 
 await env.cleanup();

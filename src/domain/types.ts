@@ -120,6 +120,8 @@ export interface Bakery {
   cloudUid?: string;
   /** Where the bakery is, for the "bakers near me" map. Only shown when listed is true. */
   location?: { lat: number; lng: number; area: string; deliveryKm: number; listed: boolean };
+  /** Days the baker is fully booked (YYYY-MM-DD). Customers can't pick these. */
+  fullDates?: string[];
 }
 
 /** What the customer (or baker) picked. IDs only, never prices. */
@@ -182,6 +184,8 @@ export interface PublicMenu {
   publishedAt: string;
   /** Account that receives requests in the cloud inbox (absent = link-only bakery). */
   owner?: string;
+  /** Fully booked days (YYYY-MM-DD), today or later. */
+  fullDates?: string[];
 }
 
 export type OrderStatus =

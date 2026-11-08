@@ -1,6 +1,6 @@
 import { allowedParts } from './designs';
 import { distanceKm, type LatLng } from './geo';
-import { estimateFromMenu } from './pricing';
+import { estimateFromMenu, isFullDate } from './pricing';
 import type { PublicMenu, Selection } from './types';
 
 /**
@@ -37,6 +37,8 @@ export interface BakeryMatch {
   leadOk: boolean;
   /** The cake feeds everyone. */
   servesOk: boolean;
+  /** The baker marked the event date as fully booked. */
+  booked: boolean;
   fitsBudget: boolean | null;
   delivers: boolean;
   /** Can make it, on time, for everyone. */
@@ -98,6 +100,7 @@ export function matchBakeries(want: CakeWanted, listed: ListedBakery[], from: La
     const base = l.menu.baseCakes.find((b) => b.id === selection.baseCakeId);
     const km = distanceKm(from, l);
     const leadOk = !want.eventDate || daysBetween(today, want.eventDate) >= l.menu.leadTimeDays;
+    const booked = isFullDate(l.menu, want.eventDate);
     const servesOk = want.servings == null || (base?.servings ?? 0) >= want.servings;
     const canMakeAll = missing.length === 0;
     return {
@@ -115,7 +118,8 @@ export function matchBakeries(want: CakeWanted, listed: ListedBakery[], from: La
       servesOk,
       fitsBudget: want.budget == null || estimate == null ? null : estimate <= want.budget,
       delivers: l.deliveryKm > 0 && km <= l.deliveryKm,
-      suitable: canMakeAll && leadOk && servesOk,
+      booked,
+      suitable: canMakeAll && leadOk && servesOk && !booked,
       leadTimeDays: l.menu.leadTimeDays,
       deliveryKm: l.deliveryKm,
       tags: l.tags,

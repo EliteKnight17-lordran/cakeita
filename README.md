@@ -42,6 +42,7 @@ npm run dev          # http://localhost:5173
 | --- | --- | --- | --- |
 | GitHub repo | Done | Source code and CI | Free |
 | Vercel account (sign in with GitHub) | For a public link | Free static hosting + the optional AI route | Free (Hobby) |
+| Web push keys (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`) | Optional | Phone alerts: new request for bakers, quote ready for customers. Without them the alert buttons stay hidden | Free |
 | Google AI Studio key (`GEMINI_API_KEY`) | Optional | Smarter reading of messages and inspo photos | Free tier |
 | Firebase project (Auth + Firestore, Spark plan) | For accounts | Sign-in (Facebook, Google, email link), cloud inbox, live quotes, real bakers on the map. Config is in `src/cloud/config.ts` (public by design). Paste `firestore.rules` into Firestore → Rules. Without it, everything still works through Messenger links | Free (Spark) |
 | Map pictures | Nothing to set up | CARTO Voyager tiles (OpenStreetMap data), falls back to OpenStreetMap tiles. Needs internet; prices and the list work without it | Free, with attribution |
@@ -61,6 +62,7 @@ Copy `.env.example` to `.env.local` for local work. On Vercel, set them in Proje
 
 | Name | Where | Notes |
 | --- | --- | --- |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Server only | A web push key pair, e.g. from `npx web-push generate-vapid-keys`. Redeploy after adding. |
 | `GEMINI_API_KEY` | Server only | From https://aistudio.google.com/apikey. Never prefix with `VITE_`. |
 | `GEMINI_MODEL` | Server only | Optional, comma-separated list tried in order. Defaults to `gemini-3.6-flash, gemini-3.5-flash-lite, gemini-2.5-flash`; a retired, gated or rate-limited model falls through to the next. |
 

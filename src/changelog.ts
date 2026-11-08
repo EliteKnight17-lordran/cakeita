@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.4.0',
+    date: '2026-11-09',
+    en: [
+      'Phone alerts: bakers can get a notification for each new request, and customers can ask to be told when the quote is ready.',
+      'Inspo photos now reach the baker inside Cakeita when the baker has an account (only that baker can see them).',
+      'Fully booked days: bakers mark days they are full; customers cannot pick them and the map shows the baker as booked.',
+    ],
+    tl: [
+      'Phone alerts: may notification ang baker sa bawat bagong request, at puwedeng magpasabi ang customer kapag may quote na.',
+      'Nakakarating na sa baker sa loob ng Cakeita ang inspo photo kapag may account ang baker (siya lang ang makakakita).',
+      'Mga araw na puno: minamarkahan ng baker ang mga araw na puno na; hindi ito mapipili ng customer at nakalagay sa mapa.',
+    ],
+  },
+  {
     version: '1.3.6',
     date: '2026-11-09',
     en: ['Map pictures now come from OpenStreetMap (free, no key), softened to match Cakeita. CARTO had started asking for a key.'],

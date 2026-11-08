@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Field, Notice } from '../../components/ui';
 import { IconAlert, IconMic } from '../../components/icons';
 import { formatPeso } from '../../domain/money';
-import { menuPriceCheck, priceSelection } from '../../domain/pricing';
+import { menuPriceCheck, priceSelection, upcomingDates } from '../../domain/pricing';
 import { parsePriceUpdate, type PriceChange } from '../../domain/priceUpdate';
 import type { Bakery, Ingredient } from '../../domain/types';
 import { repo, useDb, type DbState } from '../../data/store';
@@ -299,6 +299,8 @@ export default function MenuEditor() {
           </label>
         </section>
 
+        <FullDates bakery={b} orders={db.orders} onChange={(fullDates) => save({ fullDates })} />
+
         <section className="card space-y-3" aria-labelledby="info-h">
           <h2 id="info-h" className="font-display text-xl font-semibold">
             {tx('Bakery info', 'Info ng bakery')}
@@ -334,5 +336,54 @@ export default function MenuEditor() {
         </section>
       </div>
     </BakerShell>
+  );
+}
+
+/** Days the baker can't take more orders. Customers can't pick them, and the map says so. */
+function FullDates({ bakery, orders, onChange }: { bakery: Bakery; orders: DbState['orders']; onChange: (d: string[]) => void }) {
+  const tx = useTx();
+  const [pick, setPick] = useState('');
+  const days = upcomingDates(bakery.fullDates ?? []);
+  // Days that already have confirmed cakes, as quick suggestions.
+  const busy = useMemo(() => {
+    const count = new Map<string, number>();
+    for (const o of orders) if (['confirmed', 'baking', 'ready'].includes(o.status)) count.set(o.eventDate, (count.get(o.eventDate) ?? 0) + 1);
+    return upcomingDates([...count.keys()]).filter((d) => !days.includes(d)).map((d) => [d, count.get(d)!] as const);
+  }, [orders, days]);
+  const label = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const add = (d: string) => d && onChange(upcomingDates([...days, d]));
+  return (
+    <section className="card space-y-3" aria-labelledby="full-h">
+      <h2 id="full-h" className="font-display text-xl font-semibold">{tx('Fully booked days', 'Mga araw na puno na')}</h2>
+      <p className="text-sm text-ink-soft">{tx("Customers can't pick these days, and the map shows you as booked.", 'Hindi ito mapipili ng customer, at nakalagay sa mapa na puno ka.')}</p>
+      <div className="flex flex-wrap items-end gap-2">
+        <Field id="full-date" label={tx('Add a day', 'Magdagdag ng araw')}>
+          <input id="full-date" type="date" className="input" value={pick} onChange={(e) => setPick(e.target.value)} />
+        </Field>
+        <button type="button" className="btn-secondary" disabled={!pick} onClick={() => { add(pick); setPick(''); }}>{tx('Mark as full', 'Markahan na puno')}</button>
+      </div>
+      {busy.length > 0 && (
+        <div>
+          <p className="hint mb-1">{tx('Days with confirmed cakes:', 'May confirmed na cake:')}</p>
+          <div className="flex flex-wrap gap-2">
+            {busy.map(([d, n]) => (
+              <button key={d} type="button" className="btn-ghost" onClick={() => add(d)}>{label(d)} · {n} {tx(n === 1 ? 'cake' : 'cakes', 'cake')} · {tx('mark full', 'markahan')}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {days.length ? (
+        <ul className="flex flex-wrap gap-2" aria-label={tx('Fully booked days', 'Mga araw na puno na')}>
+          {days.map((d) => (
+            <li key={d} className="inline-flex items-center gap-1 rounded-full border border-line bg-[#faf6f1] py-1 pl-3 pr-1 text-sm">
+              {label(d)}
+              <button type="button" className="btn-ghost !min-h-8 !px-2" aria-label={tx(`Open ${label(d)} again`, `Buksan ulit ang ${label(d)}`)} onClick={() => onChange(days.filter((x) => x !== d))}>×</button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm">{tx('No full days yet.', 'Wala pang puno na araw.')}</p>
+      )}
+    </section>
   );
 }

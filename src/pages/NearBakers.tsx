@@ -293,6 +293,7 @@ function BakerCard({ m, selected, onSelect, onOrder }: { m: BakeryMatch; selecte
       <ul className="space-y-1.5 border-t border-line pt-3 text-sm">
         <Fact ok={m.canMakeAll}>{m.canMakeAll ? tx('Can make everything you picked', 'Kaya lahat ng pinili mo') : `${tx('Doesn’t make', 'Hindi gumagawa ng')}: ${m.missing.join(', ')}`}</Fact>
         <Fact ok={m.leadOk}>{m.leadOk ? tx(`Needs ${m.leadTimeDays} day(s) notice, OK for your date`, `Kailangan ng ${m.leadTimeDays} araw na abiso, abot sa petsa mo`) : tx(`Needs ${m.leadTimeDays} days' notice, too soon for your date`, `Kailangan ng ${m.leadTimeDays} araw na abiso, masyadong maaga ang petsa mo`)}</Fact>
+        {m.booked && <Fact ok={false}>{tx('Fully booked on your date', 'Puno na ang schedule sa petsa mo')}</Fact>}
         {!m.servesOk && <Fact ok={false}>{tx('Their biggest cake may not feed everyone', 'Baka kulang ang pinakamalaki nilang cake')}</Fact>}
         <li className="flex gap-2">
           {m.delivers ? <IconTruck className="mt-0.5 shrink-0 text-ink-soft" /> : <IconStore className="mt-0.5 shrink-0 text-ink-soft" />}
