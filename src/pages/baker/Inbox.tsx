@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { describeCake } from '../../cake/describe';
 import { Cake2D } from '../../cake/Cake2D';
 import { Field, Notice } from '../../components/ui';
+import { IconAlert, IconCalc } from '../../components/icons';
 import { formatPeso } from '../../domain/money';
 import { toPublicMenu } from '../../domain/pricing';
 import type { Order } from '../../domain/types';
@@ -42,7 +43,7 @@ export function OrderRow({ order }: { order: Order }) {
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate font-bold">{order.customer.name}</p>
             <StatusTag status={order.status} />
-            {order.unavailable.length > 0 && <span className="tag bg-amber-bg text-amber-ink">⚠ {order.unavailable.length}</span>}
+            {order.unavailable.length > 0 && <span className="tag bg-amber-bg text-amber-ink"><IconAlert size={13} /> {order.unavailable.length}</span>}
           </div>
           <p className="text-sm text-ink-soft">
             {order.occasion} · {order.eventDate} · {order.servings} {tx('people', 'tao')}
@@ -88,10 +89,10 @@ export default function Inbox() {
   return (
     <BakerShell>
       <div className="space-y-5">
-        <h1 className="font-display text-3xl font-bold">{tx('Requests', 'Mga request')}</h1>
+        <h1 className="font-display text-3xl font-semibold">{tx('Requests', 'Mga request')}</h1>
 
         <section className="card space-y-3" aria-labelledby="dm-h">
-          <h2 id="dm-h" className="font-display text-xl font-bold">
+          <h2 id="dm-h" className="font-display text-xl font-semibold">
             {tx('Got a DM? Paste it here', 'May DM? I-paste dito')}
           </h2>
           <p className="text-sm text-ink-soft">{tx('Cakeita reads it, picks parts from your menu, and prices it. You check before anything is sent.', 'Babasahin ng Cakeita, pipili ng parts sa menu mo, at ipe-presyo. Ikaw ang magche-check bago ipadala.')}</p>
@@ -106,13 +107,13 @@ export default function Inbox() {
               {tx('Read and price it', 'Basahin at i-presyo')}
             </button>
             <button type="button" className="btn-secondary" onClick={quickQuote}>
-              🧮 {tx('Quick quote', 'Quick quote')}
+              <IconCalc /> {tx('Quick quote', 'Quick quote')}
             </button>
           </div>
         </section>
 
         <section aria-labelledby="open-h" className="space-y-3">
-          <h2 id="open-h" className="font-display text-xl font-bold">
+          <h2 id="open-h" className="font-display text-xl font-semibold">
             {tx('Waiting on you or the customer', 'Naghihintay sa iyo o sa customer')}
           </h2>
           {open.length === 0 ? (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { QR, ShareBox } from '../../components/ShareBox';
 import { Field, Notice } from '../../components/ui';
+import { IconCheck, IconPin, IconPrint } from '../../components/icons';
 import { useDb } from '../../data/store';
 import { copyText, menuLink } from '../../lib/links';
 import { useTx } from '../../lib/prefs';
@@ -17,7 +18,7 @@ export default function ShareMenu() {
   return (
     <BakerShell>
       <div className="space-y-5">
-        <h1 className="font-display text-3xl font-bold">{tx('Your customer link', 'Ang link mo para sa customer')}</h1>
+        <h1 className="font-display text-3xl font-semibold">{tx('Your customer link', 'Ang link mo para sa customer')}</h1>
         <p>{tx('Put this in your page bio, pinned post or auto-reply. Customers build their cake, see 3 designs in their budget, and send you a ready request.', 'Ilagay sa page bio, pinned post o auto-reply. Gagawa ng cake ang customer, makikita ang 3 design sa budget nila, at magpapadala ng kumpletong request.')}</p>
         {link && (
           <>
@@ -26,7 +27,7 @@ export default function ShareMenu() {
               <p className="mt-2 font-bold">{db.bakery.name}</p>
               <p className="text-sm text-ink-soft">{tx('Scan to order a cake', 'I-scan para mag-order ng cake')}</p>
               <button type="button" className="btn-ghost no-print mt-2" onClick={() => window.print()}>
-                🖨 {tx('Print QR poster', 'I-print ang QR poster')}
+                <IconPrint /> {tx('Print QR poster', 'I-print ang QR poster')}
               </button>
             </div>
             <ShareBox url={link} title={db.bakery.name} showQr={false} qrLabel="QR" message={tx(`Order a custom cake from ${db.bakery.name}. Pick your budget and see your cake in 3D:`, `Mag-order ng custom cake sa ${db.bakery.name}. Piliin ang budget mo at makita ang cake mo sa 3D:`)} />
@@ -72,8 +73,9 @@ function GetOnMap({ link, name, city }: { link: string; name: string; city: stri
   };
   return (
     <section className="card space-y-3" aria-labelledby="map-h">
-      <h2 id="map-h" className="font-display text-xl font-bold">
-        <span aria-hidden="true">📍</span> {tx('Get on the map', 'Mapasama sa mapa')}
+      <h2 id="map-h" className="font-display text-xl font-semibold">
+        <IconPin className="-mt-1 mr-1.5 inline text-berry" size={20} />
+        {tx('Get on the map', 'Mapasama sa mapa')}
       </h2>
       <p>{tx('Customers nearby compare bakers on a map, and see your price for their cake, worked out from your own costs.', 'Ikinukumpara ng mga customer sa malapit ang mga baker sa mapa, at makikita nila ang presyo mo para sa cake nila, mula sa sarili mong gastos.')}</p>
       <Field id="map-area" label={tx('Area customers see', 'Area na makikita ng customer')} hint={tx('Baking from home? Use your barangay or a landmark, not your house address.', 'Sa bahay nagbe-bake? Barangay o landmark ang ilagay, hindi ang address ng bahay.')}>
@@ -84,7 +86,7 @@ function GetOnMap({ link, name, city }: { link: string; name: string; city: stri
       </Field>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className="btn-ghost" onClick={locate}>
-          {pin ? tx('Pin set ✓ (update)', 'Naka-pin ✓ (i-update)') : tx('Add my pin (optional)', 'Idagdag ang pin ko (optional)')}
+          {pin ? <><IconCheck className="text-ok-ink" /> {tx('Pin set (update)', 'Naka-pin (i-update)')}</> : <><IconPin /> {tx('Add my pin (optional)', 'Idagdag ang pin ko (optional)')}</>}
         </button>
         <button type="button" className="btn-secondary" onClick={copy}>
           {tx('Copy my map listing', 'I-copy ang listing ko')}

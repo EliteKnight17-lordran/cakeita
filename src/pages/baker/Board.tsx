@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Notice } from '../../components/ui';
+import { IconPrint } from '../../components/icons';
 import { weekBucket } from '../../domain/insights';
 import { formatPeso } from '../../domain/money';
 import { combinedShopping, formatQty } from '../../domain/shopping';
@@ -30,7 +31,7 @@ export default function Board() {
   const section = (title: string, items: typeof active) =>
     items.length > 0 && (
       <section className="space-y-2" aria-label={title}>
-        <h2 className="font-display text-xl font-bold">
+        <h2 className="font-display text-xl font-semibold">
           {title} <span className="text-base text-ink-soft">({items.length})</span>
         </h2>
         <ul className="space-y-2">
@@ -44,7 +45,7 @@ export default function Board() {
   return (
     <BakerShell>
       <div className="space-y-5">
-        <h1 className="font-display text-3xl font-bold">{tx('Order board', 'Order board')}</h1>
+        <h1 className="font-display text-3xl font-semibold">{tx('Order board', 'Order board')}</h1>
         {active.length === 0 ? (
           <Notice tone="info">{tx('No confirmed orders yet. Approved quotes appear here once customers confirm.', 'Wala pang confirmed na order. Lalabas dito kapag nag-confirm ang customer.')}</Notice>
         ) : (
@@ -60,7 +61,7 @@ export default function Board() {
             {section(tx('Later', 'Sa susunod pa'), groups.later)}
             <section className="card space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="font-display text-xl font-bold">{tx("This week's shopping list", 'Bibilhin ngayong linggo')}</h2>
+                <h2 className="font-display text-xl font-semibold">{tx("This week's shopping list", 'Bibilhin ngayong linggo')}</h2>
                 <button type="button" className="btn-ghost" aria-expanded={showList} onClick={() => setShowList((s) => !s)}>
                   {showList ? tx('Hide', 'Itago') : tx('Show', 'Ipakita')}
                 </button>
@@ -80,7 +81,7 @@ export default function Board() {
                       {tx('About', 'Mga')} {formatPeso(list.reduce((a, s) => a + s.cost, 0))} {tx('at your saved prices.', 'sa naka-save mong presyo.')}
                     </p>
                     <button type="button" className="btn-ghost" onClick={() => window.print()}>
-                      🖨 {tx('Print', 'I-print')}
+                      <IconPrint /> {tx('Print', 'I-print')}
                     </button>
                   </>
                 ) : (

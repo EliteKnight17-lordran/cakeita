@@ -4,10 +4,10 @@ import { describeCake } from '../../cake/describe';
 import { CakeView } from '../../cake/CakeView';
 import { ShareBox } from '../../components/ShareBox';
 import { Field, Notice } from '../../components/ui';
+import { IconCheck, IconPen, IconPrint } from '../../components/icons';
 import { normalizeSelection } from '../../domain/designs';
 import { addDays } from '../../domain/insights';
 import { formatPeso } from '../../domain/money';
-import { popConfetti } from '../../lib/confetti';
 import { approveOrder, quoteLinkPayload } from '../../domain/orders';
 import { evaluatePrice, priceSelection, toPublicMenu } from '../../domain/pricing';
 import { formatQty, shoppingForOrder } from '../../domain/shopping';
@@ -80,7 +80,6 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
     const next = approveOrder(bakery, order, { selection, look, price, note, validDays });
     repo.upsertOrder(next);
     setEditing(false);
-    popConfetti();
   };
 
   const replyByHand = async () => {
@@ -117,7 +116,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
           <Link to={confirmed ? '/baker/board' : '/baker'} className="text-sm text-berry underline">
             ← {tx('Back', 'Bumalik')}
           </Link>
-          <h1 className="font-display text-3xl font-bold">{order.customer.name}</h1>
+          <h1 className="font-display text-3xl font-semibold">{order.customer.name}</h1>
           <p className="text-ink-soft">
             {order.customer.contact} · {order.source === 'pasted-dm' ? tx('pasted DM', 'pasted DM') : tx('from your link', 'galing sa link mo')}
           </p>
@@ -164,7 +163,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
 
       {editing && !confirmed && (
         <details className="card" open={order.source === 'pasted-dm'}>
-          <summary className="cursor-pointer font-display text-xl font-bold">{tx('Edit parts', 'I-edit ang parts')}</summary>
+          <summary className="cursor-pointer font-display text-xl font-semibold">{tx('Edit parts', 'I-edit ang parts')}</summary>
           <div className="mt-3">
             <Customizer menu={menu} selection={selection} look={look} servings={order.servings} showPrices onChange={(s, l) => { setSelection(s); setLook(l); setPriceText(''); }} />
           </div>
@@ -173,7 +172,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
 
       {quote && (
         <section className="card space-y-2" aria-labelledby="bd-h">
-          <h2 id="bd-h" className="font-display text-xl font-bold">
+          <h2 id="bd-h" className="font-display text-xl font-semibold">
             {tx('Price breakdown', 'Breakdown ng presyo')}
           </h2>
           <table className="w-full text-left text-[0.95rem]">
@@ -220,7 +219,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
 
       {editing && !confirmed ? (
         <section className="card space-y-3" aria-labelledby="ap-h">
-          <h2 id="ap-h" className="font-display text-xl font-bold">
+          <h2 id="ap-h" className="font-display text-xl font-semibold">
             {tx('Approve the quote', 'I-approve ang quote')}
           </h2>
           <Field id="price" label={tx('Price to send (₱)', 'Presyong ipapadala (₱)')} hint={tx('Leave as is to use the suggested price.', 'Hayaan lang para gamitin ang suggested price.')}>
@@ -248,11 +247,11 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
             <input id="valid" type="number" min={1} max={30} className="input" value={validDays} onChange={(e) => setValidDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
           </Field>
           <button type="button" className="btn w-full text-lg" onClick={approve} disabled={!quote || price <= 0}>
-            ✅ {tx('Approve', 'I-approve')} {formatPeso(price)}
+            <IconCheck /> {tx('Approve', 'I-approve')} {formatPeso(price)}
           </button>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-ghost" onClick={replyByHand}>
-              ✍️ {tx('Reply by hand', 'Sumagot nang manual')}
+              <IconPen /> {tx('Reply by hand', 'Sumagot nang manual')}
             </button>
             <button type="button" className="btn-ghost" onClick={decline}>
               {tx('Decline politely', 'Tanggihan nang magalang')}
@@ -306,7 +305,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
 
       {confirmed && (
         <section className="card space-y-3" aria-labelledby="tk-h">
-          <h2 id="tk-h" className="font-display text-xl font-bold">
+          <h2 id="tk-h" className="font-display text-xl font-semibold">
             {tx('Order ticket', 'Order ticket')}
           </h2>
           <div className="flex flex-wrap gap-2" role="group" aria-label={tx('Status', 'Status')}>
@@ -331,7 +330,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
             ))}
           </ul>
           <button type="button" className="btn-ghost" onClick={() => window.print()}>
-            🖨 {tx('Print ticket', 'I-print ang ticket')}
+            <IconPrint /> {tx('Print ticket', 'I-print ang ticket')}
           </button>
         </section>
       )}

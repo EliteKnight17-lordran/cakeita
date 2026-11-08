@@ -5,15 +5,17 @@ import { DevPanel } from './DevPanel';
 
 export function Logo() {
   return (
-    <span className="inline-flex items-center gap-2">
-      <svg viewBox="0 0 64 64" width="32" height="32" aria-hidden="true">
-        <rect width="64" height="64" rx="14" fill="#b3164f" />
-        <rect x="14" y="30" width="36" height="20" rx="4" fill="#fff8f0" />
-        <rect x="20" y="18" width="24" height="14" rx="3" fill="#ffd6e4" />
-        <rect x="31" y="8" width="2.5" height="10" fill="#fff8f0" />
-        <circle cx="32.2" cy="7" r="2.5" fill="#ffc94d" />
+    <span className="inline-flex items-center gap-2.5">
+      <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="#8c2246" />
+        <g fill="none" stroke="#f8f4ef" strokeWidth="1.6" strokeLinejoin="round">
+          <rect x="7.5" y="17" width="17" height="8" rx="1.5" />
+          <rect x="10.5" y="11.5" width="11" height="5.5" rx="1.2" />
+          <path d="M16 7.5v4" strokeLinecap="round" />
+        </g>
+        <circle cx="16" cy="6.2" r="1.4" fill="#e6c27a" />
       </svg>
-      <span className="font-display text-2xl font-semibold tracking-tight text-berry">Cakeita</span>
+      <span className="font-display text-[1.45rem] font-semibold tracking-tight text-ink">Cakeita</span>
     </span>
   );
 }
@@ -38,7 +40,7 @@ export function Layout({ children, nav }: { children: ReactNode; nav?: ReactNode
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-xl focus:bg-white focus:p-3">
         {tx('Skip to content', 'Lumaktaw sa nilalaman')}
       </a>
-      <header className="frosting sticky top-0 z-30 bg-strawberry">
+      <header className="sticky top-0 z-30 border-b border-line bg-[#fffdfa]">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2">
           <Link to="/" onClick={onLogoTap} aria-label="Cakeita home">
             <Logo />
@@ -68,7 +70,7 @@ export function Layout({ children, nav }: { children: ReactNode; nav?: ReactNode
         </div>
         {nav && <nav className="mx-auto max-w-3xl px-2 pb-2">{nav}</nav>}
       </header>
-      <main id="main" className="mx-auto max-w-3xl px-4 pb-28 pt-6">
+      <main id="main" className="mx-auto max-w-3xl px-4 pb-28 pt-6 sm:pt-8">
         {children}
       </main>
       <footer className="no-print mx-auto max-w-3xl px-4 pb-24 text-center text-sm text-ink-soft">
@@ -93,7 +95,7 @@ export function TabNav({ tabs }: { tabs: Array<{ to: string; label: string; badg
             to={t.to}
             end
             className={({ isActive }) =>
-              `inline-flex min-h-11 items-center gap-1 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-bold ${isActive ? 'bg-berry text-white' : 'text-ink hover:bg-berry-soft'}`
+              `inline-flex min-h-11 items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ${isActive ? 'bg-ink text-white' : 'text-ink hover:bg-[#f1ebe4]'}`
             }
           >
             {t.label}

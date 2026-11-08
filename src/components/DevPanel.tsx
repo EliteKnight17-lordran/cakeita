@@ -12,6 +12,7 @@ import { EMPTY_DRAFT, writeDraft } from '../data/draft';
 import { demoOrders, scenarioOrder } from '../data/seed';
 import { localBakeryFor, repo, useDb } from '../data/store';
 import { setPrefs, usePrefs } from '../lib/prefs';
+import { IconWrench } from './icons';
 
 /**
  * Developer panel for fast testing. Open with ?dev=1 in the link, or tap the
@@ -105,9 +106,11 @@ export function DevPanel() {
   return (
     <div className="no-print fixed bottom-24 right-3 z-50">
       {open ? (
-        <div className="max-h-[70vh] w-[min(92vw,360px)] overflow-y-auto rounded-3xl border-2 border-ink bg-white p-4 text-sm shadow-2xl" role="dialog" aria-label="Developer panel">
+        <div className="max-h-[70vh] w-[min(92vw,360px)] overflow-y-auto rounded-2xl border border-ink bg-white p-4 text-sm shadow-2xl" role="dialog" aria-label="Developer panel">
           <div className="mb-2 flex items-center justify-between">
-            <p className="font-bold">🛠 Developer panel</p>
+            <p className="flex items-center gap-2 font-bold">
+              <IconWrench /> Developer panel
+            </p>
             <button type="button" className="btn-ghost" onClick={() => setOpen(false)} aria-label="Close developer panel">
               ✕
             </button>
@@ -210,8 +213,8 @@ export function DevPanel() {
           </p>
         </div>
       ) : (
-        <button type="button" className="h-14 w-14 rounded-full border-2 border-ink bg-white text-2xl shadow-lg" onClick={() => setOpen(true)} aria-label="Open developer panel">
-          🛠
+        <button type="button" className="flex h-12 w-12 items-center justify-center rounded-full border border-ink bg-white text-ink shadow-lg" onClick={() => setOpen(true)} aria-label="Open developer panel">
+          <IconWrench size={22} />
         </button>
       )}
     </div>

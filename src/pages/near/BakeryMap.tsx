@@ -120,7 +120,7 @@ export default function BakeryMap({ spot, matches, selected, radiusKm, onSelect,
         <FitAll spot={spot} matches={matches} />
         <PanToSelected selected={selected} matches={matches} />
         <ClickToMove onMove={onMoveSpot} />
-        {radiusKm != null && <Circle center={[spot.lat, spot.lng]} radius={radiusKm * 1000} pathOptions={{ color: '#b3164f', weight: 1.5, fillColor: '#ffd6e4', fillOpacity: 0.18, dashArray: '6 6' }} />}
+        {radiusKm != null && <Circle center={[spot.lat, spot.lng]} radius={radiusKm * 1000} pathOptions={{ color: '#8c2246', weight: 1.5, fillColor: '#f5e9ec', fillOpacity: 0.18, dashArray: '6 6' }} />}
         <Marker position={[spot.lat, spot.lng]} icon={youIcon} title={labels.you} alt={labels.you} keyboard={false}>
           <Tooltip direction="top" offset={[0, -10]}>{spot.label}</Tooltip>
         </Marker>

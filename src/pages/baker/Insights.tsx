@@ -9,7 +9,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   return (
     <div className="card">
       <p className="text-sm font-semibold text-ink-soft">{label}</p>
-      <p className="font-display text-3xl font-bold">{value}</p>
+      <p className="font-display text-3xl font-semibold">{value}</p>
       {sub && <p className="text-sm text-ink-soft">{sub}</p>}
     </div>
   );
@@ -30,7 +30,7 @@ export default function Insights() {
   return (
     <BakerShell>
       <div className="space-y-5">
-        <h1 className="font-display text-3xl font-bold">Insights</h1>
+        <h1 className="font-display text-3xl font-semibold">Insights</h1>
         {i.requests === 0 && <Notice tone="info">{tx('Numbers appear after your first requests.', 'Lalabas ang mga numero pagkatapos ng unang requests.')}</Notice>}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Stat label={tx('Requests', 'Requests')} value={String(i.requests)} sub={`${i.quoted} ${tx('quoted', 'na-quote')}`} />
@@ -42,7 +42,7 @@ export default function Insights() {
           <Stat label={tx('Confirmed sales', 'Confirmed na benta')} value={formatPeso(i.revenueConfirmed)} sub={`${i.unpaidConfirmed} ${tx('not marked paid', 'hindi pa bayad')}`} />
         </div>
         <section className="card space-y-3" aria-labelledby="mix-h">
-          <h2 id="mix-h" className="font-display text-xl font-bold">
+          <h2 id="mix-h" className="font-display text-xl font-semibold">
             {tx('Which design customers pick', 'Aling design ang pinipili')}
           </h2>
           <div className="flex h-6 w-full overflow-hidden rounded-full bg-berry-soft" role="img" aria-label={mix.map(([n, c]) => `${n} ${c}`).join(', ')}>

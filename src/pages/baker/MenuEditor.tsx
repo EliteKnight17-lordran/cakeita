@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Field, Notice } from '../../components/ui';
+import { IconAlert, IconMic } from '../../components/icons';
 import { formatPeso } from '../../domain/money';
 import { menuPriceCheck, priceSelection } from '../../domain/pricing';
 import { parsePriceUpdate, type PriceChange } from '../../domain/priceUpdate';
@@ -112,10 +113,10 @@ export default function MenuEditor() {
   return (
     <BakerShell>
       <div className="space-y-6">
-        <h1 className="font-display text-3xl font-bold">{tx('Menu and prices', 'Menu at presyo')}</h1>
+        <h1 className="font-display text-3xl font-semibold">{tx('Menu and prices', 'Menu at presyo')}</h1>
 
         <section className="card space-y-3" aria-labelledby="up-h">
-          <h2 id="up-h" className="font-display text-xl font-bold">
+          <h2 id="up-h" className="font-display text-xl font-semibold">
             {tx('New prices from the store?', 'May bagong presyo?')}
           </h2>
           <Field id="upd" label={tx('Type or say them', 'I-type o sabihin')} hint={tx('e.g. butter 520 per kilo, itlog 9.50 each, cream 62 per 250ml', 'hal. butter 520 per kilo, itlog 9.50 each, cream 62 per 250ml')}>
@@ -127,7 +128,7 @@ export default function MenuEditor() {
             </button>
             {Speech && (
               <button type="button" className="btn-secondary" onClick={listen} aria-pressed={listening}>
-                🎤 {listening ? tx('Stop', 'Itigil') : tx('Speak', 'Magsalita')}
+                <IconMic /> {listening ? tx('Stop', 'Itigil') : tx('Speak', 'Magsalita')}
               </button>
             )}
           </div>
@@ -140,13 +141,17 @@ export default function MenuEditor() {
                   <p className="font-bold">{tx('Check before saving:', 'I-check bago i-save:')}</p>
                   <ul className="space-y-2">
                     {pending.map((p, i) => (
-                      <li key={i} className={`rounded-2xl border-2 p-3 ${p.warning ? 'border-[#e8c46b] bg-amber-bg' : 'border-line bg-white'}`}>
+                      <li key={i} className={`rounded-xl border p-3 ${p.warning ? 'border-[#e6cf9c] bg-amber-bg' : 'border-line bg-white'}`}>
                         <p className="font-bold">{p.name}</p>
                         <p className="text-sm">
                           {tx('Old', 'Dati')}: ₱{p.oldCost} → <strong>{tx('New', 'Bago')}: ₱{p.newCost}</strong> {tx('per', 'kada')} {b.ingredients.find((x) => x.id === p.ingredientId)?.unit}
                         </p>
                         <p className="text-sm text-ink-soft">{p.how}</p>
-                        {p.warning && <p className="text-sm font-bold text-amber-ink">⚠ {p.warning}</p>}
+                        {p.warning && (
+                          <p className="flex gap-1.5 text-sm font-semibold text-amber-ink">
+                            <IconAlert size={16} className="mt-0.5 shrink-0" /> {p.warning}
+                          </p>
+                        )}
                         <button type="button" className="btn-ghost mt-1" onClick={() => setPending(pending.filter((_, j) => j !== i))}>
                           {tx('Skip this one', 'Huwag isama')}
                         </button>
@@ -165,13 +170,13 @@ export default function MenuEditor() {
         </section>
 
         <section className="card space-y-3" aria-labelledby="lugi-h">
-          <h2 id="lugi-h" className="font-display text-xl font-bold">
+          <h2 id="lugi-h" className="font-display text-xl font-semibold">
             {tx('Are your menu prices still earning?', 'Kumikita pa ba ang menu prices mo?')}
           </h2>
           <p className="text-sm text-ink-soft">{tx('Plain cake (first flavor and frosting) at your current costs.', 'Simpleng cake (unang flavor at frosting) sa kasalukuyang gastos.')}</p>
           <ul className="space-y-2">
             {lugi.map(({ base, check }) => (
-              <li key={base.id} className={`rounded-2xl border-2 p-3 ${check.belowTarget ? 'border-[#e9a0a0] bg-danger-bg' : 'border-line bg-white'}`}>
+              <li key={base.id} className={`rounded-xl border p-3 ${check.belowTarget ? 'border-[#e8b4ad] bg-danger-bg' : 'border-line bg-white'}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-bold">{base.name}</p>
                   <p className="text-sm">
@@ -206,7 +211,7 @@ export default function MenuEditor() {
         </section>
 
         <section className="card space-y-3" aria-labelledby="ing-h">
-          <h2 id="ing-h" className="font-display text-xl font-bold">
+          <h2 id="ing-h" className="font-display text-xl font-semibold">
             {tx('Ingredient prices', 'Presyo ng sangkap')}
           </h2>
           <ul className="space-y-2">
@@ -234,7 +239,7 @@ export default function MenuEditor() {
         </section>
 
         <section className="card space-y-3" aria-labelledby="parts-h">
-          <h2 id="parts-h" className="font-display text-xl font-bold">
+          <h2 id="parts-h" className="font-display text-xl font-semibold">
             {tx('What you make', 'Ano ang ginagawa mo')}
           </h2>
           <p className="text-sm text-ink-soft">{tx('Turn off anything you do not make. Customers will never be offered it.', 'I-off ang hindi mo ginagawa. Hindi ito iaalok sa customer.')}</p>
@@ -243,7 +248,7 @@ export default function MenuEditor() {
               <li key={c.id} className="rounded-2xl border border-line p-2">
                 <div className="flex flex-wrap items-center gap-3">
                   <label className="flex min-w-0 flex-1 items-center gap-2 font-semibold">
-                    <input type="checkbox" className="h-6 w-6 accent-[#b3164f]" checked={c.canMake} onChange={(e) => save({ components: b.components.map((x) => (x.id === c.id ? { ...x, canMake: e.target.checked } : x)) })} />
+                    <input type="checkbox" className="h-6 w-6 accent-[#8c2246]" checked={c.canMake} onChange={(e) => save({ components: b.components.map((x) => (x.id === c.id ? { ...x, canMake: e.target.checked } : x)) })} />
                     {c.name} <span className="text-xs text-ink-soft">({c.category})</span>
                   </label>
                   <label className="text-sm">
@@ -261,7 +266,7 @@ export default function MenuEditor() {
         </section>
 
         <section className="card space-y-3" aria-labelledby="rules-h">
-          <h2 id="rules-h" className="font-display text-xl font-bold">
+          <h2 id="rules-h" className="font-display text-xl font-semibold">
             {tx('Your rates and rules', 'Rates at rules mo')}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -285,7 +290,7 @@ export default function MenuEditor() {
             </Field>
           </div>
           <label className="flex items-start gap-3">
-            <input type="checkbox" className="mt-1 h-6 w-6 accent-[#b3164f]" checked={b.settings.showEstimates} onChange={(e) => save({ settings: { ...b.settings, showEstimates: e.target.checked } })} />
+            <input type="checkbox" className="mt-1 h-6 w-6 accent-[#8c2246]" checked={b.settings.showEstimates} onChange={(e) => save({ settings: { ...b.settings, showEstimates: e.target.checked } })} />
             <span>
               <strong>{tx('Show estimated prices to customers', 'Ipakita ang tantyang presyo sa customer')}</strong>
               <br />
@@ -295,7 +300,7 @@ export default function MenuEditor() {
         </section>
 
         <section className="card space-y-3" aria-labelledby="info-h">
-          <h2 id="info-h" className="font-display text-xl font-bold">
+          <h2 id="info-h" className="font-display text-xl font-semibold">
             {tx('Bakery info', 'Info ng bakery')}
           </h2>
           <Field id="i-name" label={tx('Name', 'Pangalan')}>
@@ -310,7 +315,7 @@ export default function MenuEditor() {
         </section>
 
         <section className="card space-y-3" aria-labelledby="data-h">
-          <h2 id="data-h" className="font-display text-xl font-bold">
+          <h2 id="data-h" className="font-display text-xl font-semibold">
             {tx('Your data', 'Ang data mo')}
           </h2>
           <p className="text-sm text-ink-soft">{tx('Everything is saved on this phone only. Back it up now and then.', 'Naka-save lang sa phone na ito ang lahat. Mag-backup paminsan-minsan.')}</p>

@@ -1,20 +1,21 @@
 import type { ReactNode } from 'react';
 import { formatPeso } from '../domain/money';
+import { IconAlert, IconCheck, IconInfo, IconStop } from './icons';
 
 export function Notice({ tone = 'info', title, children }: { tone?: 'info' | 'warn' | 'danger' | 'ok'; title?: string; children?: ReactNode }) {
   const cls = {
     info: 'border-line bg-white text-ink',
-    warn: 'border-[#e8c46b] bg-amber-bg text-amber-ink',
-    danger: 'border-[#e9a0a0] bg-danger-bg text-danger-ink',
-    ok: 'border-[#9fd3ae] bg-ok-bg text-ok-ink',
+    warn: 'border-[#e6cf9c] bg-amber-bg text-amber-ink',
+    danger: 'border-[#e8b4ad] bg-danger-bg text-danger-ink',
+    ok: 'border-[#b9d6be] bg-ok-bg text-ok-ink',
   }[tone];
-  const icon = { info: 'ℹ️', warn: '⚠️', danger: '⛔', ok: '✅' }[tone];
+  const Icon = { info: IconInfo, warn: IconAlert, danger: IconStop, ok: IconCheck }[tone];
   return (
-    <div className={`rounded-2xl border-2 p-3 ${cls}`} role={tone === 'danger' ? 'alert' : undefined}>
-      <div className="flex gap-2">
-        <span aria-hidden="true">{icon}</span>
+    <div className={`rounded-xl border p-3.5 ${cls}`} role={tone === 'danger' ? 'alert' : undefined}>
+      <div className="flex gap-2.5">
+        <Icon size={20} className={`mt-0.5 shrink-0 ${tone === 'info' ? 'text-berry' : ''}`} />
         <div className="min-w-0">
-          {title && <p className="font-bold">{title}</p>}
+          {title && <p className="font-semibold">{title}</p>}
           {children && <div className="text-[0.95rem]">{children}</div>}
         </div>
       </div>
@@ -25,7 +26,7 @@ export function Notice({ tone = 'info', title, children }: { tone?: 'info' | 'wa
 export function Chip({ pressed, onClick, children, label }: { pressed: boolean; onClick: () => void; children: ReactNode; label?: string }) {
   return (
     <button type="button" className="chip" aria-pressed={pressed} aria-label={label} onClick={onClick}>
-      {pressed && <span aria-hidden="true">✓</span>}
+      {pressed && <IconCheck size={15} className="-ml-1" />}
       {children}
     </button>
   );
@@ -76,7 +77,7 @@ export function Stepper({ step, total, label }: { step: number; total: number; l
 export function Bubble({ from, children }: { from: 'app' | 'me'; children: ReactNode }) {
   return (
     <div className={`flex ${from === 'me' ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[85%] rounded-3xl px-4 py-3 text-base ${from === 'me' ? 'rounded-br-md bg-berry text-white' : 'rounded-bl-md border border-line bg-white text-ink'}`}>{children}</div>
+      <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-base ${from === 'me' ? 'rounded-br-sm bg-berry text-white' : 'rounded-bl-sm border border-line bg-white text-ink'}`}>{children}</div>
     </div>
   );
 }

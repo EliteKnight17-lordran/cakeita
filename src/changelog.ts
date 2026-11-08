@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.1',
+    date: '2026-11-08',
+    en: [
+      'New refined look: an editorial serif with a clean sans, warm ivory and deep raspberry, and simple line icons instead of emoji.',
+      'Removed the playful extras (sweets wallpaper, banderitas, confetti) so the cake and the prices take center stage.',
+      'Numbered sections on the order page, a calmer studio backdrop for the 3D cake, and tidier baker cards on the map.',
+    ],
+    tl: [
+      'Bagong mas pino na itsura: eleganteng serif at malinis na sans, ivory at malalim na raspberry, at simpleng line icons imbes na emoji.',
+      'Inalis ang mga pambatang dekorasyon (sweets wallpaper, banderitas, confetti) para ang cake at presyo ang bida.',
+      'May numero na ang bawat bahagi ng order page, mas tahimik na backdrop para sa 3D cake, at mas maayos na baker cards sa mapa.',
+    ],
+  },
+  {
     version: '1.2.0',
     date: '2026-11-08',
     en: [

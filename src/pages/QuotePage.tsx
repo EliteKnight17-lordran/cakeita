@@ -1,4 +1,3 @@
-import { popConfetti } from '../lib/confetti';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { describeCake } from '../cake/describe';
@@ -6,6 +5,7 @@ import { CakeView } from '../cake/CakeView';
 import { Layout } from '../components/Layout';
 import { ShareBox } from '../components/ShareBox';
 import { Field, Notice, SampleBadge } from '../components/ui';
+import { IconHeart } from '../components/icons';
 import { formatPeso } from '../domain/money';
 import { applyConfirmation, isQuoteExpired, quoteLinkPayload } from '../domain/orders';
 import { quoteLinkSchema, type QuoteLink } from '../domain/schemas';
@@ -61,7 +61,7 @@ export default function QuotePage() {
     return (
       <Layout>
         <div className="space-y-4 py-6">
-          <h1 className="font-display text-2xl font-bold">{tx('Your cake request', 'Ang cake request mo')}</h1>
+          <h1 className="font-display text-2xl font-semibold">{tx('Your cake request', 'Ang cake request mo')}</h1>
           {mine ? (
             <>
               <Notice tone="info" title={tx('Waiting for the baker', 'Hinihintay ang baker')}>
@@ -98,17 +98,16 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
     const res = applyConfirmation(repo.get().orders.find((o) => o.id === quote.orderId), c);
     if (res.ok) repo.upsertOrder(res.order);
     repo.updateMyRequest(quote.orderId, { status: 'confirmed' });
-    popConfetti();
   };
 
   return (
     <Layout>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="font-display text-xl font-bold">{quote.bakery.name}</p>
+          <p className="font-display text-xl font-semibold">{quote.bakery.name}</p>
           <SampleBadge show={quote.bakery.isSample} text={tx('Sample bakery, demo data', 'Sample bakery, demo data')} />
         </div>
-        <h1 className="font-display text-3xl font-bold">
+        <h1 className="font-display text-3xl font-semibold">
           {tx(`Here's your quote, ${quote.customerName.split(' ')[0]}`, `Sige, ito ang quote mo, ${quote.customerName.split(' ')[0]}`)}
         </h1>
         <CakeView visual={quote.visual} description={desc} />
@@ -169,7 +168,7 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
               <textarea id="cnote" className="input min-h-20" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
             </Field>
             <button type="button" className="btn w-full text-lg" onClick={confirm}>
-              💖 {tx('This is the one I want', 'Ito ang gusto ko')}
+              <IconHeart /> {tx('This is the one I want', 'Ito ang gusto ko')}
             </button>
             <p className="hint text-center">{tx('Not ready? Just reply to the baker in Messenger.', 'Hindi pa sigurado? Mag-reply lang sa baker sa Messenger.')}</p>
           </div>

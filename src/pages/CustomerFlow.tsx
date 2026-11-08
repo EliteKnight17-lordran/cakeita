@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { aiAvailable, analyzeRequest, type Reading } from '../ai/client';
 import { describeCake } from '../cake/describe';
 import { CakeView } from '../cake/CakeView';
 import { Cake2D } from '../cake/Cake2D';
 import { Layout } from '../components/Layout';
+import { IconArrow, IconCamera, IconCheck, IconChevron, IconPin, IconSparkle } from '../components/icons';
 import { ShareBox } from '../components/ShareBox';
 import { Bubble, Chip, Field, Notice, SampleBadge } from '../components/ui';
 import { normalizeSelection, type DesignOption } from '../domain/designs';
@@ -21,21 +22,35 @@ import { clearDraft, useDraft, type Draft } from '../data/draft';
 import { newId, repo } from '../data/store';
 import { resizeImage, type SmallImage } from '../lib/image';
 import { linkErrorText } from '../lib/codec';
-import { popConfetti } from '../lib/confetti';
 import { requestLink } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
 import { currentCake, offlineReading } from './customerCake';
 import { useMenu } from './useMenu';
 
-const OCCASIONS: Array<[string, string, string]> = [
-  ['Birthday', 'Birthday', '🎂'],
-  ['Debut', 'Debut', '👑'],
-  ['Wedding', 'Kasal', '💍'],
-  ['Christening', 'Binyag', '🕊️'],
-  ['Anniversary', 'Anniversary', '💞'],
-  ['Graduation', 'Graduation', '🎓'],
-  ['Other', 'Iba pa', '✨'],
+const OCCASIONS: Array<[string, string]> = [
+  ['Birthday', 'Birthday'],
+  ['Debut', 'Debut'],
+  ['Wedding', 'Kasal'],
+  ['Christening', 'Binyag'],
+  ['Anniversary', 'Anniversary'],
+  ['Graduation', 'Graduation'],
+  ['Other', 'Iba pa'],
 ];
+
+/** Numbered section heading: a small "01" eyebrow over a serif title. */
+function SectionTitle({ id, n, children, sub }: { id: string; n: string; children: ReactNode; sub?: ReactNode }) {
+  return (
+    <div>
+      <p className="eyebrow" aria-hidden="true">
+        {n}
+      </p>
+      <h2 id={id} className="mt-0.5 text-xl leading-snug">
+        {children}
+      </h2>
+      {sub && <p className="mt-0.5 text-sm text-ink-soft">{sub}</p>}
+    </div>
+  );
+}
 
 const PALETTE = COLOR_WORDS.map(([, name, hex]) => ({ name, hex }));
 
@@ -183,14 +198,13 @@ function Flow({ menu }: { menu: PublicMenu }) {
     if (own && own.slug === menu.slug) repo.upsertOrder(requestToOrder(req, 'same-device'));
     update({ sentId: req.id, sentLink: link, sentMessage: message, step: 'done' });
     window.scrollTo({ top: 0 });
-    popConfetti(40);
   };
 
   const header = (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div>
         <p className="text-sm font-semibold text-ink-soft">{tx('Cake request for', 'Cake request para sa')}</p>
-        <p className="font-display text-xl font-bold">{menu.name}</p>
+        <p className="font-display text-xl font-semibold">{menu.name}</p>
       </div>
       <SampleBadge show={menu.isSample} text={tx('Sample bakery, demo data', 'Sample bakery, demo data')} />
     </div>
@@ -201,7 +215,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
       <Layout>
         {header}
         <div className="space-y-4">
-          <h1 ref={doneRef} tabIndex={-1} className="font-display text-2xl font-bold leading-tight outline-none sm:text-3xl">
+          <h1 ref={doneRef} tabIndex={-1} className="font-display text-2xl font-semibold leading-tight outline-none sm:text-3xl">
             {tx('Done! Now send it to the baker', 'Ayos! Ipadala na sa baker')}
           </h1>
           <Bubble from="app">
@@ -241,7 +255,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
       {header}
       <div className="space-y-5">
         <div className="space-y-1">
-          <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">{tx('Design your cake', 'I-design ang cake mo')}</h1>
+          <h1 className="text-3xl leading-tight sm:text-4xl">{tx('Design your cake', 'I-design ang cake mo')}</h1>
           <p className="text-ink-soft">
             {tx('One page. Type it like you would in Messenger, and the designs and prices update as you go.', 'Isang page lang. I-type na parang nasa Messenger ka, at kusang magbabago ang design at presyo.')}
           </p>
@@ -249,9 +263,9 @@ function Flow({ menu }: { menu: PublicMenu }) {
 
         {/* 1. The message */}
         <section className="card space-y-3" aria-labelledby="sec-msg">
-          <h2 id="sec-msg" className="font-display text-lg font-bold">
-            <span aria-hidden="true">💬</span> {tx('What cake do you want?', 'Anong cake ang gusto mo?')}
-          </h2>
+          <SectionTitle id="sec-msg" n="01">
+            {tx('What cake do you want?', 'Anong cake ang gusto mo?')}
+          </SectionTitle>
           <label htmlFor="desc" className="sr-only">
             {tx('Describe your cake (Taglish OK)', 'Ilarawan ang cake (Taglish OK)')}
           </label>
@@ -277,7 +291,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
           )}
           <div className="flex flex-wrap items-center gap-2">
             <label className="btn-ghost cursor-pointer">
-              <span aria-hidden="true">📷</span> {photo ? tx('Change inspo photo', 'Palitan ang inspo photo') : tx('Add inspo photo', 'Magdagdag ng inspo photo')}
+              <IconCamera /> {photo ? tx('Change inspo photo', 'Palitan ang inspo photo') : tx('Add inspo photo', 'Magdagdag ng inspo photo')}
               <input
                 id="photo"
                 type="file"
@@ -299,7 +313,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
             </label>
             {smartAvailable && hasText && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
               <button type="button" className="btn-ghost" disabled={busy} onClick={() => smartRead(photo)}>
-                ✨ {busy ? tx('Reading…', 'Binabasa…') : tx('Smart read', 'Smart read')}
+                <IconSparkle /> {busy ? tx('Reading…', 'Binabasa…') : tx('Smart read', 'Smart read')}
               </button>
             )}
             {photo && (
@@ -318,15 +332,15 @@ function Flow({ menu }: { menu: PublicMenu }) {
 
         {/* 2. The basics, all on one card */}
         <section className="card space-y-4" aria-labelledby="sec-basics">
-          <h2 id="sec-basics" className="font-display text-lg font-bold">
-            <span aria-hidden="true">📝</span> {tx('The basics', 'Ang basics')}
-          </h2>
+          <SectionTitle id="sec-basics" n="02">
+            {tx('The basics', 'Ang basics')}
+          </SectionTitle>
           <div>
             <p className="label" id="occ-label">{tx('Occasion', 'Okasyon')}</p>
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-labelledby="occ-label">
-              {OCCASIONS.map(([en, tl, icon]) => (
+              {OCCASIONS.map(([en, tl]) => (
                 <Chip key={en} pressed={occasion === en} onClick={() => update({ occasion: draft.occasion === en ? '' : en })}>
-                  <span aria-hidden="true">{icon}</span> <span className="whitespace-nowrap">{tx(en, tl)}</span>
+                  <span className="whitespace-nowrap">{tx(en, tl)}</span>
                 </Chip>
               ))}
             </div>
@@ -385,11 +399,11 @@ function Flow({ menu }: { menu: PublicMenu }) {
         {/* 3. Designs, live */}
         <section className="space-y-3" aria-labelledby="sec-designs">
           <div className="flex flex-wrap items-end justify-between gap-2">
-            <h2 id="sec-designs" className="font-display text-lg font-bold">
-              <span aria-hidden="true">🎂</span> {tx('Pick a design', 'Pumili ng design')}
-            </h2>
+            <SectionTitle id="sec-designs" n="03">
+              {tx('Pick a design', 'Pumili ng design')}
+            </SectionTitle>
             <Link to={`/near?from=${encodeURIComponent(menu.slug)}`} className="btn-ghost">
-              <span aria-hidden="true">📍</span> {tx('Compare bakers near me', 'Ikumpara ang malapit na baker')}
+              <IconPin /> {tx('Compare bakers near me', 'Ikumpara ang malapit na baker')}
             </Link>
           </div>
           {designs.budgetTooLow && wants.budget != null && (
@@ -405,7 +419,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
           </div>
           {isCustom && (
             <p className="text-sm">
-              <span className="tag bg-ube text-ink">{tx('Your custom design', 'Sarili mong design')}</span>{' '}
+              <span className="tag border border-line bg-[#faf6f1] text-ink">{tx('Your custom design', 'Sarili mong design')}</span>{' '}
               <button type="button" className="text-berry underline" onClick={() => update({ selection: null })}>
                 {tx('Go back to the suggestions', 'Bumalik sa mga suggestion')}
               </button>
@@ -413,12 +427,14 @@ function Flow({ menu }: { menu: PublicMenu }) {
           )}
           {selection && (
             <details className="card group" open={isCustom || undefined}>
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 font-display text-lg font-bold">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2">
                 <span>
-                  <span aria-hidden="true">🎨</span> {tx('Customize it', 'I-customize')}
-                  <span className="block text-sm font-normal text-ink-soft">{tx('Size, flavor, frosting, colors, toppings, words', 'Laki, flavor, frosting, kulay, toppings, sulat')}</span>
+                  <span className="block font-display text-lg">{tx('Customize it', 'I-customize')}</span>
+                  <span className="block text-sm text-ink-soft">{tx('Size, flavor, frosting, colors, toppings, words', 'Laki, flavor, frosting, kulay, toppings, sulat')}</span>
                 </span>
-                <span aria-hidden="true" className="text-2xl transition group-open:rotate-180">⌄</span>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line transition group-open:rotate-180">
+                  <IconChevron />
+                </span>
               </summary>
               <div className="mt-4">
                 <Customizer menu={menu} selection={selection} look={look} servings={wants.servings} onChange={(sel, l) => update({ selection: sel, look: l, lookTouched: draft.lookTouched || JSON.stringify(l) !== JSON.stringify(look) })} />
@@ -429,9 +445,9 @@ function Flow({ menu }: { menu: PublicMenu }) {
 
         {/* 4. Contact */}
         <section className="card space-y-3" aria-labelledby="sec-contact">
-          <h2 id="sec-contact" className="font-display text-lg font-bold">
-            <span aria-hidden="true">📨</span> {tx('Where can the baker reach you?', 'Saan ka makokontak ng baker?')}
-          </h2>
+          <SectionTitle id="sec-contact" n="04">
+            {tx('Where can the baker reach you?', 'Saan ka makokontak ng baker?')}
+          </SectionTitle>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="name" label={tx('Your name', 'Pangalan mo')}>
               <input id="name" className="input" autoComplete="name" maxLength={80} value={draft.name} aria-invalid={!!errors.name} onChange={(e) => update({ name: e.target.value })} />
@@ -443,8 +459,8 @@ function Flow({ menu }: { menu: PublicMenu }) {
           <Field id="note" label={tx('Anything else? (optional)', 'May iba pa? (optional)')}>
             <input id="note" className="input" maxLength={300} value={draft.note} onChange={(e) => update({ note: e.target.value })} />
           </Field>
-          <label className="flex items-start gap-3 rounded-2xl border-2 border-line bg-white p-3">
-            <input id="consent" type="checkbox" className="mt-1 h-6 w-6 accent-[#b3164f]" checked={draft.consent} onChange={(e) => update({ consent: e.target.checked })} />
+          <label className="flex items-start gap-3 rounded-xl border border-line bg-[#fffdfa] p-3.5">
+            <input id="consent" type="checkbox" className="mt-0.5 h-6 w-6 shrink-0 accent-[#8c2246]" checked={draft.consent} onChange={(e) => update({ consent: e.target.checked })} />
             <span>
               {tx('I agree to send my name, contact and this request to the baker. No payment happens in Cakeita.', 'Pumapayag ako na ipadala ang pangalan, contact at request na ito sa baker. Walang bayaran sa Cakeita.')}
             </span>
@@ -457,12 +473,12 @@ function Flow({ menu }: { menu: PublicMenu }) {
       </div>
 
       {/* Sticky price + send */}
-      <div className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-cream p-3">
+      <div className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#fffdfa] p-3 shadow-[0_-12px_30px_-24px_rgb(36_26_23/0.45)]">
         <div className="mx-auto flex max-w-3xl items-center gap-3">
           <div className="min-w-0 flex-1" aria-live="polite">
             {menu.showEstimates && estimate != null ? (
               <>
-                <p className="text-xs font-semibold text-ink-soft">{tx('Estimated price', 'Tantyang presyo')}</p>
+                <p className="eyebrow !text-ink-soft">{tx('Estimated price', 'Tantyang presyo')}</p>
                 <p className="flex flex-wrap items-baseline gap-x-2">
                   <span className="price text-2xl" data-testid="live-price">{formatPeso(estimate)}</span>
                   {wants.budget != null && (
@@ -475,7 +491,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
             )}
           </div>
           <button type="button" className="btn shrink-0" disabled={!selection} onClick={submit}>
-            {tx('Send to baker', 'Ipadala sa baker')} →
+            {tx('Send to baker', 'Ipadala sa baker')} <IconArrow />
           </button>
         </div>
       </div>
@@ -545,12 +561,16 @@ function DesignCard({ option, menu, look, selected, onPick, budget }: { option: 
   const base = menu.baseCakes.find((b) => b.id === option.selection.baseCakeId);
   const parts = option.selection.componentIds.map((id) => menu.components.find((c) => c.id === id)).filter((c) => !!c && c.category !== 'flavor');
   return (
-    <button type="button" role="radio" aria-checked={selected} onClick={onPick} className={`card text-left transition ${selected ? 'border-2 border-berry ring-4 ring-berry-soft' : 'hover:border-berry'}`}>
+    <button type="button" role="radio" aria-checked={selected} onClick={onPick} className={`card text-left transition ${selected ? '!border-ink ring-1 ring-ink' : 'hover:border-[#cdbdb0]'}`}>
       <div className="flex items-center justify-between">
-        <span className="font-display text-lg font-bold">{label}</span>
-        {selected && <span className="tag bg-berry text-white">✓ {tx('Picked', 'Napili')}</span>}
+        <span className="font-display text-lg">{label}</span>
+        {selected && (
+          <span className="tag bg-ink text-white">
+            <IconCheck size={13} /> {tx('Picked', 'Napili')}
+          </span>
+        )}
       </div>
-      <Cake2D visual={v} title={describeCake(v, prefs.lang)} className="my-2 h-28 w-full" />
+      <Cake2D visual={v} title={describeCake(v, prefs.lang)} className="my-3 h-28 w-full rounded-xl bg-[#faf6f1]" />
       <p className="text-sm text-ink-soft">
         {base?.sizeLabel} · {tx('feeds', 'pang')} {option.servings}
       </p>
@@ -610,7 +630,7 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
               if (slot === 1 && !colors[0]) colors[0] = '#fbf1e4';
               onChange(selection, { ...look, colors: colors.filter(Boolean).slice(0, 2) });
             }}
-            className={`h-11 w-11 rounded-full border-2 ${on ? 'border-berry ring-4 ring-berry-soft' : 'border-line'}`}
+            className={`h-11 w-11 rounded-full border-2 ${on ? 'border-white ring-2 ring-ink' : 'border-line'}`}
             style={{ background: p.hex }}
           />
         );
@@ -626,7 +646,7 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
           {menu.baseCakes.map((b) => {
             const short = servings != null && b.servings < servings;
             return (
-              <button key={b.id} type="button" role="radio" aria-checked={b.id === selection.baseCakeId} onClick={() => onChange({ ...selection, baseCakeId: b.id }, look)} className={`chip justify-between ${b.id === selection.baseCakeId ? 'border-berry bg-berry-soft' : ''}`}>
+              <button key={b.id} type="button" role="radio" aria-checked={b.id === selection.baseCakeId} onClick={() => onChange({ ...selection, baseCakeId: b.id }, look)} className={`chip justify-between rounded-xl ${b.id === selection.baseCakeId ? '!border-ink ring-1 ring-ink' : ''}`}>
                 <span>
                   {b.name} <span className="text-sm text-ink-soft">· {tx('feeds', 'pang')} {b.servings}</span>
                 </span>

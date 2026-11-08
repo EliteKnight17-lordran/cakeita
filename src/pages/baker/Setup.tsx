@@ -50,7 +50,7 @@ export default function Setup() {
   return (
     <Layout>
       <div className="space-y-5">
-        <h1 className="font-display text-3xl font-bold">{tx('Set up your bakery', 'I-set up ang bakery mo')}</h1>
+        <h1 className="font-display text-3xl font-semibold">{tx('Set up your bakery', 'I-set up ang bakery mo')}</h1>
         <Stepper step={step} total={3} label={tx('Setup', 'Setup')} />
 
         {step === 1 && (
@@ -58,8 +58,8 @@ export default function Setup() {
             <p>{tx('Pick the menu closest to what you bake. You can change everything later.', 'Piliin ang menu na pinakamalapit sa bine-bake mo. Puwedeng baguhin lahat mamaya.')}</p>
             <div className="grid gap-3" role="radiogroup" aria-label={tx('Starter menu', 'Starter menu')}>
               {STARTER_PRESETS.map((p) => (
-                <button key={p.key} type="button" role="radio" aria-checked={starter === p.key} onClick={() => setStarter(p.key)} className={`card text-left ${starter === p.key ? 'border-2 border-berry ring-4 ring-berry-soft' : ''}`}>
-                  <p className="font-display text-xl font-bold">{tx(p.title, p.titleTl)}</p>
+                <button key={p.key} type="button" role="radio" aria-checked={starter === p.key} onClick={() => setStarter(p.key)} className={`card text-left ${starter === p.key ? '!border-ink ring-1 ring-ink' : 'hover:border-[#cdbdb0]'}`}>
+                  <p className="font-display text-xl font-semibold">{tx(p.title, p.titleTl)}</p>
                   <p>{tx(p.blurb, p.blurbTl)}</p>
                 </button>
               ))}

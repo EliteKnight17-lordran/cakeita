@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { copyText, messengerUrl, shareOrCopy } from '../lib/links';
 import { useTx } from '../lib/prefs';
+import { IconChat, IconCopy, IconSend } from './icons';
 
 export function QR({ value, label, size = 220 }: { value: string; label: string; size?: number }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -8,7 +9,7 @@ export function QR({ value, label, size = 220 }: { value: string; label: string;
   useEffect(() => {
     let alive = true;
     import('qrcode')
-      .then((m) => m.toDataURL(value, { margin: 1, width: size * 2, errorCorrectionLevel: value.length > 1500 ? 'L' : 'M', color: { dark: '#2b1a1f', light: '#ffffff' } }))
+      .then((m) => m.toDataURL(value, { margin: 1, width: size * 2, errorCorrectionLevel: value.length > 1500 ? 'L' : 'M', color: { dark: '#241a17', light: '#ffffff' } }))
       .then((url) => alive && setSrc(url))
       .catch(() => alive && setErr(true));
     return () => {
@@ -17,9 +18,9 @@ export function QR({ value, label, size = 220 }: { value: string; label: string;
   }, [value, size]);
   if (err) return null;
   return src ? (
-    <img src={src} width={size} height={size} alt={label} className="mx-auto rounded-2xl border border-line bg-white p-2" />
+    <img src={src} width={size} height={size} alt={label} className="mx-auto rounded-xl border border-line bg-white p-2" />
   ) : (
-    <div className="mx-auto animate-pulse rounded-2xl bg-berry-soft" style={{ width: size, height: size }} aria-hidden="true" />
+    <div className="mx-auto animate-pulse rounded-xl bg-[#f1ebe4]" style={{ width: size, height: size }} aria-hidden="true" />
   );
 }
 
@@ -48,21 +49,21 @@ export function ShareBox({ url, message, title, contact, qrLabel, showQr = true 
     <div className="space-y-3">
       <div className="grid gap-2 sm:grid-cols-2">
         <button type="button" className="btn" onClick={share}>
-          📤 {tx('Send', 'Ipadala')}
+          <IconSend /> {tx('Send', 'Ipadala')}
         </button>
         <button type="button" className="btn-secondary" onClick={copy}>
-          📋 {tx('Copy message', 'I-copy ang message')}
+          <IconCopy /> {tx('Copy message', 'I-copy ang message')}
         </button>
         {mUrl && (
           <button type="button" className="btn-secondary sm:col-span-2" onClick={openMessenger}>
-            💬 {tx('Open Messenger', 'Buksan ang Messenger')}
+            <IconChat /> {tx('Open Messenger', 'Buksan ang Messenger')}
           </button>
         )}
       </div>
       <p className="min-h-6 text-center font-semibold text-ok-ink" aria-live="polite">
         {status}
       </p>
-      <details className="rounded-2xl border border-line bg-white p-3">
+      <details className="rounded-xl border border-line bg-white p-3.5">
         <summary className="cursor-pointer font-semibold">{tx('See the message and link', 'Tingnan ang message at link')}</summary>
         <p className="mt-2 whitespace-pre-wrap text-sm">{message}</p>
         <a href={url} className="mt-2 block break-all text-sm text-berry underline">

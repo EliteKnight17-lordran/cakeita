@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Cake2D } from '../cake/Cake2D';
 import { describeCake } from '../cake/describe';
 import { Layout } from '../components/Layout';
+import { IconAlert, IconArrow, IconCheck, IconPin, IconStore, IconTruck } from '../components/icons';
 import { Chip, Notice } from '../components/ui';
 import { DEFAULT_SPOT, formatKm, type LatLng } from '../domain/geo';
 import { matchBakeries, sortMatches, type BakeryMatch, type MatchSort } from '../domain/matching';
@@ -132,7 +133,7 @@ export default function NearBakers() {
     <Layout>
       <div className="space-y-4">
         <div className="space-y-1">
-          <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">{tx('Bakers near you who can make your cake', 'Mga baker na malapit sa iyo na kayang gawin ang cake mo')}</h1>
+          <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{tx('Bakers near you who can make your cake', 'Mga baker na malapit sa iyo na kayang gawin ang cake mo')}</h1>
           <p className="text-ink-soft">{tx('Same cake, priced from each baker’s own costs. Each baker still confirms the final price.', 'Parehong cake, presyo mula sa sariling gastos ng bawat baker. Ang baker pa rin ang magko-confirm ng final na presyo.')}</p>
         </div>
 
@@ -155,7 +156,7 @@ export default function NearBakers() {
         <section className="space-y-3" aria-label={tx('Location and filters', 'Lokasyon at filter')}>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold">
-              <span aria-hidden="true">📍</span> {tx('Near', 'Malapit sa')} {spot.label}
+              <IconPin className="-mt-0.5 mr-1 inline text-berry" /> {tx('Near', 'Malapit sa')} {spot.label}
             </span>
             <button type="button" className="btn-ghost" onClick={useMyLocation} disabled={locating}>
               {locating ? tx('Finding you…', 'Hinahanap ka…') : tx('Use my location', 'Gamitin ang location ko')}
@@ -174,7 +175,7 @@ export default function NearBakers() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3 font-semibold">
-              <input type="checkbox" className="h-5 w-5 accent-[#b3164f]" checked={onlyCan} onChange={(e) => setOnlyCan(e.target.checked)} />
+              <input type="checkbox" className="h-5 w-5 accent-[#8c2246]" checked={onlyCan} onChange={(e) => setOnlyCan(e.target.checked)} />
               {tx('Only bakers who can make it', 'Yung kaya lang gawin')}
             </label>
             <label className="flex items-center gap-2 text-sm font-semibold">
@@ -211,7 +212,7 @@ export default function NearBakers() {
 
         {/* Results */}
         <section className="space-y-3" aria-labelledby="results-h">
-          <h2 id="results-h" className="font-display text-xl font-bold" aria-live="polite">
+          <h2 id="results-h" className="font-display text-xl font-semibold" aria-live="polite">
             {shown.length === 0
               ? tx('No bakers match yet', 'Wala pang tugmang baker')
               : tx(`${shown.length} ${shown.length === 1 ? 'baker' : 'bakers'} can make it`, `${shown.length} baker ang kaya itong gawin`)}
@@ -259,10 +260,10 @@ export default function NearBakers() {
 function BakerCard({ m, selected, onSelect, onOrder }: { m: BakeryMatch; selected: boolean; onSelect: () => void; onOrder: () => void }) {
   const tx = useTx();
   return (
-    <article className={`card space-y-2 ${selected ? 'border-2 border-berry ring-4 ring-berry-soft' : ''}`} aria-label={m.name} onClick={onSelect}>
+    <article className={`card space-y-3 ${selected ? '!border-ink ring-1 ring-ink' : ''}`} aria-label={m.name} onClick={onSelect}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-display text-lg font-bold leading-tight">{m.name}</h3>
+          <h3 className="font-display text-lg font-semibold leading-tight">{m.name}</h3>
           <p className="text-sm text-ink-soft">
             {m.area} · {formatKm(m.distanceKm)}
           </p>
@@ -275,24 +276,37 @@ function BakerCard({ m, selected, onSelect, onOrder }: { m: BakeryMatch; selecte
           )}
         </div>
       </div>
-      <ul className="space-y-1 text-sm">
-        <li>{m.canMakeAll ? <>✅ {tx('Can make everything you picked', 'Kaya lahat ng pinili mo')}</> : <>⚠️ {tx('Doesn’t make', 'Hindi gumagawa ng')}: {m.missing.join(', ')}</>}</li>
-        <li>{m.leadOk ? <>✅ {tx(`Needs ${m.leadTimeDays} day(s) notice, OK for your date`, `Kailangan ng ${m.leadTimeDays} araw na abiso, abot sa petsa mo`)}</> : <>⚠️ {tx(`Needs ${m.leadTimeDays} days' notice, too soon for your date`, `Kailangan ng ${m.leadTimeDays} araw na abiso, masyadong maaga ang petsa mo`)}</>}</li>
-        {!m.servesOk && <li>⚠️ {tx('Their biggest cake may not feed everyone', 'Baka kulang ang pinakamalaki nilang cake')}</li>}
-        <li>{m.delivers ? <>🚗 {tx(`Delivers to you (within ${m.deliveryKm} km)`, `Nagde-deliver sa iyo (hanggang ${m.deliveryKm} km)`)}</> : m.deliveryKm === 0 ? <>🏠 {tx('Pickup only', 'Pickup lang')}</> : <>🏠 {tx(`Pickup (delivers only within ${m.deliveryKm} km)`, `Pickup (nagde-deliver lang hanggang ${m.deliveryKm} km)`)}</>}</li>
+      <ul className="space-y-1.5 border-t border-line pt-3 text-sm">
+        <Fact ok={m.canMakeAll}>{m.canMakeAll ? tx('Can make everything you picked', 'Kaya lahat ng pinili mo') : `${tx('Doesn’t make', 'Hindi gumagawa ng')}: ${m.missing.join(', ')}`}</Fact>
+        <Fact ok={m.leadOk}>{m.leadOk ? tx(`Needs ${m.leadTimeDays} day(s) notice, OK for your date`, `Kailangan ng ${m.leadTimeDays} araw na abiso, abot sa petsa mo`) : tx(`Needs ${m.leadTimeDays} days' notice, too soon for your date`, `Kailangan ng ${m.leadTimeDays} araw na abiso, masyadong maaga ang petsa mo`)}</Fact>
+        {!m.servesOk && <Fact ok={false}>{tx('Their biggest cake may not feed everyone', 'Baka kulang ang pinakamalaki nilang cake')}</Fact>}
+        <li className="flex gap-2">
+          {m.delivers ? <IconTruck className="mt-0.5 shrink-0 text-ink-soft" /> : <IconStore className="mt-0.5 shrink-0 text-ink-soft" />}
+          <span>{m.delivers ? tx(`Delivers to you (within ${m.deliveryKm} km)`, `Nagde-deliver sa iyo (hanggang ${m.deliveryKm} km)`) : m.deliveryKm === 0 ? tx('Pickup only', 'Pickup lang') : tx(`Pickup (delivers only within ${m.deliveryKm} km)`, `Pickup (nagde-deliver lang hanggang ${m.deliveryKm} km)`)}</span>
+        </li>
       </ul>
       {m.tags.length > 0 && (
         <p className="flex flex-wrap gap-1">
           {m.tags.map((t) => (
-            <span key={t} className="tag bg-ube text-ink">
+            <span key={t} className="tag border border-line bg-[#faf6f1] text-ink-soft">
               {t}
             </span>
           ))}
         </p>
       )}
       <button type="button" className="btn w-full" onClick={(e) => { e.stopPropagation(); onOrder(); }}>
-        {tx(`Request from ${m.name.replace(' (sample)', '')}`, `Mag-request kay ${m.name.replace(' (sample)', '')}`)} →
+        {tx(`Request from ${m.name.replace(' (sample)', '')}`, `Mag-request kay ${m.name.replace(' (sample)', '')}`)} <IconArrow />
       </button>
     </article>
+  );
+}
+
+/** One line of a baker's fit: a green check when it's fine, an amber warning when it isn't. */
+function Fact({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2">
+      {ok ? <IconCheck className="mt-0.5 shrink-0 text-ok-ink" /> : <IconAlert className="mt-0.5 shrink-0 text-amber-ink" />}
+      <span className={ok ? '' : 'text-amber-ink'}>{children}</span>
+    </li>
   );
 }

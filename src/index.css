@@ -1,30 +1,35 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/fredoka';
-@import '@fontsource-variable/nunito';
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/inter';
 
+/*
+ * Look: a modern pâtisserie. Warm ivory paper, deep raspberry accent, cocoa ink,
+ * an editorial serif for headings and a clean sans for everything you read or tap.
+ */
 @theme {
-  --color-cream: #fff8f0;
+  --color-cream: #f8f4ef;
   --color-card: #ffffff;
-  --color-berry: #b3164f;
-  --color-berry-dark: #8e0f3d;
-  --color-berry-soft: #fde4ee;
-  --color-ink: #2b1a1f;
-  --color-ink-soft: #6b4a52;
-  --color-line: #ecd9cf;
-  --color-amber-bg: #fff3d6;
-  --color-amber-ink: #6e4500;
-  --color-danger-bg: #fde8e8;
-  --color-danger-ink: #9b1717;
-  --color-ok-bg: #e3f5e8;
-  --color-ok-ink: #155a2b;
-  /* Pastel sweets used for accents (backgrounds only, never for text). */
-  --color-strawberry: #ffd6e4;
-  --color-ube: #ece0fb;
-  --color-mango: #ffefc2;
-  --color-mint: #dcf4e3;
-  --color-blueberry: #dcefff;
-  --font-sans: 'Nunito Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-  --font-display: 'Fredoka Variable', 'Nunito Variable', ui-rounded, system-ui, sans-serif;
+  --color-berry: #8c2246;
+  --color-berry-dark: #6b1733;
+  --color-berry-soft: #f5e9ec;
+  --color-ink: #241a17;
+  --color-ink-soft: #6b5e58;
+  --color-line: #e7ddd3;
+  --color-gold: #a8834a;
+  --color-amber-bg: #fbf1dc;
+  --color-amber-ink: #6a4506;
+  --color-danger-bg: #fbe9e7;
+  --color-danger-ink: #962015;
+  --color-ok-bg: #e8f1e9;
+  --color-ok-ink: #1f5530;
+  /* Quiet tints for backgrounds only (never text). */
+  --color-strawberry: #f4ebe7;
+  --color-ube: #efebf1;
+  --color-mango: #f6efe3;
+  --color-mint: #ebf1ec;
+  --color-blueberry: #e9eef2;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
 }
 
 html {
@@ -36,24 +41,35 @@ html[data-big='true'] {
   font-size: 125%;
 }
 html[data-big='true'] body {
-  --color-ink-soft: #4a2f36;
-  --color-line: #c9aea2;
+  --color-ink-soft: #4a3d38;
+  --color-line: #c9b9ab;
 }
 
 body {
   margin: 0;
-  /* Sweets wallpaper: cakes, cupcakes, poppers, candy. Pale on purpose so text stays AA. */
   background-color: var(--color-cream);
-  background-image:
-    radial-gradient(60rem 30rem at 110% -10%, rgb(255 214 228 / 0.7), transparent 60%),
-    radial-gradient(50rem 30rem at -20% 40%, rgb(236 224 251 / 0.6), transparent 60%),
-    radial-gradient(50rem 30rem at 120% 90%, rgb(255 239 194 / 0.6), transparent 60%),
-    url('./assets/sweets.svg');
-  background-size: auto, auto, auto, 320px 320px;
-  background-attachment: fixed, fixed, fixed, scroll;
+  background-image: radial-gradient(70rem 28rem at 50% -8rem, #fffdfa, transparent 70%);
+  background-repeat: no-repeat;
   color: var(--color-ink);
   font-family: var(--font-sans);
-  line-height: 1.5;
+  font-feature-settings: 'cv11', 'ss01';
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 560;
+    letter-spacing: -0.015em;
+    font-variation-settings: 'opsz' 72, 'SOFT' 30;
+  }
+  .font-display {
+    letter-spacing: -0.012em;
+    font-variation-settings: 'opsz' 72, 'SOFT' 30;
+  }
 }
 
 :focus-visible {
@@ -61,82 +77,62 @@ body {
   outline-offset: 2px;
 }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  letter-spacing: -0.01em;
-}
-
-/* Frosting drip under the header. */
-.frosting {
-  position: relative;
-}
-.frosting::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  height: 14px;
-  pointer-events: none;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='14' viewBox='0 0 120 14'%3E%3Cpath d='M0 0h120v4c-6 0-7 9-12 9s-5-9-11-9-6 6-11 6-5-6-12-6-6 10-12 10-6-10-12-10-5 5-11 5S44 4 38 4s-7 8-12 8-6-8-12-8S8 9 4 9 0 4 0 4Z' fill='%23ffd6e4'/%3E%3C/svg%3E")
-    repeat-x;
-  background-size: 120px 14px;
+/* Small caps label above a heading, e.g. "STEP 01". */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-berry);
 }
 
 @layer components {
-  /* Candy buttons: a darker "base" under each button, pressed on tap. */
   .btn {
-    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-berry px-5 py-3 text-base font-bold text-white transition hover:bg-berry-dark active:translate-y-[3px] disabled:cursor-not-allowed disabled:opacity-50;
-    font-family: var(--font-display);
-    font-weight: 600;
-    box-shadow: 0 4px 0 var(--color-berry-dark), 0 8px 18px rgb(179 22 79 / 0.18);
-  }
-  .btn:active {
-    box-shadow: 0 1px 0 var(--color-berry-dark);
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-berry px-5 py-3 text-base font-semibold text-white transition hover:bg-berry-dark active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+    letter-spacing: 0.005em;
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.15) inset, 0 6px 16px -8px rgb(107 23 51 / 0.55);
   }
   .btn-secondary {
-    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-berry bg-white px-5 py-3 text-base font-bold text-berry transition hover:bg-berry-soft active:translate-y-[3px] disabled:opacity-50;
-    font-family: var(--font-display);
-    font-weight: 600;
-    box-shadow: 0 4px 0 #f3b9cd;
-  }
-  .btn-secondary:active {
-    box-shadow: 0 1px 0 #f3b9cd;
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#d8cbbf] bg-white px-5 py-3 text-base font-semibold text-ink transition hover:border-ink/40 hover:bg-[#fffdfa] active:scale-[0.99] disabled:opacity-50;
   }
   .btn-ghost {
-    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:bg-berry-soft;
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-[#cdbdb0] hover:bg-[#fffdfa];
   }
   .btn-danger {
-    @apply inline-flex min-h-11 items-center justify-center rounded-xl border-2 border-danger-ink bg-white px-4 py-2 text-sm font-bold text-danger-ink hover:bg-danger-bg;
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-danger-ink bg-white px-4 py-2 text-sm font-semibold text-danger-ink hover:bg-danger-bg;
   }
   .chip {
-    @apply inline-flex min-h-11 items-center gap-1 rounded-full border-2 border-line bg-white px-4 py-2 text-base font-semibold text-ink transition hover:border-berry;
+    @apply inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-white px-4 py-2 text-[0.95rem] font-medium text-ink transition hover:border-[#cdbdb0];
   }
   .chip[aria-pressed='true'] {
-    @apply border-berry bg-berry-soft text-berry-dark;
+    @apply border-ink bg-ink text-white;
   }
-  /* Cards sit like a cake layer on a pink plate. */
   .card {
-    @apply rounded-3xl border border-line bg-card p-4;
-    box-shadow: 0 4px 0 #f6dbe3, 0 10px 24px rgb(120 40 70 / 0.06);
+    @apply rounded-2xl border border-line bg-card p-5;
+    box-shadow: 0 1px 2px rgb(36 26 23 / 0.04), 0 12px 32px -20px rgb(60 35 25 / 0.25);
   }
   .input {
-    @apply min-h-12 w-full rounded-2xl border-2 border-line bg-white px-4 py-2 text-base text-ink placeholder:text-[#8a6f76] focus:border-berry focus:outline-none;
+    @apply min-h-12 w-full rounded-xl border border-[#d8cbbf] bg-white px-4 py-2 text-base text-ink placeholder:text-[#8d7f78] focus:border-ink focus:outline-none;
   }
   .label {
-    @apply mb-1 block text-base font-bold text-ink;
+    @apply mb-1.5 block text-sm font-semibold text-ink;
   }
   .hint {
     @apply mt-1 text-sm text-ink-soft;
   }
   .price {
-    @apply font-display text-3xl font-bold tracking-tight text-ink;
+    @apply font-display text-3xl font-semibold tracking-tight text-ink;
+    font-variant-numeric: lining-nums tabular-nums;
   }
   .tag {
-    @apply inline-flex items-center rounded-full px-3 py-1 text-sm font-bold;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
+}
+
+/* Secondary text inside a pressed (dark) chip stays readable. Unlayered so it beats text utilities. */
+.chip[aria-pressed='true'] .text-ink-soft {
+  color: rgb(255 255 255 / 0.82);
 }
 
 .sr-only {
@@ -151,45 +147,7 @@ h3 {
   border: 0;
 }
 
-/* Confetti for happy moments (approve, confirm). Decorative only. */
-.confetti {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 60;
-}
-.confetti i {
-  position: absolute;
-  top: -20px;
-  width: 9px;
-  height: 14px;
-  border-radius: 3px;
-  animation: confetti-fall 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
-}
-@keyframes confetti-fall {
-  to {
-    transform: translate3d(var(--dx), 105vh, 0) rotate(var(--rot));
-    opacity: 0.9;
-  }
-}
-@keyframes bob {
-  0%,
-  100% {
-    transform: translateY(0) rotate(var(--r, 0deg));
-  }
-  50% {
-    transform: translateY(-8px) rotate(var(--r, 0deg));
-  }
-}
-.bob {
-  animation: bob 4s ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .confetti {
-    display: none;
-  }
   *,
   *::before,
   *::after {
@@ -207,9 +165,6 @@ h3 {
   body {
     background: #fff;
   }
-  .frosting::after {
-    display: none;
-  }
 }
 
 /* ---------- Nearby bakers map ---------- */
@@ -217,15 +172,14 @@ h3 {
 .cakeita-map {
   height: 22rem;
   width: 100%;
-  border-radius: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
   z-index: 0;
   /* Shown under the map pictures, and on its own when offline. */
   background:
-    radial-gradient(circle at 30% 30%, rgb(255 214 228 / 0.6), transparent 40%),
-    radial-gradient(circle at 75% 70%, rgb(220 239 255 / 0.8), transparent 45%),
-    repeating-linear-gradient(0deg, transparent 0 39px, rgb(217 184 166 / 0.25) 39px 40px),
-    repeating-linear-gradient(90deg, transparent 0 39px, rgb(217 184 166 / 0.25) 39px 40px),
-    #fff8f0;
+    repeating-linear-gradient(0deg, transparent 0 39px, rgb(190 172 156 / 0.2) 39px 40px),
+    repeating-linear-gradient(90deg, transparent 0 39px, rgb(190 172 156 / 0.2) 39px 40px),
+    #f4efe8;
   font-family: var(--font-sans);
 }
 @media (min-width: 640px) {
@@ -272,8 +226,8 @@ h3 {
   color: #4a3b3f;
 }
 .pin-selected {
-  --pin-bg: #b3164f;
-  background: #b3164f;
+  --pin-bg: #8c2246;
+  background: #8c2246;
   color: #fff;
   font-size: 15px;
   padding: 4px 11px;

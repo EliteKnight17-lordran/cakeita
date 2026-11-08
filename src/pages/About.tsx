@@ -7,14 +7,14 @@ export default function About() {
   const { lang } = usePrefs();
   const S = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <section className="card space-y-2">
-      <h2 className="font-display text-xl font-bold">{title}</h2>
+      <h2 className="font-display text-xl font-semibold">{title}</h2>
       {children}
     </section>
   );
   return (
     <Layout>
       <div className="space-y-4">
-        <h1 className="font-display text-3xl font-bold">{tx('About Cakeita', 'Tungkol sa Cakeita')}</h1>
+        <h1 className="font-display text-3xl font-semibold">{tx('About Cakeita', 'Tungkol sa Cakeita')}</h1>
         <S title={tx('The problem', 'Ang problema')}>
           <p>
             {tx(

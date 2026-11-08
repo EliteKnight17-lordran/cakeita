@@ -1,6 +1,6 @@
 # QA report
 
-**Build:** v1.2.0 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+**Build:** v1.2.1 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
 
 ## Results
 
@@ -44,6 +44,12 @@
 | --- | --- | --- | --- |
 | English/Taglish choice reverted when a second tab (e.g. a Messenger link) was open | User on the live Vercel build | Prefs now sync across tabs (`storage` event, re-read on tab focus) and merge over the saved value before writing | e2e: "language picked in another tab reaches this tab", "language stays after reload…" (fails on v1.0.0, passes on v1.0.1) |
 | Vercel build showed TS2835 for `api/parse.ts`; the function would fail to import in Node ESM | Vercel build log | `.js` extensions on the server import chain; test moved out of `api/`; Node pinned to 22.x | Unit test checks every relative import in the chain ends in `.js`; compiled with `tsc --module nodenext` and ran GET/POST in plain Node |
+
+## v1.2.1 (2026-11-08)
+
+| Change | How it was checked |
+| --- | --- |
+| Refined look: serif + sans fonts (bundled, work offline), ivory and raspberry palette, line icons instead of emoji, no wallpaper, banderitas or confetti | All 51 e2e checks and axe scans re-run on the new look. One contrast issue found (grey price text inside a selected dark chip) and fixed before release. Phone screenshots checked at 375 to 390 px |
 
 ## v1.2.0 (2026-11-08)
 
