@@ -189,3 +189,31 @@ export async function loadMyRequests(uid: string): Promise<MyRequest[]> {
     return [];
   }
 }
+
+/**
+ * Deletes everything this account put in the cloud: private bakery, public menu and map pin,
+ * inbox requests and confirmations, published quotes, and the customer's "My cakes" list.
+ * Data on this phone is left alone (the person can clear it from About).
+ */
+export async function deleteCloudData(uid: string, slug: string | null, quoteIds: string[]): Promise<void> {
+  const c = await loadCloud();
+  const { doc, deleteDoc, getDoc, getDocs, collection, query, where } = c.m.fs;
+  const jobs: Promise<unknown>[] = [];
+  for (const col of ['requests', 'confirmations'] as const) {
+    const snap = await getDocs(query(collection(c.db, col), where('bakerUid', '==', uid)));
+    snap.forEach((d) => jobs.push(deleteDoc(d.ref)));
+  }
+  for (const id of quoteIds) {
+    jobs.push(
+      getDoc(doc(c.db, 'quotes', id))
+        .then((s) => (s.exists() && s.data().bakerUid === uid ? deleteDoc(s.ref) : undefined))
+        .catch(() => undefined),
+    );
+  }
+  if (slug) {
+    const m = await getDoc(doc(c.db, 'menus', slug));
+    if (m.exists() && m.data().ownerUid === uid) jobs.push(deleteDoc(m.ref));
+  }
+  jobs.push(deleteDoc(doc(c.db, 'bakeries', uid)), deleteDoc(doc(c.db, 'users', uid)));
+  await Promise.all(jobs);
+}

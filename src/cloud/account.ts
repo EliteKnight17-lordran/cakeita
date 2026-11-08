@@ -180,3 +180,28 @@ export async function signOut(): Promise<void> {
   await c.m.auth.signOut(c.auth);
   store(HINT, null);
 }
+
+/** Firebase only lets an account be deleted within a few minutes of signing in. */
+export async function signedInRecently(): Promise<boolean> {
+  const c = await loadCloud();
+  const t = Date.parse(c.auth.currentUser?.metadata.lastSignInTime ?? '');
+  return Number.isFinite(t) && Date.now() - t < 4 * 60 * 1000;
+}
+
+/** Removes the sign-in itself. Call after the cloud data is deleted. */
+export async function deleteSignIn(): Promise<string> {
+  const c = await loadCloud();
+  const u = c.auth.currentUser;
+  if (!u) return '';
+  try {
+    await c.m.auth.deleteUser(u);
+    store(HINT, null);
+    return '';
+  } catch (e) {
+    await c.m.auth.signOut(c.auth).catch(() => undefined);
+    store(HINT, null);
+    return (e as { code?: string })?.code?.includes('requires-recent-login')
+      ? 'Your data is deleted. To remove the sign-in too, sign in again and tap delete right away. / Na-delete na ang data mo.'
+      : friendlyError(e);
+  }
+}

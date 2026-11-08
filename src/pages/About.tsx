@@ -35,8 +35,9 @@ export default function About() {
         </S>
         <S title={tx('Privacy', 'Privacy')}>
           <ul className="list-disc space-y-1 pl-5">
-            <li>{tx('No accounts. Data stays on your own phone (browser storage).', 'Walang account. Nasa sarili mong phone lang ang data.')}</li>
-            <li>{tx('Requests and quotes travel as links you send yourself in Messenger. Our servers do not keep them.', 'Ang request at quote ay mga link na ikaw mismo ang nagpapadala sa Messenger. Hindi ito iniimbak ng server namin.')}</li>
+            <li>{tx('Accounts are optional. Without one, your data stays on your own phone and requests travel as links you send in Messenger.', 'Optional ang account. Kung wala, nasa phone mo lang ang data at ang request ay link na ipinapadala mo sa Messenger.')}</li>
+            <li>{tx('If you sign in (Facebook, Google or email), we keep your name, email, bakery menu, requests and quotes in Google Firebase so they reach the other side and follow you to any phone. Only the baker can read requests sent to them. Map pins are rounded to about 100 m.', 'Kung mag-sign in ka, iniimbak namin sa Google Firebase ang pangalan, email, menu, requests at quotes para makarating sa kabila at masundan ka sa kahit anong phone. Ang baker lang ang nakakabasa ng request sa kanila. Ang pin sa mapa ay nasa ~100 m lang.')}</li>
+            <li>{tx('Delete everything any time: Account, then Delete my account. Full policy: ', 'Puwedeng burahin lahat kahit kailan: Account, tapos I-delete ang account ko. Buong policy: ')}<a className="underline" href="./privacy.html">privacy.html</a></li>
             <li>{tx('Inspo photos are shrunk on your phone and are never saved. If smart reading is on, the photo is sent once to the AI to read and then discarded.', 'Pinaliliit sa phone mo ang inspo photo at hindi sine-save. Kung naka-on ang smart reading, ipapadala ito minsan sa AI para basahin at pagkatapos ay itatapon.')}</li>
             <li>{tx('Cakeita never asks for or handles payments.', 'Hindi humihingi o humahawak ng bayad ang Cakeita.')}</li>
             <li>{tx('Your location for the bakers map stays on your phone. Only the map pictures are downloaded.', 'Nasa phone mo lang ang location mo para sa mapa. Ang larawan lang ng mapa ang dina-download.')}</li>

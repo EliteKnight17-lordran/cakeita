@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cakeita privacy policy</title>
+<meta name="description" content="What Cakeita keeps, why, and how to delete it.">
+<style>
+  :root { --bg: #fffdfa; --ink: #241a17; --soft: #5c504a; --berry: #8c2246; --line: #e7ddd3; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1d1513; --ink: #f8f4ef; --soft: #d9cfc8; --berry: #f0a6bf; --line: #4a3d38; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-family: Georgia, serif; font-size: 2rem; margin: 0 0 4px; }
+  h2 { font-family: Georgia, serif; font-size: 1.3rem; margin: 32px 0 8px; }
+  p, li { color: var(--soft); }
+  a { color: var(--berry); }
+  .meta { font-size: 0.9rem; }
+  .box { border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cakeita privacy policy</h1>
+  <p class="meta">Last updated November 9, 2026. Cakeita is a student prototype made for Build-Off 2026 (Manila).</p>
+
+  <h2>The short version</h2>
+  <p>You can order a cake without an account. If you sign in, we keep only what is needed to pass your cake request and quote between you and the baker. We never handle payments. You can delete everything yourself, any time.</p>
+
+  <h2>Without an account</h2>
+  <ul>
+    <li>Your bakery, requests and quotes stay in your own browser on your own phone.</li>
+    <li>Requests and quotes travel as links that you send yourself, for example in Messenger. Our servers do not keep them.</li>
+    <li>Your location for the "bakers near me" map stays on your phone. Only map pictures are downloaded.</li>
+  </ul>
+
+  <h2>If you sign in with Facebook, Google or email</h2>
+  <p>Sign-in is handled by Google Firebase Authentication. From Facebook we ask only for your public profile (name and photo) and email. We store, in Google Firebase (Cloud Firestore):</p>
+  <ul>
+    <li>Your name, email and profile photo link, so you can see which account you are using.</li>
+    <li>For bakers: your bakery menu and costs (private to you), your public menu, and your map pin if you choose to list it. Pins are rounded to about 100 meters.</li>
+    <li>Cake requests sent to a baker (the customer's name, contact and cake details). Only that baker can read them.</li>
+    <li>Quotes and confirmations, readable only by someone who has the exact order link.</li>
+    <li>For customers: your list of cake requests, so it follows you to another phone.</li>
+  </ul>
+  <p>We do not sell or share this data, and we do not use it for ads.</p>
+
+  <h2>Photos and AI</h2>
+  <p>Inspiration photos are shrunk on your phone and never saved. If smart reading is switched on, the request text or photo is sent once to Google Gemini to read, then discarded. Prices are always calculated by Cakeita's own code from the baker's menu.</p>
+
+  <h2 id="delete">How to delete your data</h2>
+  <div class="box">
+    <ol>
+      <li>Open <a href="./#/account">cakeita.vercel.app → Account</a> and sign in.</li>
+      <li>Tap <strong>Delete my account</strong>, then <strong>Yes, delete everything</strong>.</li>
+    </ol>
+    <p>This removes your sign-in and everything the account put in the cloud: bakery, public menu, map pin, inbox requests, confirmations, quotes and your cake list. To clear the data kept on your phone, clear this site's data in your browser settings.</p>
+    <p>If you signed in with Facebook, you can also remove Cakeita from Facebook → Settings → Apps and websites.</p>
+  </div>
+
+  <h2>Payments</h2>
+  <p>Cakeita never asks for, shows or handles payments. Pay your baker directly the way you both agree.</p>
+
+  <p><a href="./">Back to Cakeita</a></p>
+</main>
+</body>
+</html>

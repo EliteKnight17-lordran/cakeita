@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.1',
+    date: '2026-11-09',
+    en: [
+      'Delete my account: one place to remove your sign-in and everything in the cloud.',
+      'Full privacy policy page (privacy.html), also used for Facebook sign-in.',
+      'Security update for a Firebase dependency used by our tests.',
+    ],
+    tl: [
+      'I-delete ang account: isang pindot para burahin ang sign-in at lahat ng nasa cloud.',
+      'Buong privacy policy (privacy.html), gamit din para sa Facebook sign-in.',
+      'Security update sa isang Firebase dependency ng tests.',
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-11-09',
     en: [

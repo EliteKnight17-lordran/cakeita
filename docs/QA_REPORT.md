@@ -1,15 +1,16 @@
 # QA report
 
-**Build:** v1.2.2 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+**Build:** v1.3.0 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
 
 ## Results
 
 | Suite | Result |
 | --- | --- |
-| Unit tests (Vitest) | **144 / 144 passed** |
+| Unit tests (Vitest) | **177 / 177 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
-| End-to-end checks (4 phones) | **54 / 54 passed** |
+| End-to-end checks (4 phones) | **61 / 61 passed** |
+| Firestore security rules (emulator) | **32 / 32 passed** |
 | Accessibility (axe, 12 screens) | **0 serious or critical issues** |
 | JavaScript errors during e2e | 0 on all phones |
 | `npm audit` | 0 known vulnerabilities |
@@ -44,6 +45,23 @@
 | --- | --- | --- | --- |
 | English/Taglish choice reverted when a second tab (e.g. a Messenger link) was open | User on the live Vercel build | Prefs now sync across tabs (`storage` event, re-read on tab focus) and merge over the saved value before writing | e2e: "language picked in another tab reaches this tab", "language stays after reload…" (fails on v1.0.0, passes on v1.0.1) |
 | Vercel build showed TS2835 for `api/parse.ts`; the function would fail to import in Node ESM | Vercel build log | `.js` extensions on the server import chain; test moved out of `api/`; Node pinned to 22.x | Unit test checks every relative import in the chain ends in `.js`; compiled with `tsc --module nodenext` and ran GET/POST in plain Node |
+
+## v1.3.0 (2026-11-09)
+
+| Change | How it was checked |
+| --- | --- |
+| Accounts (Facebook, Google, email link) on Firebase free tier; cloud inbox, live quotes and confirmations | Full loop run on the Firebase emulator: baker signs in, customer orders from the short link, request appears live, approve, customer sees the quote, confirm reaches the baker |
+| Firestore rules: private bakeries, public menus, requests only to listed bakers, quotes readable by exact id only, one confirmation per quote | `npm run test:rules`: 32 allow/deny checks |
+| Real bakers on the map (pin rounded to ≈100 m) | Emulator run; sample shops stay labeled "(sample)" |
+| Demo tab, My cakes, phone menu | e2e plus axe on each new screen |
+| Installable app, works offline after one visit | Server stopped after first load; app reopened and a full order was made |
+| Not yet checked | Facebook sign-in on the live site (needs the Meta app set up), real phones on mobile data |
+
+## v1.2.3 (2026-11-08)
+
+| Change | How it was checked |
+| --- | --- |
+| Theme toppers: a character request becomes a generic topper shape in the cake's colors, priced as a part, plus a licensed-topper note | Unit tests for every theme and trademark; e2e checks the hero topper is picked for a Spider-Man request |
 
 ## v1.2.2 (2026-11-08)
 

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { inAppBrowser, sendEmailLink, signInWith, signOut, startAccount, useAccount } from '../cloud/account';
+import { deleteSignIn, inAppBrowser, sendEmailLink, signedInRecently, signInWith, signOut, startAccount, useAccount } from '../cloud/account';
+import { deleteCloudData } from '../cloud/data';
 import { useSyncStatus } from '../cloud/CloudSync';
 import { Layout } from '../components/Layout';
 import { IconCheck, IconCloud, IconMail, IconUser } from '../components/icons';
 import { Field, Notice } from '../components/ui';
-import { useDb } from '../data/store';
+import { repo, useDb } from '../data/store';
 import { useTx } from '../lib/prefs';
 
 function GoogleMark() {
@@ -120,6 +121,7 @@ export default function Account() {
 
           <button type="button" className="btn-ghost" onClick={() => signOut()}>{tx('Sign out', 'Mag-sign out')}</button>
           <p className="text-sm text-ink-soft">{tx('Signing out keeps everything on this phone. We never see payments; pay your baker directly.', 'Naiiwan sa phone ang lahat kahit mag-sign out. Hindi kami humahawak ng bayad.')}</p>
+          <DeleteAccount uid={u.uid} />
         </div>
       </Layout>
     );
@@ -164,5 +166,52 @@ export default function Account() {
         </p>
       </div>
     </Layout>
+  );
+}
+
+/** Deletes the account and everything it put in the cloud. Two taps, so it can't happen by accident. */
+function DeleteAccount({ uid }: { uid: string }) {
+  const tx = useTx();
+  const [step, setStep] = useState<'idle' | 'confirm' | 'busy'>('idle');
+  const [msg, setMsg] = useState('');
+
+  async function go() {
+    setStep('busy');
+    setMsg('');
+    try {
+      if (!(await signedInRecently())) {
+        setMsg(tx('For your safety, sign out, sign in again, then delete right away.', 'Para sigurado, mag-sign out, mag-sign in ulit, at saka i-delete agad.'));
+        setStep('idle');
+        return;
+      }
+      const db = repo.get();
+      const b = db.bakery && db.bakery.cloudUid === uid ? db.bakery : null;
+      // Unlink first so nothing re-uploads while we delete.
+      if (b) repo.setBakery({ ...b, cloudUid: undefined });
+      await deleteCloudData(uid, b?.slug ?? null, db.orders.map((o) => o.id));
+      setMsg(await deleteSignIn());
+    } catch {
+      setMsg(tx('Could not reach the cloud. Nothing was deleted; try again with signal.', 'Hindi maabot ang cloud. Walang na-delete; subukan ulit.'));
+      setStep('idle');
+    }
+  }
+
+  return (
+    <section className="card space-y-2" aria-labelledby="del-h">
+      <h2 id="del-h" className="text-xl">{tx('Delete account', 'I-delete ang account')}</h2>
+      <p className="text-sm text-ink-soft">
+        {tx('Removes your sign-in and everything in the cloud: bakery, public menu, map pin, inbox and quotes. Data on this phone stays until you clear the site data in your browser.', 'Buburahin ang sign-in at lahat ng nasa cloud: bakery, menu, pin sa mapa, inbox at quotes. Naiiwan ang data sa phone hanggang burahin mo sa browser settings.')}
+      </p>
+      {step === 'idle' && (
+        <button type="button" className="btn-ghost text-danger-ink" onClick={() => setStep('confirm')}>{tx('Delete my account', 'I-delete ang account ko')}</button>
+      )}
+      {step !== 'idle' && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn-danger" disabled={step === 'busy'} onClick={go}>{step === 'busy' ? tx('Deleting…', 'Dine-delete…') : tx('Yes, delete everything', 'Oo, burahin lahat')}</button>
+          <button type="button" className="btn-ghost" disabled={step === 'busy'} onClick={() => setStep('idle')}>{tx('Cancel', 'Huwag na')}</button>
+        </div>
+      )}
+      {msg && <p className="text-sm font-semibold" aria-live="polite">{msg}</p>}
+    </section>
   );
 }

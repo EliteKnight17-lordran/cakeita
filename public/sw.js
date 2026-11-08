@@ -5,7 +5,7 @@
  * - App files (hashed /assets/*), fonts, icons: cache first (they never change once built).
  * - Never cached: the AI endpoint (/api/), and anything from other sites (maps, Firebase).
  */
-const VERSION = 'cakeita-v3';
+const VERSION = 'cakeita-v4';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './favicon.svg', './icon-192.png'];
 
 self.addEventListener('install', (e) => {
@@ -44,8 +44,11 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(VERSION).then((c) => c.put('./index.html', copy));
+          // Only the app shell is kept for offline; other pages (privacy.html) are not.
+          if (res.ok && (url.pathname.endsWith('/') || url.pathname.endsWith('/index.html'))) {
+            const copy = res.clone();
+            caches.open(VERSION).then((c) => c.put('./index.html', copy));
+          }
           return res;
         })
         .catch(() => caches.match('./index.html', { ignoreVary: true }).then((r) => r || caches.match('./', { ignoreVary: true }))),

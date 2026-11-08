@@ -1,6 +1,6 @@
 # Requirements
 
-_Cakeita v1.2.2 · updated 2026-11-08_
+_Cakeita v1.3.0 · updated 2026-11-09_
 
 ## 1. Problem (start with the problem)
 
@@ -66,10 +66,10 @@ Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quo
 
 | Area | Requirement | How we meet it |
 | --- | --- | --- |
-| Cost (sustainability) | ₱0 to run for a small baker | Static hosting, no database, AI optional on a free tier |
+| Cost (sustainability) | ₱0 to run for a small baker | Static hosting, Firebase free (Spark) plan for accounts, AI optional on a free tier |
 | Offline / weak signal | Core flow works without AI | Rule-based Taglish reader; 3D has no network assets |
 | Performance | First screen fast on mobile data | 3D engine lazy-loaded (≈243 KB gz) only when a cake is shown; first load ≈128 KB gz; 3D sleeps when idle |
-| Privacy (Data Privacy Act mindset) | Collect the minimum | No accounts; data on device; photos never stored; consent before sending |
+| Privacy (Data Privacy Act mindset) | Collect the minimum | Accounts optional; data on device unless the baker signs in; map pins rounded to ≈100 m; photos never stored; consent before sending |
 | Security | Links can be edited by anyone | Every link is schema-validated; customers can't set the baker's price; confirmations must match the approved price |
 | Trust | No surprise promises | 3D only shows priced parts; "concept only" label; text on cake only if a lettering part is priced |
 | Accessibility | WCAG 2.1 AA | axe scans in e2e (0 serious/critical), big-text mode |
@@ -77,7 +77,7 @@ Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quo
 
 ## 5. Out of scope
 
-Payments of any kind (and payment look-alikes), delivery booking, customer accounts, multi-branch, live cloud sync, AI image generation, self-serve map listings (bakers send a listing and the team adds it; self-serve would need a database).
+Payments of any kind (and payment look-alikes), delivery booking, multi-branch, AI image generation. (Accounts, cloud sync and self-serve map listings were added in v1.3.)
 
 ## 6. Alignment with the Ganap notes
 

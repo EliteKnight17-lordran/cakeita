@@ -82,7 +82,7 @@ Copy `.env.example` to `.env.local` for local work. On Vercel, set them in Proje
 | --- | --- |
 | `npm run dev` | Dev server |
 | `npm run check` | Typecheck + lint + unit tests + build (what CI runs) |
-| `npm test` | 144 unit tests (Vitest) |
+| `npm test` | 177 unit tests (Vitest) |
 | `npm run build && npm run e2e` | End-to-end walkthrough on 4 simulated phones + accessibility scans (Playwright + axe) |
 
 ## How it works

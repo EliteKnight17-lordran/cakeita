@@ -35,7 +35,8 @@ Rule: `domain/` never imports from UI, data or network. Screens call domain func
 ### ADR-2 Local-first + links instead of a cloud database
 - **Why:** ₱0 to run, no accounts, nothing personal on our servers, works with Messenger habits.
 - **How:** payloads are JSON → deflate-raw → base64url in the URL hash (never sent to a server). Typical request link ≈ 600 characters; a full bakery menu ≈ 3–4k.
-- **Trade-off:** no live sync between devices; data is per device (backup/restore provided). A `Repo` interface in `data/store.ts` lets a cloud adapter (e.g. Firebase) be added later without touching screens.
+- **Trade-off:** no live sync between devices; data is per device (backup/restore provided).
+- **Update v1.3:** optional Firebase accounts (free Spark plan) add a cloud inbox and live quotes on top. Links still work for anyone without an account, and the app still runs with no network.
 
 ### ADR-3 Rules first, AI optional
 - **Why:** the offline reader is instant, free and predictable; AI helps with messy text and photos.
