@@ -285,6 +285,32 @@ async function main() {
     await baker.getByRole('heading', { name: 'Order ticket' }).waitFor();
     check('order confirmed on baker phone', await baker.getByText('Confirmed').first().isVisible());
     await baker.getByLabel(/Bayad na/).check();
+    // ---------------- Cake is ready: photo + note to the customer ----------------
+    const cakePng = await baker.evaluate(() => {
+      const c = document.createElement('canvas');
+      c.width = 320;
+      c.height = 240;
+      const g = c.getContext('2d');
+      g.fillStyle = '#f3e6ff';
+      g.fillRect(0, 0, 320, 240);
+      g.fillStyle = '#9466c4';
+      g.fillRect(90, 90, 140, 110);
+      return c.toDataURL('image/png').split(',')[1];
+    });
+    await baker.locator('[data-ready-photo]').setInputFiles({ name: 'cake.png', mimeType: 'image/png', buffer: Buffer.from(cakePng, 'base64') });
+    await baker.getByRole('button', { name: 'Mag-book ng rider' }).click();
+    await baker.locator('[data-mark-ready]').click();
+    check('baker tells the customer the cake is ready, with a photo', await baker.locator('[data-ready-sender] img').isVisible() && (await baker.getByText('Handa na').first().isVisible()));
+    const readyUrl = await linkFromShareBox(baker);
+    await axe(baker, 'cake ready sender');
+    await shot(baker, '07b-ready');
+    await customer.goto(readyUrl);
+    await customer.locator('[data-cake-ready]').waitFor({ timeout: 10000 });
+    const readyText = (await customer.locator('[data-cake-ready]').textContent()) ?? '';
+    check('customer sees "your cake is ready" with delivery tips and the baker note', /Handa na ang cake mo/.test(readyText) && /Lalamove/.test(readyText) && /Mag-book na ng Lalamove/.test(readyText), readyText.slice(0, 160));
+    check('a link has no room for the photo, so it says the baker sends it in Messenger', /ise-send nila sa Messenger|Nilo-load/.test(readyText));
+    await axe(customer, 'cake ready card');
+    await shot(customer, '07c-ready-customer');
     await baker.goto(`${BASE}#/baker/board`);
     check('order on board', await waitTrue(() => baker.getByText('Ana Test').first().isVisible()));
     await axe(baker, 'baker board');

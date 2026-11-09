@@ -86,6 +86,7 @@ export function quoteLinkPayload(bakery: Bakery, order: Order): QuoteLink | null
     handoff: order.handoff ?? null,
     handoffTime: order.handoffTime ?? '',
     address: (order.address ?? '').slice(0, 200),
+    ready: !declined && order.ready && ['ready', 'done'].includes(order.status) ? { at: order.ready.at, note: order.ready.note.slice(0, 300), hasPhoto: !!order.ready.photo } : null,
   };
 }
 
@@ -152,4 +153,15 @@ export function applyConfirmation(order: Order | undefined, c: ConfirmLink, now 
 export function isQuoteExpired(validUntil: string, today = new Date()): boolean {
   const t = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   return validUntil < t;
+}
+
+/** The baker says the cake is ready, with an optional photo of the finished cake and a short note. */
+export function markReady(order: Order, note: string, photo: string | null, now = new Date()): Order {
+  const at = now.toISOString();
+  return {
+    ...order,
+    status: 'ready',
+    ready: { at, note: note.trim().slice(0, 300), photo },
+    history: [...order.history, { at, type: 'ready', detail: photo ? 'with photo' : '' }],
+  };
 }

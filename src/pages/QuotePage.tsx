@@ -8,6 +8,7 @@ import { describeCake } from '../cake/describe';
 import { CakeView } from '../cake/CakeView';
 import { Layout } from '../components/Layout';
 import { ShareBox } from '../components/ShareBox';
+import { ReadyCard } from '../components/CakeReady';
 import { Field, Notice, SampleBadge } from '../components/ui';
 import { IconChevron, IconHeart } from '../components/icons';
 import { formatPeso } from '../domain/money';
@@ -157,7 +158,8 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
   const expired = isQuoteExpired(quote.validUntil);
   const local = db.orders.find((o) => o.id === quote.orderId);
   const auto = !!mine?.auto;
-  const confirmedHere = (local && ['confirmed', 'baking', 'ready', 'done'].includes(local.status)) || (auto && mine?.status === 'confirmed');
+  // A cake marked ready means the baker already has the confirmation.
+  const confirmedHere = (local && ['confirmed', 'baking', 'ready', 'done'].includes(local.status)) || (auto && mine?.status === 'confirmed') || !!quote.ready;
   const desc = describeCake(quote.visual, prefs.lang);
   const other = `/near?from=${encodeURIComponent(mine?.fromSlug ?? 'sample')}`;
   const myOffer = mine?.offer ?? sentOffer;
@@ -260,8 +262,9 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
           <SampleBadge show={quote.bakery.isSample} text={tx('Sample bakery, demo data', 'Sample bakery, demo data')} />
         </div>
         <h1 className="font-display text-3xl font-semibold">
-          {tx(`Here's your quote, ${quote.customerName.split(' ')[0]}`, `Sige, ito ang quote mo, ${quote.customerName.split(' ')[0]}`)}
+          {quote.ready ? tx(`Your order, ${quote.customerName.split(' ')[0]}`, `Ang order mo, ${quote.customerName.split(' ')[0]}`) : tx(`Here's your quote, ${quote.customerName.split(' ')[0]}`, `Sige, ito ang quote mo, ${quote.customerName.split(' ')[0]}`)}
         </h1>
+        {quote.ready && <ReadyCard quote={quote} local={local} />}
         <CakeView visual={quote.visual} description={desc} />
         <div className="card space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">

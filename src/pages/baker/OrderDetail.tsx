@@ -5,6 +5,7 @@ import { describeCake } from '../../cake/describe';
 import { CakeView } from '../../cake/CakeView';
 import { AllergyNotice } from '../../components/AllergyNotice';
 import { ShareBox } from '../../components/ShareBox';
+import { ReadySender } from '../../components/CakeReady';
 import { Chip, Field, Notice } from '../../components/ui';
 import { IconCheck, IconPen, IconPrint } from '../../components/icons';
 import { normalizeSelection } from '../../domain/designs';
@@ -420,6 +421,8 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
           </button>
         </section>
       )}
+
+      {confirmed && <ReadySender order={order} link={link} cloud={order.source === 'cloud' && cloudEnabled() && !!currentUid()} />}
 
       <section className="no-print flex flex-wrap gap-2">
         {confirmed && order.status !== 'done' && (

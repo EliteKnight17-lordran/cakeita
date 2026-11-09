@@ -296,6 +296,14 @@ export interface Order extends CakeRequest {
   declineReason?: string;
   /** The customer's one counter-offer and the baker's answer. */
   offer?: CustomerOffer | null;
+  /** "Your cake is ready": when the baker said so, their note, and a photo of the finished cake (small JPEG data URL). */
+  ready?: ReadyNotice | null;
+}
+
+export interface ReadyNotice {
+  at: string;
+  note: string;
+  photo: string | null;
 }
 
 /** A customer may answer a quote with one lower price. The baker accepts it or keeps their price. */

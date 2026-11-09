@@ -179,6 +179,8 @@ export const quoteLinkSchema = z.object({
   handoff: z.enum(['pickup', 'delivery']).nullable().default(null).catch(null),
   handoffTime: z.string().regex(/^(\d{2}:\d{2})?$/).default('').catch(''),
   address: shortText(200).default(''),
+  /** Added in 1.25: the baker says the cake is ready. The photo travels separately (too big for a link). */
+  ready: z.object({ at: z.string().max(40), note: shortText(300), hasPhoto: z.boolean() }).nullable().default(null).catch(null),
 });
 
 /** Customer -> baker: one counter-offer on a quote ("Puwede ba ₱X?"). */

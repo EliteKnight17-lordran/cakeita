@@ -155,6 +155,20 @@ export async function publishQuote(uid: string, q: QuoteLink): Promise<void> {
   await c.m.fs.setDoc(c.m.fs.doc(c.db, 'quotes', q.orderId), { bakerUid: uid, quote: JSON.stringify(q), updatedAt: now() });
 }
 
+/** The photo of the finished cake (the "ready" notice itself rides in the quote). Needs the 1.25 rules. */
+export async function publishReadyPhoto(uid: string, orderId: string, photo: string): Promise<void> {
+  const c = await loadCloud();
+  await c.m.fs.setDoc(c.m.fs.doc(c.db, 'ready', orderId), { bakerUid: uid, photo, at: now() });
+}
+
+/** Customer side: the finished-cake photo, if the baker sent one. */
+export async function loadReadyPhoto(orderId: string): Promise<string | null> {
+  const c = await loadCloud();
+  const snap = await c.m.fs.getDoc(c.m.fs.doc(c.db, 'ready', orderId));
+  const p = snap.exists() ? snap.data().photo : null;
+  return typeof p === 'string' && p.startsWith('data:image/jpeg;base64,') ? p : null;
+}
+
 /** Watch for the baker's quote on a request (customer side). */
 export async function listenQuote(orderId: string, onQuote: (q: QuoteLink) => void): Promise<() => void> {
   const c = await loadCloud();
@@ -325,6 +339,11 @@ export async function deleteCloudData(uid: string, slug: string | null, quoteIds
   for (const id of quoteIds) {
     jobs.push(
       getDoc(doc(c.db, 'quotes', id))
+        .then((s) => (s.exists() && s.data().bakerUid === uid ? deleteDoc(s.ref) : undefined))
+        .catch(() => undefined),
+    );
+    jobs.push(
+      getDoc(doc(c.db, 'ready', id))
         .then((s) => (s.exists() && s.data().bakerUid === uid ? deleteDoc(s.ref) : undefined))
         .catch(() => undefined),
     );

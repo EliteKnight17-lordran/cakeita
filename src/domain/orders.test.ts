@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { answerOffer, applyConfirmation, applyOffer, approveOrder, declineOrder, isQuoteExpired, quoteLinkPayload, requestToOrder } from './orders';
+import { answerOffer, applyConfirmation, applyOffer, approveOrder, declineOrder, isQuoteExpired, markReady, quoteLinkPayload, requestToOrder } from './orders';
 import { priceSelection } from './pricing';
 import { quoteLinkSchema } from './schemas';
 import { createSampleBakery } from './starterMenus';
@@ -124,5 +124,20 @@ describe('accept, decline, and one counter-offer each way', () => {
     const k = answerOffer(bakery, r.order, false, NOW);
     expect(k.quote!.price).toBe(1600);
     expect(k.offer!.answer).toBe('kept');
+  });
+});
+
+describe('cake is ready', () => {
+  it('tells the customer, but the photo never goes in the link', () => {
+    const q = priceSelection(bakery, req.selection)!;
+    const a = approveOrder(bakery, requestToOrder({ ...req, handoff: 'delivery', handoffTime: '15:30', address: 'Cubao' }, 'link', NOW), { selection: req.selection, look: req.look, price: q.suggestedPrice, note: '', validDays: 3 }, NOW);
+    expect(quoteLinkPayload(bakery, a)!.ready).toBeNull();
+    const r = markReady({ ...a, status: 'baking' }, '  Book your rider  ', 'data:image/jpeg;base64,AAAA', NOW);
+    expect(r.status).toBe('ready');
+    const p = quoteLinkPayload(bakery, r)!;
+    expect(p.ready).toEqual({ at: NOW.toISOString(), note: 'Book your rider', hasPhoto: true });
+    expect(p.handoff).toBe('delivery');
+    expect(JSON.stringify(p)).not.toContain('base64');
+    expect(quoteLinkSchema.safeParse(p).success).toBe(true);
   });
 });

@@ -13,6 +13,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.25.0',
+    date: '2026-11-10',
+    en: [
+      '"Cake is ready": on the order ticket the baker adds a photo of the finished cake and a short note. The customer sees "Your cake is ready!" with the photo and pickup or delivery tips.',
+    ],
+    tl: [
+      '"Handa na ang cake": sa order ticket, maglalagay ang baker ng picture ng tapos na cake at maikling note. Makikita ng customer ang "Handa na ang cake mo!" kasama ang picture at tips sa pickup o delivery.',
+    ],
+  },
+  {
     version: '1.24.0',
     date: '2026-11-10',
     en: [

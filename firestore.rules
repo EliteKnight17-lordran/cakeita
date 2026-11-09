@@ -85,6 +85,22 @@ service cloud.firestore {
       }
     }
 
+    // Baker -> customer: photo of the finished cake ("your cake is ready"). Readable by id only,
+    // like the quote. Only the baker who owns the quote can write it.
+    match /ready/{id} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if signedIn()
+        && exists(quoteDoc(id))
+        && get(quoteDoc(id)).data.bakerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['bakerUid', 'photo', 'at'])
+        && request.resource.data.bakerUid == request.auth.uid
+        && text(request.resource.data.photo, 400000)
+        && request.resource.data.photo.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && stamp(request.resource.data.at);
+      allow delete: if signedIn() && resource.data.bakerUid == request.auth.uid;
+    }
+
     // Customer -> baker: "Yes, I'll take it." Only for a quote that exists, only once.
     match /confirmations/{id} {
       allow create: if exists(quoteDoc(id))

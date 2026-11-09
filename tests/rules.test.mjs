@@ -75,6 +75,13 @@ await t('offer must go to the quote baker', assertFails(setDoc(doc(anon, 'offers
 await t('offer has no extra fields', assertFails(setDoc(doc(anon, 'offers/rq-abc123def456'), { bakerUid: 'anaUid0000001', offer: '{}', createdAt: now, price: 1 })));
 await t('customer sends one offer on a real quote', assertSucceeds(setDoc(doc(anon, 'offers/rq-abc123def456'), { bakerUid: 'anaUid0000001', offer: '{}', createdAt: now })));
 await t('only one offer per quote', assertFails(setDoc(doc(anon, 'offers/rq-abc123def456'), { bakerUid: 'anaUid0000001', offer: '{}', createdAt: now })));
+await t('baker sends the finished-cake photo', assertSucceeds(setDoc(doc(ana, 'ready/rq-abc123def456'), { bakerUid: 'anaUid0000001', photo: jpg, at: now })));
+await t('customer opens the ready photo by id', assertSucceeds(getDoc(doc(anon, 'ready/rq-abc123def456'))));
+await t('nobody can list ready photos', assertFails(getDocs(collection(anon, 'ready'))));
+await t('another baker cannot post a ready photo', assertFails(setDoc(doc(ben, 'ready/rq-abc123def456'), { bakerUid: 'benUid0000001', photo: jpg, at: now })));
+await t('customers cannot post a ready photo', assertFails(setDoc(doc(anon, 'ready/rq-abc123def456'), { bakerUid: 'anaUid0000001', photo: jpg, at: now })));
+await t('ready photo must be a JPEG data URL', assertFails(setDoc(doc(ana, 'ready/rq-abc123def456'), { bakerUid: 'anaUid0000001', photo: 'https://x.y/z.jpg', at: now })));
+await t('no ready photo without a quote', assertFails(setDoc(doc(ana, 'ready/rq-none'), { bakerUid: 'anaUid0000001', photo: jpg, at: now })));
 await t('cannot offer without a quote', assertFails(setDoc(doc(anon, 'offers/rq-none'), { bakerUid: 'anaUid0000001', offer: '{}', createdAt: now })));
 await t('baker reads offers', assertSucceeds(getDocs(query(collection(ana, 'offers'), where('bakerUid', '==', 'anaUid0000001')))));
 await t('others cannot read offers', assertFails(getDoc(doc(anon, 'offers/rq-abc123def456'))));

@@ -14,6 +14,7 @@ import {
   loadBakery,
   loadMyRequests,
   publishQuote,
+  publishReadyPhoto,
   saveBakery,
   saveMyRequests,
   slugOwner,
@@ -191,11 +192,14 @@ export function CloudSync() {
     for (const o of db.orders) {
       const declined = o.status === 'declined' && o.source === 'cloud';
       if (!declined && (!o.quote || !['quoted', 'confirmed', 'baking', 'ready', 'done'].includes(o.status))) continue;
-      const key = declined ? `${o.id}@declined` : `${o.id}@${o.quote!.approvedAt}${o.offer ? `@offer-${o.offer.answer}` : ''}`;
+      const key = declined ? `${o.id}@declined` : `${o.id}@${o.quote!.approvedAt}${o.offer ? `@offer-${o.offer.answer}` : ''}${o.ready ? `@ready-${o.ready.at}` : ''}`;
       if (done.has(key)) continue;
       const q = quoteLinkPayload(bakery, o);
       if (!q) continue;
-      publishQuote(uid, q).then(
+      const photo = o.ready?.photo;
+      // The photo goes up before the notice, so the customer's phone finds it when the notice arrives.
+      // (Rules from before 1.25 refuse the photo; the notice still goes.)
+      (photo ? publishReadyPhoto(uid, o.id, photo).catch(() => undefined).then(() => publishQuote(uid, q)) : publishQuote(uid, q)).then(
         () => {
           markPushed(key);
           // Tell the customer's phone, if they asked to be told.
