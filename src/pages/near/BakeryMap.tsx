@@ -79,6 +79,16 @@ function FitAll({ spot, matches, radiusKm }: { spot: LatLng; matches: BakeryMatc
  */
 function Declutter({ matches, selected, onCompact }: { matches: BakeryMatch[]; selected: string | null; onCompact: (s: Set<string>) => void }) {
   const map = useMap();
+  // Measure text in the pins' real font (sizes match .pin and .pin-name in index.css).
+  const measure = useMemo(() => {
+    const ctx = document.createElement('canvas').getContext('2d');
+    const family = getComputedStyle(map.getContainer()).getPropertyValue('--font-sans').trim() || getComputedStyle(document.body).fontFamily;
+    return (text: string, font: string) => {
+      if (!ctx) return text.length * (font.startsWith('600 11') ? 6.5 : 8.5);
+      ctx.font = `${font} ${family}`;
+      return ctx.measureText(text).width;
+    };
+  }, [map]);
   const run = () => {
     const order = [...matches].sort((a, b) => Number(b.slug === selected) - Number(a.slug === selected));
     const placed: Array<{ x0: number; x1: number; y0: number; y1: number }> = [];
@@ -87,12 +97,15 @@ function Declutter({ matches, selected, onCompact }: { matches: BakeryMatch[]; s
     for (const m of order) {
       const pt = map.latLngToContainerPoint([m.lat, m.lng]);
       const price = m.estimate != null ? formatPeso(m.estimate) : '?';
-      const box = (w: number, h: number) => ({ x0: pt.x - w / 2, x1: pt.x + w / 2, y0: pt.y - 7 - h, y1: pt.y - 7 });
-      const full = box(Math.max(pinName(m.name).length * 5.6, price.length * 8.5) + 18, 36);
+      // Padding 9px and a 2px border each side; the pin's bottom edge sits on the spot.
+      const box = (w: number, h: number) => ({ x0: pt.x - w / 2 - 2, x1: pt.x + w / 2 + 2, y0: pt.y - h - 2, y1: pt.y + 2 });
+      const name = pinName(m.name).replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+      const priceW = measure(price, '700 13px');
+      const full = box(Math.max(measure(name, '600 11px'), priceW) + 22, 41);
       if (m.slug === selected || !hits(full)) placed.push(full);
       else {
         compact.add(m.slug);
-        placed.push(box(price.length * 8.5 + 20, 22));
+        placed.push(box(priceW + 22, 27));
       }
     }
     onCompact(compact);
@@ -100,9 +113,14 @@ function Declutter({ matches, selected, onCompact }: { matches: BakeryMatch[]; s
   useMapEvents({ zoomend: run, resize: run });
   const key = `${selected}|${matches.map((m) => `${m.slug}:${m.estimate}`).join(',')}`;
   useEffect(() => {
-    // After FitAll has zoomed to the pins.
+    // After FitAll has zoomed to the pins, and again once the web font has loaded.
+    let alive = true;
     const t = window.setTimeout(run, 0);
-    return () => window.clearTimeout(t);
+    document.fonts?.ready.then(() => alive && run()).catch(() => {});
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }

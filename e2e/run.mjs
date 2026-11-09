@@ -206,9 +206,12 @@ async function main() {
     check('map lists bakers who can make it', (await requestButtons.count()) >= 1, `${await requestButtons.count()} bakers`);
     const pinPrices = await customer.locator('.leaflet-marker-icon .pin').allInnerTexts();
     check('pins show a peso estimate, with the bakery name where there is room', pinPrices.every((t) => /(^|\n)₱[\d,]+$/.test(t.trim())) && pinPrices.some((t) => /^\S.*\n₱[\d,]+$/.test(t.trim())), pinPrices.join(' | '));
-    const pinBoxes = await customer.locator('.leaflet-marker-icon .pin').evaluateAll((els) => els.filter((e) => e.querySelector('.pin-name')).map((e) => { const r = e.getBoundingClientRect(); return [r.left, r.right, r.top, r.bottom]; }));
-    const pileUp = pinBoxes.some((a, i) => pinBoxes.some((b, j) => j > i && a[0] < b[1] - 2 && a[1] > b[0] + 2 && a[2] < b[3] - 2 && a[3] > b[2] + 2));
-    check('pin names never pile on top of each other', !pileUp, `${pinBoxes.length} named pins`);
+    let pinBoxes = [];
+    const noPileUp = await waitTrue(async () => {
+      pinBoxes = await customer.locator('.leaflet-marker-icon .pin').evaluateAll((els) => els.filter((e) => e.querySelector('.pin-name')).map((e) => { const r = e.getBoundingClientRect(); return [r.left, r.right, r.top, r.bottom]; }));
+      return !pinBoxes.some((a, i) => pinBoxes.some((b, j) => j > i && a[0] < b[1] - 2 && a[1] > b[0] + 2 && a[2] < b[3] - 2 && a[3] > b[2] + 2));
+    });
+    check('pin names never pile on top of each other', noPileUp, `${pinBoxes.length} named pins`);
     await customer.locator('[data-filters] summary').click();
     await customer.getByRole('button', { name: 'Kahit gaano kalayo' }).click();
     await customer.getByLabel('Yung kaya lang gawin').uncheck();
