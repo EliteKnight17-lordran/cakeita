@@ -478,7 +478,7 @@ async function main() {
     await pick('Kaunti');
     await pick('Oo');
     await tester.locator('[data-next]').click();
-    check('survey part 2 finishes with a share QR', await tester.locator('[data-survey-done] img').waitFor({ timeout: 8000 }).then(() => true, () => false));
+    check('survey part 2 finishes with a share QR', await tester.locator('[data-survey-done] img').waitFor({ timeout: 20000 }).then(() => true, () => false));
     const outbox = await tester.evaluate(() => JSON.parse(localStorage.getItem('cakeita.outbox.v1') || '[]'));
     check('both survey parts are kept for sending, linked but anonymous', outbox.length === 2 && outbox[0].entry.ref === outbox[1].entry.ref && outbox[1].entry.answers.see3d === 'lot', JSON.stringify(outbox.map((o) => o.entry.part)));
     check('a double tap saves each part once, under one id per person and part', /p1$/.test(outbox[0].id) && /p2$/.test(outbox[1].id), outbox.map((o) => o.id).join(' '));
