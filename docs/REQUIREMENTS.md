@@ -46,6 +46,8 @@ Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quo
 - **C12** The baker's answer comes back to me in Cakeita: accepted at the app price, their counter-offer, or "sorry, we can't" with a reason. I can take it, offer a lower price once, or choose another baker.
   *AC:* only one offer per quote (also enforced by the database rules); an offer must be lower than the quote; after the baker's answer, I can only confirm or pick someone else. Messenger links work for all of it when there is no cloud.
 - **C13** For the demo, the "(sample)" shops answer by themselves within a few seconds using plain rules (decline if the date is too soon or booked; counter an over-budget request but never below their minimum margin). Real bakers always answer by hand.
+- **C14** My inspo photo builds the 3D cake: its colors (read on the phone, no AI needed) and, with smart reading, its tiers, frosting, decorations and flower placement, using only parts the baker sells. I see what was matched and what the baker doesn't make, and the closest design is picked.
+  *AC:* no price comes from the photo; text I type wins over the photo; the photo is never saved, only the hints.
 - **C10** While customizing I can still see my cake: a small floating cake on phones (tap to enlarge or jump back to 3D) and the cake pinned beside the form on laptops.
 
 ### Baker

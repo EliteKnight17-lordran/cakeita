@@ -1,6 +1,6 @@
 import { addThemeTopper, COLOR_WORDS, findTrademark, type ColorHit, type ParsedRequest } from '../domain/requestReader';
 import type { AiReading } from '../domain/schemas';
-import type { PublicMenu } from '../domain/types';
+import type { FlowerStyle, PublicMenu, TopperSpot } from '../domain/types';
 
 /**
  * Combine an AI reading with the rule-based reading.
@@ -8,7 +8,7 @@ import type { PublicMenu } from '../domain/types';
  * - Numbers the customer typed (budget, servings) come from the rule-based reader
  *   when it found them, because regexes don't hallucinate.
  */
-export function mergeReading(rule: ParsedRequest, ai: AiReading, menu: PublicMenu): ParsedRequest & { droppedIds: string[]; summary: string } {
+export function mergeReading(rule: ParsedRequest, ai: AiReading, menu: PublicMenu): ParsedRequest & { droppedIds: string[]; summary: string; flowerStyle: FlowerStyle | null; topperSpot: TopperSpot | null } {
   const byId = new Map(menu.components.map((c) => [c.id, c]));
   const droppedIds: string[] = [];
   const okId = (idv: string | null | undefined, cat?: string) => {
@@ -62,5 +62,7 @@ export function mergeReading(rule: ParsedRequest, ai: AiReading, menu: PublicMen
     confidence: Math.max(rule.confidence, Math.min(0.95, ai.confidence)),
     droppedIds,
     summary: tm ? '' : ai.summaryTaglish,
+    flowerStyle: ai.flowerStyle ?? null,
+    topperSpot: ai.topperSpot ?? null,
   };
 }

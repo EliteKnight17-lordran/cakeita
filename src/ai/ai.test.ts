@@ -156,3 +156,20 @@ describe('share link codec', () => {
     expect((await decodePayload('z' + 'A'.repeat(20000), confirmLinkSchema)).ok).toBe(false);
   });
 });
+
+describe('inspo photo reading', () => {
+  const menu = toPublicMenu(createSampleBakery());
+  it('asks for tiers, decorations and placement only when a photo is attached', () => {
+    expect(buildPrompt(menu, '', true)).toMatch(/flowerStyle .*cascade/);
+    expect(buildPrompt(menu, 'pink cake', false)).not.toMatch(/flowerStyle \(only/);
+  });
+  it('keeps a valid placement, drops an odd one, and still never takes a price', () => {
+    const ok = aiReadingSchema.parse({ flowerStyle: 'crown', topperSpot: 'side', price: 1 });
+    expect(ok.flowerStyle).toBe('crown');
+    expect(ok.topperSpot).toBe('side');
+    expect('price' in ok).toBe(false);
+    expect(aiReadingSchema.parse({ flowerStyle: 'everywhere' }).flowerStyle).toBeNull();
+    const merged = mergeReading(readRequest('', menu), ok, menu);
+    expect(merged.flowerStyle).toBe('crown');
+  });
+});

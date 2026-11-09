@@ -5,6 +5,7 @@ import { motifFor } from '../domain/motifs';
 import { readRequest } from '../domain/requestReader';
 import type { CakeLook, PublicMenu, Selection } from '../domain/types';
 import type { Draft } from '../data/draft';
+import { withPhoto } from '../domain/photoHints';
 
 /**
  * The customer's cake as it stands right now, worked out from their draft.
@@ -56,15 +57,18 @@ export function currentCake(menu: PublicMenu, draft: Draft, today: Date, live?: 
   const minDate = earliestDate(menu.leadTimeDays, today);
   const liveReading = live ?? offlineReading(draft.description, menu);
   // A smart (AI) reading is used only while the message it read hasn't changed.
-  const reading = draft.reading && draft.readingFor === draft.description ? draft.reading : liveReading;
-  const hasText = draft.description.trim().length > 0;
+  const typed = draft.reading && draft.readingFor === draft.description ? draft.reading : liveReading;
+  // The inspo photo adds what it shows (tiers, decorations, colors); what they typed wins.
+  const hints = draft.photoHints ?? null;
+  const reading = withPhoto(typed, hints, menu);
+  const hasText = draft.description.trim().length > 0 || !!hints;
   // What the customer picked by hand wins; otherwise use what we read from their message.
   const occasion = draft.occasion || (hasText ? reading.occasion : '');
   const readDate = reading.eventDate && reading.eventDate >= minDate ? reading.eventDate : '';
   const eventDate = draft.eventDate || readDate;
   const wants = wantsFrom(draft, hasText || draft.reading ? reading : null);
   // Placement and things the customer brings are always their own choice, even when colors follow the message.
-  const keep = { flowerStyle: draft.look.flowerStyle, topperSpot: draft.look.topperSpot, own: draft.look.own };
+  const keep = { flowerStyle: draft.look.flowerStyle ?? hints?.flowerStyle ?? undefined, topperSpot: draft.look.topperSpot ?? hints?.topperSpot ?? undefined, own: draft.look.own };
   const look = draft.lookTouched ? draft.look : { ...lookFromReading(hasText ? reading : null, occasion), ...keep };
   const designs = buildDesigns(menu, wants);
   // Default pick: the tier they chose; if that tier isn't offered, the fullest design that still fits the budget.

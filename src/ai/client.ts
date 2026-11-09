@@ -1,6 +1,6 @@
 import { readRequest, type ParsedRequest } from '../domain/requestReader';
 import { aiReadingSchema } from '../domain/schemas';
-import type { PublicMenu } from '../domain/types';
+import type { FlowerStyle, PublicMenu, TopperSpot } from '../domain/types';
 import { mergeReading } from './merge';
 
 /**
@@ -10,7 +10,7 @@ import { mergeReading } from './merge';
  * Any AI problem silently falls back to step 1. The customer never sees a raw error.
  */
 
-export type Reading = ParsedRequest & { summary: string; usedAi: boolean; aiNote: string };
+export type Reading = ParsedRequest & { summary: string; usedAi: boolean; aiNote: string; flowerStyle?: FlowerStyle | null; topperSpot?: TopperSpot | null };
 
 let aiCache: Promise<boolean> | null = null;
 

@@ -6,10 +6,10 @@
 
 | Suite | Result |
 | --- | --- |
-| Unit tests (Vitest) | **213 / 213 passed** |
+| Unit tests (Vitest) | **221 / 221 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
-| End-to-end checks (5 phones) | **99 / 99 passed** |
+| End-to-end checks (5 phones) | **101 / 101 passed** |
 | Firestore security rules (emulator) | **61 / 61 passed** |
 | Accessibility (axe, 15 screens) | **0 serious or critical issues** |
 | JavaScript errors during e2e | 0 on all phones |

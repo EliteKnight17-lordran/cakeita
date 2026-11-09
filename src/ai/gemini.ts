@@ -1,5 +1,5 @@
 import { aiReadingSchema, type AiReading } from '../domain/schemas.js';
-import type { PublicMenu } from '../domain/types.js';
+import { FLOWER_STYLES, TOPPER_SPOTS, type PublicMenu } from '../domain/types.js';
 
 /**
  * Server-side helper that asks Gemini to READ a cake request (text and/or inspo photo)
@@ -31,7 +31,7 @@ export function buildPrompt(menu: PublicMenu, text: string, hasImage: boolean): 
     '{"baseCakeId": string|null, "flavorId": string|null, "coveringId": string|null, "componentIds": string[],',
     ' "detectedButUnavailable": string[], "colors": string[], "textOnCake": string, "occasion": string,',
     ' "servings": number|null, "budget": number|null, "tiers": number|null, "theme": string,',
-    ' "summaryTaglish": string, "confidence": number}',
+    ' "summaryTaglish": string, "confidence": number, "flowerStyle": string|null, "topperSpot": string|null}',
     'Rules:',
     '- Use ONLY ids from the lists below. If something is wanted but not in the list, put a short name in detectedButUnavailable.',
     '- Never write a price. "budget" is only the amount the customer wrote, in pesos (2k = 2000). Otherwise null.',
@@ -39,7 +39,10 @@ export function buildPrompt(menu: PublicMenu, text: string, hasImage: boolean): 
     '- Do not name trademarked characters (Disney, Marvel, Sanrio, etc). Describe a generic theme instead.',
     '- colors: simple English color names like "pink", "gold", "baby blue".',
     '- summaryTaglish: one or two short friendly sentences in Taglish describing the cake.',
-    hasImage ? '- An inspiration photo is attached. Describe what you SEE in it using the menu ids.' : '',
+    hasImage
+      ? '- An inspiration photo is attached. Describe what you SEE in it using the menu ids: number of tiers (pick the closest size), frosting type, flavor if visible, every decoration, main colors (frosting first, then accent), and words written on the cake.'
+      : '',
+    hasImage ? `- flowerStyle (only if flowers are visible): one of ${JSON.stringify(FLOWER_STYLES)}. topperSpot (only if a topper is visible): one of ${JSON.stringify(TOPPER_SPOTS)}. Otherwise null.` : '',
     `Cake sizes: ${JSON.stringify(sizes)}`,
     `Parts: ${JSON.stringify(parts)}`,
     `Max tiers this baker makes: ${menu.maxTiers}. Things the baker does not do: ${JSON.stringify(menu.cannotDo)}`,

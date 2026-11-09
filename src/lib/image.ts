@@ -34,3 +34,28 @@ export async function resizeImage(file: File, maxPx = 1024, quality = 0.82): Pro
     URL.revokeObjectURL(url);
   }
 }
+
+/**
+ * Sample the middle of a photo (where the cake usually is) as RGB pixels, on the phone.
+ * The edges are skipped because they are mostly table, wall or plate.
+ */
+export async function samplePixels(dataUrl: string, size = 48, keep = 0.6): Promise<Array<[number, number, number]>> {
+  const img = new Image();
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error('unreadable'));
+    img.src = dataUrl;
+  });
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return [];
+  const sw = img.naturalWidth * keep;
+  const sh = img.naturalHeight * keep;
+  ctx.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, size, size);
+  const d = ctx.getImageData(0, 0, size, size).data;
+  const out: Array<[number, number, number]> = [];
+  for (let i = 0; i < d.length; i += 4) if ((d[i + 3] ?? 0) > 200) out.push([d[i]!, d[i + 1]!, d[i + 2]!]);
+  return out;
+}

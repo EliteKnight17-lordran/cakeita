@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { Reading } from '../ai/client';
+import type { PhotoHints } from '../domain/photoHints';
 import type { CakeLook, DesignTier, Selection } from '../domain/types';
 
 /**
@@ -36,6 +37,8 @@ export interface Draft {
   sentId: string | null;
   sentLink: string | null;
   sentMessage: string | null;
+  /** What the inspo photo showed (not the photo itself). */
+  photoHints: PhotoHints | null;
 }
 
 export const EMPTY_DRAFT: Draft = {
@@ -59,6 +62,7 @@ export const EMPTY_DRAFT: Draft = {
   sentId: null,
   sentLink: null,
   sentMessage: null,
+  photoHints: null,
 };
 
 const key = (slug: string) => `cakeita.draft.${slug}`;

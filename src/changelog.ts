@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.8.0',
+    date: '2026-11-09',
+    en: [
+      'Your inspo photo now builds the 3D cake: colors are read right on the phone, and with smart reading on, also the tiers, frosting, decorations and flower placement. The closest design is picked for you.',
+      'Only parts the baker sells are used, so the picture still matches the price. Anything the baker doesn\'t make is listed, and the baker still sees your photo.',
+      'What the photo showed stays when you keep typing (the photo itself is still never saved).',
+    ],
+    tl: [
+      'Ang inspo photo mo na ang bumubuo ng 3D na cake: binabasa sa phone mismo ang kulay, at kapag naka-on ang smart reading, pati ang tier, frosting, dekorasyon at ayos ng bulaklak. Pinipili para sa iyo ang pinakamalapit na design.',
+      'Parts lang na binebenta ng baker ang ginagamit, kaya tugma pa rin ang itsura sa presyo. Nakalista ang hindi ginagawa ng baker, at makikita pa rin ng baker ang photo mo.',
+      'Nananatili ang nakuha sa photo kahit mag-type ka pa (hindi pa rin sine-save ang photo mismo).',
+    ],
+  },
+  {
     version: '1.7.0',
     date: '2026-11-09',
     en: [

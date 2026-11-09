@@ -21,7 +21,9 @@ import { toVisual } from '../domain/visual';
 import { SCENARIOS } from '../data/demoScenarios';
 import { clearDraft, useDraft, type Draft } from '../data/draft';
 import { repo } from '../data/store';
-import { resizeImage, type SmallImage } from '../lib/image';
+import { resizeImage, samplePixels, type SmallImage } from '../lib/image';
+import { colorsFromPixels } from '../domain/photoColors';
+import type { PhotoHints } from '../domain/photoHints';
 import { linkErrorText } from '../lib/codec';
 import { usePrefs, useTx } from '../lib/prefs';
 import { celebrate } from '../lib/celebrate';
@@ -166,6 +168,45 @@ function Flow({ menu }: { menu: PublicMenu }) {
     try {
       const r = await analyzeRequest(draft.description, menu, { image: img ? { mimeType: img.mimeType, base64: img.base64 } : null, allowAi: !prefs.aiOff });
       update({ reading: r, readingFor: draft.description });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Turn the inspo photo into the cake: AI (when set up) reads tiers, decorations, colors and
+   * placement using only this menu's parts; the phone itself always reads the main colors.
+   * Then the design closest to the photo is picked. Prices still come only from the menu.
+   */
+  const readPhoto = async (img: SmallImage) => {
+    setBusy(true);
+    try {
+      const [ai, px] = await Promise.all([
+        smartAvailable && !prefs.aiOff ? analyzeRequest('', menu, { image: { mimeType: img.mimeType, base64: img.base64 }, allowAi: true }).catch(() => null) : Promise.resolve(null),
+        samplePixels(img.dataUrl).catch(() => [] as Array<[number, number, number]>),
+      ]);
+      const usedAi = !!ai?.usedAi;
+      const hints: PhotoHints = {
+        colors: usedAi && ai!.colors.length ? ai!.colors.slice(0, 2) : colorsFromPixels(px),
+        componentIds: usedAi ? ai!.componentIds : [],
+        flavorId: usedAi ? ai!.flavorId : null,
+        coveringId: usedAi ? ai!.coveringId : null,
+        tiers: usedAi ? ai!.tiers : null,
+        theme: usedAi ? ai!.theme : '',
+        licensedNote: usedAi ? ai!.licensedNote : '',
+        unavailable: usedAi ? ai!.unavailable : [],
+        flowerStyle: usedAi ? ai!.flowerStyle ?? null : null,
+        topperSpot: usedAi ? ai!.topperSpot ?? null : null,
+        summary: usedAi ? ai!.summary : '',
+        usedAi,
+      };
+      // Show the design that keeps the most of what the photo shows.
+      const next = { ...draft, photoHints: hints, selection: null, lookTouched: false };
+      const c = currentCake(menu, next, today);
+      const best = c.designs.options
+        .map((o) => ({ o, n: leftOut(menu, c.wants, o.selection).parts.length }))
+        .sort((a, b) => a.n - b.n || b.o.estimate - a.o.estimate)[0];
+      update({ photoHints: hints, selection: null, lookTouched: false, ...(best ? { tier: best.o.tier } : {}) });
     } finally {
       setBusy(false);
     }
@@ -363,7 +404,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
                   try {
                     const img = await resizeImage(f);
                     setPhoto(img);
-                    if (smartAvailable) await smartRead(img);
+                    await readPhoto(img);
                   } catch {
                     setPhotoError(tx("We couldn't open that photo. Try a screenshot of it instead.", 'Hindi mabuksan ang photo. Subukan ang screenshot nito.'));
                   }
@@ -371,14 +412,18 @@ function Flow({ menu }: { menu: PublicMenu }) {
               />
             </label>
                 {photo && (
-                  <button type="button" className="btn-ghost" onClick={() => setPhoto(null)}>
+                  <button type="button" className="btn-ghost" onClick={() => { setPhoto(null); update({ photoHints: null }); }}>
                     {tx('Remove', 'Alisin')}
                   </button>
                 )}
               </div>
             </div>
           </div>
-          {smartAvailable && hasText && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
+          {busy && photo && <p className="text-sm font-semibold text-ink-soft" aria-live="polite">{tx('Building your cake from the photo…', 'Ginagawa ang cake mula sa photo…')}</p>}
+          {draft.photoHints && !busy && (
+            <PhotoMatch hints={draft.photoHints} menu={menu} hasPhoto={!!photo} onSee={() => cakeRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })} onRemove={() => { setPhoto(null); update({ photoHints: null }); }} />
+          )}
+          {smartAvailable && draft.description.trim() && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
             <button type="button" className="btn-ghost" disabled={busy} onClick={() => smartRead(photo)}>
               <IconSparkle /> {busy ? tx('Reading…', 'Binabasa…') : tx('Smart read', 'Smart read')}
             </button>
@@ -999,3 +1044,52 @@ function StandAndOwn({ menu, selection, look, onChange, prices, delta }: { menu:
   );
 }
 
+
+/** What the inspo photo turned into: shown right under the photo, so the customer can check it. */
+function PhotoMatch({ hints, menu, hasPhoto, onSee, onRemove }: { hints: PhotoHints; menu: PublicMenu; hasPhoto: boolean; onSee: () => void; onRemove: () => void }) {
+  const tx = useTx();
+  const names = [hints.flavorId, hints.coveringId, ...hints.componentIds]
+    .map((id) => menu.components.find((c) => c.id === id)?.name)
+    .filter((n): n is string => !!n);
+  const bits = [
+    hints.tiers ? tx(`${hints.tiers} tier${hints.tiers > 1 ? 's' : ''}`, `${hints.tiers} tier`) : '',
+    ...names,
+    hints.flowerStyle ? tx(`flowers: ${FLOWER_LABELS[hints.flowerStyle][0].toLowerCase()}`, `bulaklak: ${FLOWER_LABELS[hints.flowerStyle][1].toLowerCase()}`) : '',
+  ].filter(Boolean);
+  return (
+    <div className="space-y-2 rounded-2xl border border-line bg-white p-3" data-photo-match>
+      <p className="font-semibold">{hasPhoto ? tx('Your cake, made from the photo', 'Ang cake mo, mula sa photo') : tx('Using the details from your photo', 'Gamit ang detalye mula sa photo mo')}</p>
+      {hints.colors.length > 0 && (
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-ink-soft">{tx('Colors', 'Kulay')}:</span>
+          {hints.colors.map((c) => (
+            <span key={c.hex} className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-4 w-4 rounded-full border border-line" style={{ background: c.hex }} aria-hidden="true" />
+              {c.name}
+            </span>
+          ))}
+        </p>
+      )}
+      {bits.length > 0 && <p className="text-sm">{bits.join(' · ')}</p>}
+      {hints.unavailable.length > 0 && (
+        <p className="text-sm text-amber-ink">
+          {tx(`Not on ${menu.name}'s menu, so not on the cake`, `Wala sa menu ng ${menu.name}, kaya wala sa cake`)}: {hints.unavailable.join(', ')}
+        </p>
+      )}
+      {!hints.usedAi && (
+        <p className="text-sm text-ink-soft">{tx('We matched the colors. Add tiers and decorations in the box above, or pick them in Customize.', 'Kinuha namin ang kulay. Idagdag ang tier at dekorasyon sa box sa itaas, o piliin sa Customize.')}</p>
+      )}
+      <p className="text-sm text-ink-soft">{tx("Built only from parts this baker sells, so the picture matches the price. The baker also sees your photo.", 'Gawa lang sa parts na binebenta ng baker, kaya tugma ang itsura sa presyo. Makikita rin ng baker ang photo mo.')}</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn-secondary" onClick={onSee} data-see-photo-cake>
+          {tx('See the cake', 'Tingnan ang cake')}
+        </button>
+        {!hasPhoto && (
+          <button type="button" className="btn-ghost" onClick={onRemove}>
+            {tx('Stop using it', 'Huwag nang gamitin')}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -327,6 +327,18 @@ async function main() {
     check('own stand is free, replaces the priced one, and Customize stays open', ownPrice === before && ownNote === 1, `${ownPrice}, note ${ownNote}`);
     await tester.locator('[data-inspo]').waitFor();
     check('inspo photo is a clear card under the request box', await tester.locator('[data-inspo]').getByText('May picture ka ng cake na gusto mo?').isVisible());
+    // Inspo photo becomes the 3D cake: with no AI key, the phone still reads its colors.
+    const inspoPng = await tester.evaluate(() => {
+      const c = document.createElement('canvas'); c.width = 400; c.height = 400; const g = c.getContext('2d');
+      g.fillStyle = '#c4c4cc'; g.fillRect(0, 0, 400, 400);
+      g.fillStyle = '#c9b3e6'; g.fillRect(90, 140, 220, 200);
+      g.fillStyle = '#d4af37'; g.fillRect(90, 140, 220, 45);
+      return c.toDataURL('image/png').split(',')[1];
+    });
+    await tester.locator('#photo').setInputFiles({ name: 'inspo.png', mimeType: 'image/png', buffer: Buffer.from(inspoPng, 'base64') });
+    const match = tester.locator('[data-photo-match]');
+    check('inspo photo turns into the cake (colors read on the phone, no AI)', await match.waitFor({ timeout: 10000 }).then(() => true, () => false) && /lavender/.test(await match.innerText()) && /lavender/i.test((await tester.locator('figure [role="img"]').first().getAttribute('aria-label')) ?? ''));
+    await axe(tester, 'cake from inspo photo');
     await axe(tester, 'customize with placement and stands');
 
     // Pilot survey: tap-only part 1, try the app, reminder to come back, part 2 (saved on the phone when offline).

@@ -195,6 +195,9 @@ export const aiReadingSchema = z.object({
   theme: z.string().max(60).default(''),
   summaryTaglish: z.string().max(400).default(''),
   confidence: z.number().min(0).max(1).default(0.5),
+  // What an inspo photo shows about placement (added in 1.8; anything odd is ignored).
+  flowerStyle: z.enum(FLOWER_STYLES).nullable().optional().catch(null),
+  topperSpot: z.enum(TOPPER_SPOTS).nullable().optional().catch(null),
 });
 
 export type QuoteLink = z.infer<typeof quoteLinkSchema>;
