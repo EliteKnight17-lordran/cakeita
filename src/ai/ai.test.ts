@@ -149,7 +149,7 @@ describe('share link codec', () => {
     const code = await encodePayload(req);
     expect(code.length).toBeLessThan(1200);
     const back = await decodePayload(code, cakeRequestSchema);
-    expect(back).toEqual({ ok: true, value: req });
+    expect(back).toEqual({ ok: true, value: { ...req, handoff: 'pickup', handoffTime: '', address: '' } });
   });
   it('the whole public menu fits in a link', async () => {
     const code = await encodePayload(menu);

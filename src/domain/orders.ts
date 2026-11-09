@@ -83,6 +83,9 @@ export function quoteLinkPayload(bakery: Bakery, order: Order): QuoteLink | null
     reason: declined ? (order.declineReason ?? '').slice(0, 300) : '',
     estimate: order.estimate ?? null,
     offer: order.offer ? { price: order.offer.price, note: order.offer.note.slice(0, 300), answer: order.offer.answer } : null,
+    handoff: order.handoff ?? null,
+    handoffTime: order.handoffTime ?? '',
+    address: (order.address ?? '').slice(0, 200),
   };
 }
 

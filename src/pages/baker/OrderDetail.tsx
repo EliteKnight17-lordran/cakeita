@@ -18,7 +18,7 @@ import { toVisual } from '../../domain/visual';
 import { repo, useDb } from '../../data/store';
 import { copyText, quoteLink } from '../../lib/links';
 import { usePrefs, useTx } from '../../lib/prefs';
-import { niceDate } from '../../lib/dates';
+import { handoffText, niceDate } from '../../lib/dates';
 import { Customizer } from '../CustomerFlow';
 import { celebrate } from '../../lib/celebrate';
 import { currentUid } from '../../cloud/account';
@@ -171,6 +171,12 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
           <dd className="font-bold">{order.budget != null ? formatPeso(order.budget) : tx('none given', 'wala')}</dd>
         </div>
       </dl>
+
+      {order.handoff && (
+        <p className={`rounded-2xl border p-3 text-[0.95rem] ${order.handoff === 'delivery' ? 'border-berry bg-berry-soft' : 'border-line bg-white'}`} data-order-handoff={order.handoff}>
+          <strong>{order.handoff === 'delivery' ? tx('Delivery', 'Delivery') : tx('Pickup', 'Pickup')}:</strong> {handoffText(order, tx, 'baker')}
+        </p>
+      )}
 
       {order.description && (
         <blockquote className="rounded-2xl border-l-4 border-berry bg-white p-3 whitespace-pre-wrap">

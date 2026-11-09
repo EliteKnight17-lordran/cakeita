@@ -18,7 +18,7 @@ import { repo, useDb, type MyRequest } from '../data/store';
 import { decodePayload, linkErrorText } from '../lib/codec';
 import { confirmLink, offerLink, quoteCodeFrom } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
-import { niceDate } from '../lib/dates';
+import { handoffText, niceDate } from '../lib/dates';
 
 export default function QuotePage() {
   const { id = '' } = useParams();
@@ -291,6 +291,11 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
             <li>
               <strong>{tx('For', 'Para sa')}:</strong> {quote.occasion}, {niceDate(quote.eventDate, prefs.lang)}
             </li>
+            {quote.handoff && (
+              <li data-quote-handoff={quote.handoff}>
+                <strong>{quote.handoff === 'delivery' ? 'Delivery' : 'Pickup'}:</strong> {handoffText(quote, tx, 'you')}
+              </li>
+            )}
             <li>
               <strong>{tx('Valid until', 'Valid hanggang')}:</strong> {niceDate(quote.validUntil, prefs.lang)}
             </li>

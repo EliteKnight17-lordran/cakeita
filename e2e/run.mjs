@@ -228,7 +228,12 @@ async function main() {
     await designGroup.waitFor();
     check('cake survives the trip to the map and back (same step)', await customer.evaluate(() => JSON.parse(sessionStorage.getItem('cakeita.draft.sample') || '{}').description?.includes('Happy 7th Mia')));
 
+    await customer.locator('[data-handoff="delivery"]').click();
+    check('delivery says the buyer pays the delivery fee', await customer.locator('[data-delivery-fee-note]').getByText(/Ikaw ang magbabayad/).isVisible());
+    await customer.locator('[data-handoff-time]').fill('15:30');
     await customer.locator('[data-choose-baker]').click();
+    check('delivery asks where to deliver', await customer.getByText(/Pakilagay kung saan ide-deliver/).isVisible());
+    await customer.locator('[data-address]').fill('Brgy. Pinyahan, Quezon City');
     check('choosing a baker first asks for name and contact', await customer.getByText(/Pakilagay ang pangalan/).isVisible());
     await customer.getByLabel('Pangalan mo').fill('Ana Test');
     await customer.getByLabel(/Messenger name o mobile/).fill('0917 123 4567');
@@ -249,6 +254,7 @@ async function main() {
     await baker.goto(requestUrl);
     await baker.getByRole('heading', { name: 'Ana Test' }).waitFor();
     check('baker sees breakdown', await baker.getByRole('heading', { name: 'Breakdown ng presyo' }).isVisible());
+    check('baker sees delivery, time and address', /Delivery sa Brgy\. Pinyahan, Quezon City nang 3:30 PM \(customer ang magbabayad/.test((await baker.locator('[data-order-handoff="delivery"]').textContent({ timeout: 5000 }).catch(() => '')) ?? ''));
     check('baker sees the customer allergy', await baker.locator('[data-allergy]').getByText(/Allergy ng customer: blueberries/).isVisible());
     check('baker sees "accept at the app price" button', await baker.getByRole('button', { name: /Tanggapin sa ₱/ }).isVisible());
     await baker.getByLabel(/Presyong ipapadala/).fill('500');
@@ -265,6 +271,7 @@ async function main() {
     // ---------------- Customer gets quote ----------------
     await customer.goto(quoteUrl);
     await customer.getByRole('heading', { name: /ito ang quote mo/ }).waitFor();
+    check('quote shows the delivery and time', /3:30 PM/.test((await customer.locator('[data-quote-handoff="delivery"]').textContent({ timeout: 5000 }).catch(() => '')) ?? ''));
     check('customer quote page says to pay the baker directly', await customer.getByText(/Sa baker ka mismo magbabayad/).first().isVisible());
     await customer.waitForTimeout(800);
     await axe(customer, 'customer quote');

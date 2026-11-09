@@ -201,6 +201,9 @@ export default function NearBakers() {
           notifySub: null,
           lang: prefs.lang,
           allergies: cake.allergyText,
+          handoff: draft.handoff,
+          handoffTime: draft.handoffTime,
+          address: draft.address,
         },
         tx,
       );

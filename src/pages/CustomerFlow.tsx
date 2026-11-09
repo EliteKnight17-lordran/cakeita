@@ -128,7 +128,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
     if (name || contact) update({ ...(name ? { name } : {}), ...(contact ? { contact } : {}) });
     // Only when the page opens or the account loads; typing must not be overwritten.
   }, [accountName]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [errors, setErrors] = useState<Partial<Record<'date' | 'name' | 'contact' | 'form', string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<'date' | 'address' | 'name' | 'contact' | 'form', string>>>({});
   const [smartAvailable, setSmartAvailable] = useState(false);
   const [notifySub, setNotifySub] = useState<string | null>(null);
   const doneRef = useRef<HTMLHeadingElement>(null);
@@ -271,12 +271,13 @@ function Flow({ menu }: { menu: PublicMenu }) {
     if (!eventDate) e.date = tx('Pick the date you need the cake.', 'Piliin kung kailan kailangan ang cake.');
     else if (eventDate < minDate) e.date = pickOnMap ? tx('Please pick a date after today.', 'Pumili ng petsa pagkatapos ng araw na ito.') : tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.');
     else if (!anyBaker && isFullDate(menu, eventDate)) e.date = tx('The baker is fully booked that day. Please pick another date.', 'Puno na ang baker sa araw na iyon. Pumili ng ibang petsa.');
+    if (draft.handoff === 'delivery' && draft.address.trim().length < 5) e.address = tx('Please add where to deliver the cake.', 'Pakilagay kung saan ide-deliver ang cake.');
     if (!draft.name.trim()) e.name = tx('Please add your name.', 'Pakilagay ang pangalan mo.');
     if (draft.contact.trim().length < 5) e.contact = tx('Please add your Messenger name or mobile number.', 'Pakilagay ang Messenger name o mobile number mo.');
     setErrors(e);
-    const first = (['date', 'name', 'contact'] as const).find((k) => e[k]);
+    const first = (['date', 'address', 'name', 'contact'] as const).find((k) => e[k]);
     if (first) {
-      if (first !== 'date') setEditMe(true);
+      if (first === 'name' || first === 'contact') setEditMe(true);
       const el = document.getElementById(first);
       el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       el?.focus({ preventScroll: true });
@@ -312,6 +313,9 @@ function Flow({ menu }: { menu: PublicMenu }) {
     notifySub,
     lang: prefs.lang,
     allergies: cake.allergyText,
+    handoff: draft.handoff,
+    handoffTime: draft.handoffTime,
+    address: draft.address,
   });
 
   /** Main path from the open designer: see who can bake it, ranked, and send it to one of them. */
@@ -637,6 +641,40 @@ function Flow({ menu }: { menu: PublicMenu }) {
     </div>
   );
 
+  const handoffBlock = (
+    <div data-handoff-block>
+      <p className="label" id="handoff-label">{tx('Pickup or delivery?', 'Pickup o delivery?')}</p>
+      <div className="flex flex-wrap gap-2" role="group" aria-labelledby="handoff-label">
+        <Chip pressed={draft.handoff === 'pickup'} onClick={() => update({ handoff: 'pickup' })}>
+          <span data-handoff="pickup">{tx('I will pick it up', 'Kukunin ko')}</span>
+        </Chip>
+        <Chip pressed={draft.handoff === 'delivery'} onClick={() => update({ handoff: 'delivery' })}>
+          <span data-handoff="delivery">{tx('Deliver it to me', 'Ipa-deliver')}</span>
+        </Chip>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-[11rem_1fr]">
+        <Field id="handoff-time" label={draft.handoff === 'delivery' ? tx('Delivery time (optional)', 'Oras ng delivery (optional)') : tx('Pickup time (optional)', 'Oras ng pickup (optional)')}>
+          <input id="handoff-time" type="time" className={`input ${draft.handoffTime ? '!border-berry !bg-berry-soft font-semibold' : ''}`} step={900} value={draft.handoffTime} onChange={(e) => update({ handoffTime: e.target.value })} data-handoff-time />
+        </Field>
+        {draft.handoff === 'delivery' && (
+          <Field id="address" label={tx('Deliver to (area or address)', 'Saan ide-deliver (lugar o address)')}>
+            <input id="address" className="input" autoComplete="street-address" maxLength={200} placeholder={tx('e.g. Brgy. Pinyahan, Quezon City', 'hal. Brgy. Pinyahan, Quezon City')} value={draft.address} aria-invalid={!!errors.address} onChange={(e) => update({ address: e.target.value })} data-address />
+          </Field>
+        )}
+      </div>
+      {draft.handoff === 'delivery' && (
+        <p className="mt-2 text-sm text-ink-soft" data-delivery-fee-note>
+          {tx('The delivery fee is not in the cake price. You pay it yourself (e.g. Lalamove or Grab), as you agree with the baker.', 'Hindi kasama sa presyo ng cake ang delivery fee. Ikaw ang magbabayad nito (hal. Lalamove o Grab), ayon sa usapan ninyo ng baker.')}
+        </p>
+      )}
+      {errors.address && (
+        <div className="mt-2">
+          <Notice tone="warn">{errors.address}</Notice>
+        </div>
+      )}
+    </div>
+  );
+
   const occasionBlock = (
     <div>
       <p className="label" id="occ-label">{tx('Occasion', 'Okasyon')}</p>
@@ -851,6 +889,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
             <section className="card space-y-4" aria-labelledby="sec-contact">
               <h2 id="sec-contact" className="text-xl">{tx('When, and how to reach you', 'Kailan, at paano ka makokontak')}</h2>
               {dateBlock}
+              {handoffBlock}
               {contactBlock}
             </section>
           </div>
@@ -918,6 +957,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
               {budgetBlock}
             </div>
             {dateBlock}
+            {handoffBlock}
             {allergyBlock}
           </section>
 

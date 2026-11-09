@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { Reading } from '../ai/client';
 import type { PhotoHints } from '../domain/photoHints';
-import type { CakeLook, DesignTier, Selection } from '../domain/types';
+import type { CakeLook, DesignTier, Handoff, Selection } from '../domain/types';
 
 /**
  * The customer's in-progress request. Saved in sessionStorage so a refresh or a
@@ -48,6 +48,10 @@ export interface Draft {
   photoHints: PhotoHints | null;
   /** What they can't eat, as typed. null = not typed yet (we use what the description says). */
   allergies: string | null;
+  /** Pickup or delivery (delivery fee paid by the customer), the time, and the delivery address. */
+  handoff: Handoff;
+  handoffTime: string;
+  address: string;
 }
 
 export const EMPTY_DRAFT: Draft = {
@@ -75,6 +79,9 @@ export const EMPTY_DRAFT: Draft = {
   sentMessage: null,
   photoHints: null,
   allergies: null,
+  handoff: 'pickup',
+  handoffTime: '',
+  address: '',
 };
 
 const key = (slug: string) => `cakeita.draft.${slug}`;

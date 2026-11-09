@@ -4,10 +4,11 @@ import { formatPeso } from '../domain/money';
 import { requestToOrder } from '../domain/orders';
 import { ownText } from '../domain/placement';
 import { cakeRequestSchema } from '../domain/schemas';
-import type { CakeLook, CakeRequest, DesignTier, PublicMenu, Selection } from '../domain/types';
+import type { CakeLook, CakeRequest, DesignTier, Handoff, PublicMenu, Selection } from '../domain/types';
 import { isAutoBaker } from '../data/sampleBakers';
 import { newId, repo } from '../data/store';
 import type { SmallImage } from '../lib/image';
+import { handoffText } from '../lib/dates';
 import { requestLink } from '../lib/links';
 import { sendNotify } from '../push/client';
 
@@ -40,6 +41,10 @@ export interface RequestParts {
   lang: 'tl' | 'en';
   /** What the customer can't eat, as typed ('' = none). */
   allergies: string;
+  handoff: Handoff;
+  /** HH:MM or ''. */
+  handoffTime: string;
+  address: string;
 }
 
 export type SendResult = { ok: false } | { ok: true; id: string; link: string; message: string; cloud: boolean; auto: boolean };
@@ -71,6 +76,9 @@ export async function sendCakeRequest(p: RequestParts, tx: Tx): Promise<SendResu
     hasInspoPhoto: !!p.photo,
     lang: p.lang,
     allergies: p.allergies.trim().slice(0, 120),
+    handoff: p.handoff,
+    handoffTime: /^\d{2}:\d{2}$/.test(p.handoffTime) ? p.handoffTime : '',
+    address: p.handoff === 'delivery' ? p.address.trim().slice(0, 200) : '',
   };
   if (!cakeRequestSchema.safeParse(req).success) return { ok: false };
   const link = await requestLink(req);
@@ -93,6 +101,7 @@ export async function sendCakeRequest(p: RequestParts, tx: Tx): Promise<SendResu
     tx(`Hi ${menu.name}! Cake request from ${req.customer.name}:`, `Hi ${menu.name}! Cake request po mula kay ${req.customer.name}:`),
     `• ${req.occasion}, ${req.eventDate}, ${tx('for', 'para sa')} ${req.servings} ${tx('people', 'tao')}`,
     `• ${p.summary}`,
+    `• ${handoffText(req, tx, 'me')}`,
     req.allergies ? `• ${tx('ALLERGY', 'ALLERGY')}: ${req.allergies}` : '',
     req.budget != null ? `• Budget: ${formatPeso(req.budget)}` : '',
     req.estimate != null ? `• ${tx('Estimate in the app', 'Tantya sa app')}: ${formatPeso(req.estimate)}` : '',
@@ -129,3 +138,4 @@ export function carryPhoto(p: SmallImage | null) {
 export function carriedPhoto(): SmallImage | null {
   return carried;
 }
+

@@ -108,6 +108,10 @@ export const cakeRequestSchema = z.object({
   lang: z.enum(['tl', 'en']),
   /** What the customer can't eat, as they typed it. Older links have none. */
   allergies: shortText(120).default(''),
+  /** Added in 1.24. Pickup or delivery (delivery fee paid by the customer), time, and address. */
+  handoff: z.enum(['pickup', 'delivery']).default('pickup').catch('pickup'),
+  handoffTime: z.string().regex(/^(\d{2}:\d{2})?$/).default('').catch(''),
+  address: shortText(200).default(''),
 });
 
 export const cakeVisualSchema = z.object({
@@ -171,6 +175,10 @@ export const quoteLinkSchema = z.object({
   estimate: money.nullable().default(null),
   /** The customer's one counter-offer and the baker's answer. */
   offer: z.object({ price: money, note: shortText(300), answer: z.enum(['pending', 'accepted', 'kept']) }).nullable().default(null),
+  /** Added in 1.24: pickup or delivery, and the time (null = not said, e.g. a pasted DM or an older link). */
+  handoff: z.enum(['pickup', 'delivery']).nullable().default(null).catch(null),
+  handoffTime: z.string().regex(/^(\d{2}:\d{2})?$/).default('').catch(''),
+  address: shortText(200).default(''),
 });
 
 /** Customer -> baker: one counter-offer on a quote ("Puwede ba ₱X?"). */

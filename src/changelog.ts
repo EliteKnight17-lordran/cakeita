@@ -13,6 +13,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.24.0',
+    date: '2026-11-10',
+    en: [
+      'Pickup or delivery: the customer picks one, with a time, and an address for delivery. The delivery fee is paid by the customer and is not in the cake price.',
+      'The baker sees it on the order and in the inbox, and it shows on the quote.',
+    ],
+    tl: [
+      'Pickup o delivery: pipili ang customer, may oras, at address kung delivery. Ang customer ang magbabayad ng delivery fee; hindi ito kasama sa presyo ng cake.',
+      'Makikita ito ng baker sa order at sa inbox, at nasa quote din.',
+    ],
+  },
+  {
     version: '1.23.0',
     date: '2026-11-09',
     en: [

@@ -257,7 +257,15 @@ export interface CakeRequest {
   lang: 'tl' | 'en';
   /** What the customer can't eat, as they typed it ('' = none said). */
   allergies?: string;
+  /** Pickup at the bakery or delivery (delivery fee paid by the customer). Older requests have none. */
+  handoff?: Handoff;
+  /** Pickup or delivery time, HH:MM ('' = not said). */
+  handoffTime?: string;
+  /** Where to deliver ('' for pickup). */
+  address?: string;
 }
+
+export type Handoff = 'pickup' | 'delivery';
 
 export interface ApprovedQuote {
   price: number;
