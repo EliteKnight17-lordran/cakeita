@@ -13,13 +13,13 @@ import { Layout } from '../components/Layout';
 import { IconArrow, IconCamera, IconCheck, IconChevron, IconPin, IconSparkle } from '../components/icons';
 import { ShareBox } from '../components/ShareBox';
 import { Bubble, Chip, Field, Notice, SampleBadge } from '../components/ui';
-import { leftOut, type DesignOption } from '../domain/designs';
+import { leftOut, selectionKey, type DesignOption } from '../domain/designs';
 import { addDays, earliestDate } from '../domain/insights';
 import { formatPeso } from '../domain/money';
 import { MOTIF_KEYS, MOTIFS } from '../domain/motifs';
 import { estimateFromMenu, isFullDate } from '../domain/pricing';
 import { COLOR_WORDS } from '../domain/requestReader';
-import { FLOWER_STYLES, TOPPER_SPOTS, type OwnItem, type PublicMenu, type Selection } from '../domain/types';
+import { FLOWER_STYLES, TOPPER_SPOTS, type DesignTier, type OwnItem, type PublicMenu, type Selection } from '../domain/types';
 import { FLOWER_LABELS, OWN_LABELS } from '../domain/placement';
 import { toVisual } from '../domain/visual';
 import { SCENARIOS } from '../data/demoScenarios';
@@ -30,6 +30,7 @@ import { findShowcase, showcaseByKey, showcaseHints } from '../domain/showcase';
 import { colorsFromPhoto } from '../domain/photoColors';
 import type { PhotoHints } from '../domain/photoHints';
 import { linkErrorText } from '../lib/codec';
+import { canShareSheet } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
 import { celebrate } from '../lib/celebrate';
 import { QuoteAlertToggle } from '../push/PushButtons';
@@ -147,7 +148,10 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const liveReading = useMemo(() => offlineReading(draft.description, menu), [draft.description, menu]);
   const cake = currentCake(menu, draft, today, liveReading);
   const { reading, hasText, occasion, eventDate, wants, look, designs, selection, isCustom } = cake;
-  const wantsKey = JSON.stringify(wants);
+  // What resets a hand-made cake: a new message or photo (start again from it), or a new
+  // head count or allergy (the size and parts may no longer fit). A budget change never does.
+  const askKey = JSON.stringify({ ...cake.asked, budget: null, servings: null, avoid: null });
+  const fitKey = JSON.stringify([cake.asked.servings, cake.asked.avoid?.said ?? []]);
   const estimate = selection ? estimateFromMenu(menu, selection) : null;
   const visual = selection ? toVisual(menu, selection, look) : null;
   const missingBase = selection ? leftOut(menu, wants, selection) : null;
@@ -155,6 +159,15 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const fullest = designs.options
     .map((o) => ({ o, n: leftOut(menu, wants, o.selection).parts.length }))
     .sort((a, b) => a.n - b.n || a.o.estimate - b.o.estimate)[0];
+  // Their own design (changed by hand in Customize) stays as the first card, so picking another
+  // design never loses it: they can tap it again to get it back.
+  const ownSel = isCustom ? selection : draft.handPicked && designs.options.every((o) => selectionKey(o.selection) !== selectionKey(draft.handPicked!)) ? draft.handPicked : null;
+  const ownBase = ownSel ? menu.baseCakes.find((b) => b.id === ownSel.baseCakeId) : undefined;
+  const ownPrice = ownSel ? estimateFromMenu(menu, ownSel) : null;
+  const customOption: DesignCardOption | null =
+    ownSel && ownBase && ownPrice != null
+      ? { tier: 'custom', selection: ownSel, estimate: ownPrice, overBudget: wants.budget != null && ownPrice > wants.budget, servings: ownBase.servings, servingsShort: ownBase.servings < (wants.servings ?? 0) }
+      : null;
   const colorNames = look.colors.map((h) => PALETTE.find((p) => p.hex === h)?.name ?? '').filter(Boolean);
   // Semi-naked cakes have no frosting to color, so say so instead of quietly dropping the color.
   const missing = missingBase && visual?.covering === 'naked' && colorNames.length
@@ -162,14 +175,20 @@ function Flow({ menu }: { menu: PublicMenu }) {
     : missingBase;
   const description = visual ? describeCake(visual, prefs.lang, colorNames) : '';
 
-  // When the request changes (people, budget, message), the suggested designs change too:
-  // drop a hand-made selection so the cake on screen always matches what was asked.
-  const firstWants = useRef(wantsKey);
+  // A new message or photo: the cake follows it again, and hand-made changes are dropped.
+  const firstAsk = useRef(askKey);
   useEffect(() => {
-    if (firstWants.current === wantsKey) return;
-    firstWants.current = wantsKey;
+    if (firstAsk.current === askKey) return;
+    firstAsk.current = askKey;
+    if (draft.selection || draft.handPicked) update({ selection: null, handPicked: null });
+  }, [askKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // More people or a new allergy: show the designs again (still built from their own parts).
+  const firstFit = useRef(fitKey);
+  useEffect(() => {
+    if (firstFit.current === fitKey) return;
+    firstFit.current = fitKey;
     if (draft.selection) update({ selection: null });
-  }, [wantsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fitKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Same for the look: new colors, theme or words in the message replace hand-picked ones.
   const askedLook = JSON.stringify([reading.colors?.map((c) => c.hex), reading.theme, reading.textOnCake, reading.age]);
@@ -229,14 +248,14 @@ function Flow({ menu }: { menu: PublicMenu }) {
       };
       // Show the design that keeps the most of what the photo (and anything typed) asks for,
       // then the one with the fewest extras, so we don't add decorations nobody asked for.
-      const next = { ...draft, photoHints: hints, selection: null, lookTouched: false };
+      const next = { ...draft, photoHints: hints, selection: null, handPicked: null, lookTouched: false };
       const c = currentCake(menu, next, today);
       // Parts a design adds that the photo doesn't show (flavor and frosting don't count).
       const extras = (ids: string[]) => ids.filter((id) => !c.wants.componentIds.includes(id) && !['flavor', 'covering'].includes(menu.components.find((x) => x.id === id)?.category ?? '')).length;
       const best = c.designs.options
         .map((o) => ({ o, missing: leftOut(menu, c.wants, o.selection).parts.length, extra: extras(o.selection.componentIds) }))
         .sort((a, b) => a.missing - b.missing || a.extra - b.extra || a.o.estimate - b.o.estimate)[0];
-      update({ photoHints: hints, selection: null, lookTouched: false, ...(best ? { tier: best.o.tier } : {}) });
+      update({ photoHints: hints, selection: null, handPicked: null, lookTouched: false, ...(best ? { tier: best.o.tier } : {}) });
       // Show the cake assembling itself.
       setBuildKey((k) => k + 1);
       requestAnimationFrame(() => cakeRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
@@ -334,10 +353,15 @@ function Flow({ menu }: { menu: PublicMenu }) {
             {tx('Done! Now send it to the baker', 'Ayos! Ipadala na sa baker')}
           </h1>
           <Bubble from="app">
-            {tx(
-              `Tap Send and choose Messenger. ${menu.name} will check it and send you the final price. This is not an order yet.`,
-              `I-tap ang Ipadala at piliin ang Messenger. Titingnan ito ng ${menu.name} at ipapadala ang final na presyo. Hindi pa ito order.`,
-            )}
+            {canShareSheet()
+              ? tx(
+                  `Tap Send and choose Messenger. ${menu.name} will check it and send you the final price. This is not an order yet.`,
+                  `I-tap ang Ipadala at piliin ang Messenger. Titingnan ito ng ${menu.name} at ipapadala ang final na presyo. Hindi pa ito order.`,
+                )
+              : tx(
+                  `Copy the message and paste it in Messenger to ${menu.name}. They will check it and send you the final price. This is not an order yet.`,
+                  `I-copy ang message at i-paste sa Messenger ng ${menu.name}. Titingnan nila ito at ipapadala ang final na presyo. Hindi pa ito order.`,
+                )}
           </Bubble>
           <SurveyFinishCard />
           {repo.get().myRequests.find((r) => r.id === draft.sentId)?.cloud && (
@@ -533,7 +557,10 @@ function Flow({ menu }: { menu: PublicMenu }) {
     </Field>
   );
   const allergyWarn = selection && cake.allergies.said.length > 0 && (
-    <AllergyNotice menu={menu} selection={selection} text={cake.allergyText} who="customer" onRemove={(id) => update({ selection: { ...selection, componentIds: selection.componentIds.filter((x) => x !== id) } })} />
+    <AllergyNotice menu={menu} selection={selection} text={cake.allergyText} who="customer" onRemove={(id) => {
+      const next = { ...selection, componentIds: selection.componentIds.filter((x) => x !== id) };
+      update({ selection: next, handPicked: next });
+    }} />
   );
 
   const budgetInput = (
@@ -631,9 +658,10 @@ function Flow({ menu }: { menu: PublicMenu }) {
       )}
       {!pickOnMap && !wide && cakeStage}
       {allergyWarn}
-      <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={tx('Designs', 'Mga design')}>
+      <div className={`grid gap-3 ${customOption ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`} role="radiogroup" aria-label={tx('Designs', 'Mga design')}>
+        {customOption && <DesignCard option={customOption} menu={menu} look={look} selected={isCustom} onPick={() => update({ selection: customOption.selection })} budget={wants.budget} missing={[]} />}
         {designs.options.map((o) => (
-          <DesignCard key={o.tier} option={o} menu={menu} look={look} selected={!isCustom && JSON.stringify(selection) === JSON.stringify(o.selection)} onPick={() => update({ tier: o.tier, selection: null })} budget={wants.budget} />
+          <DesignCard key={o.tier} option={o} menu={menu} look={look} selected={!isCustom && !!selection && selectionKey(selection) === selectionKey(o.selection)} onPick={() => update({ tier: o.tier, selection: null })} budget={wants.budget} missing={leftOut(menu, wants, o.selection).parts} mine={!!draft.handPicked && selectionKey(draft.handPicked) === selectionKey(o.selection)} />
         ))}
       </div>
       {missing?.maxTiers && (
@@ -651,11 +679,10 @@ function Flow({ menu }: { menu: PublicMenu }) {
           </Notice>
         </div>
       )}
-      {isCustom && (
+      {draft.handPicked && (
         <p className="text-sm">
-          <span className="tag border border-line bg-[#faf6f1] text-ink">{tx('Your custom design', 'Sarili mong design')}</span>{' '}
-          <button type="button" className="text-berry underline" onClick={() => update({ selection: null })}>
-            {tx('Go back to the suggestions', 'Bumalik sa mga suggestion')}
+          <button type="button" className="min-h-11 text-berry underline" onClick={() => update({ selection: null, handPicked: null })} data-clear-hand>
+            {tx('Undo my changes and start again from my message', 'Burahin ang binago ko at bumalik sa mensahe ko')}
           </button>
         </p>
       )}
@@ -674,7 +701,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
         </span>
       </summary>
       <div className="mt-4">
-        <Customizer menu={menu} selection={selection} look={look} servings={wants.servings} onChange={(sel, l) => update({ selection: sel, look: l, lookTouched: draft.lookTouched || JSON.stringify(l) !== JSON.stringify(look) })} />
+        <Customizer menu={menu} selection={selection} look={look} servings={wants.servings} onChange={(sel, l) => update({ selection: sel, handPicked: selectionKey(sel) !== selectionKey(selection) ? sel : draft.handPicked, look: l, lookTouched: draft.lookTouched || JSON.stringify(l) !== JSON.stringify(look) })} />
       </div>
     </details>
   );
@@ -1003,15 +1030,26 @@ function ReadSummary({ reading: r, menu, compact = false }: { reading: Reading; 
   );
 }
 
-function DesignCard({ option, menu, look, selected, onPick, budget }: { option: DesignOption; menu: PublicMenu; look: Draft['look']; selected: boolean; onPick: () => void; budget: number | null }) {
+type DesignCardOption = Omit<DesignOption, 'tier'> & { tier: DesignTier };
+
+function DesignCard({ option, menu, look, selected, onPick, budget, missing, mine = false }: { option: DesignCardOption; menu: PublicMenu; look: Draft['look']; selected: boolean; onPick: () => void; budget: number | null; missing: string[]; mine?: boolean }) {
   const tx = useTx();
   const prefs = usePrefs();
   const v = toVisual(menu, option.selection, look);
-  const label = { simple: tx('Simple', 'Simple'), classic: tx('Classic', 'Classic'), showstopper: tx('Showstopper', 'Showstopper') }[option.tier];
+  const label = { simple: tx('Simple', 'Simple'), classic: tx('Classic', 'Classic'), showstopper: tx('Showstopper', 'Showstopper'), custom: tx('Your design', 'Sarili mong design') }[option.tier];
+  // One line on what each design is, so a plain Simple cake doesn't look like a mistake.
+  const what = {
+    simple: tx('Plain, lowest price', 'Simple lang, pinakamura'),
+    classic: budget != null ? tx('Most of what you want, within budget', 'Halos lahat ng gusto mo, pasok sa budget') : tx('What you asked for', 'Ang hiniling mo'),
+    showstopper: tx('The fullest version', 'Pinakakumpleto'),
+    custom: tx('As you made it in Customize', 'Gaya ng ginawa mo sa I-customize'),
+  }[option.tier];
+  const whatShown = mine ? tx('Same as the cake you made', 'Kapareho ng cake na ginawa mo') : what;
+  const shownMissing = missing.length > 3 ? `${missing.slice(0, 3).join(', ')} +${missing.length - 3}` : missing.join(', ');
   const base = menu.baseCakes.find((b) => b.id === option.selection.baseCakeId);
   const parts = option.selection.componentIds.map((id) => menu.components.find((c) => c.id === id)).filter((c) => !!c && c.category !== 'flavor');
   return (
-    <button type="button" role="radio" aria-checked={selected} onClick={onPick} className={`card text-left transition ${selected ? '!border-ink ring-1 ring-ink' : 'hover:border-[#cdbdb0]'}`}>
+    <button type="button" role="radio" aria-checked={selected} data-design={option.tier} onClick={onPick} className={`card text-left transition ${selected ? '!border-ink ring-1 ring-ink' : 'hover:border-[#cdbdb0]'}`}>
       <div className="flex items-center justify-between">
         <span className="font-display text-lg">{label}</span>
         {selected && (
@@ -1020,11 +1058,17 @@ function DesignCard({ option, menu, look, selected, onPick, budget }: { option: 
           </span>
         )}
       </div>
-      <Cake2D visual={v} title={describeCake(v, prefs.lang)} className="my-3 h-28 w-full rounded-xl bg-[#faf6f1]" />
+      <p className={`text-sm ${mine ? 'font-semibold text-berry' : 'text-ink-soft'}`}>{whatShown}</p>
+      <Cake2D visual={v} title={describeCake(v, prefs.lang)} crop className="my-3 h-36 w-full rounded-xl bg-[#faf6f1]" />
       <p className="text-sm text-ink-soft">
         {base?.sizeLabel} · {tx('feeds', 'pang')} {option.servings}
       </p>
       <p className="text-sm">{parts.map((p) => p!.name).join(', ')}</p>
+      {missing.length > 0 && (
+        <p className="mt-1 text-sm text-ink-soft" data-card-missing>
+          {tx('Leaves out', 'Wala rito')}: {shownMissing}
+        </p>
+      )}
       {menu.showEstimates ? (
         <p className="mt-2">
           <span className="text-sm text-ink-soft">{tx('About', 'Mga')} </span>

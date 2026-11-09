@@ -1,6 +1,6 @@
 import type { Reading } from '../ai/client';
 import { allergiesInText, readAllergies, type Allergies } from '../domain/allergens';
-import { buildDesigns, type DesignResult, type Wants } from '../domain/designs';
+import { buildDesigns, selectionKey, wantsWithPicked, type DesignResult, type Wants } from '../domain/designs';
 import { earliestDate } from '../domain/insights';
 import { motifFor } from '../domain/motifs';
 import { readName, readRequest } from '../domain/requestReader';
@@ -47,6 +47,9 @@ export interface CurrentCake {
   occasion: string;
   eventDate: string;
   minDate: string;
+  /** What they asked for in words and photo (before anything changed by hand). */
+  asked: Wants;
+  /** What the designs are built from: `asked`, with what they changed by hand. */
   wants: Wants;
   look: CakeLook;
   designs: DesignResult;
@@ -73,7 +76,9 @@ export function currentCake(menu: PublicMenu, draft: Draft, today: Date, live?: 
   // Allergies: what they typed in the allergy box, else what the description says ("allergic sa mani").
   const allergyText = (draft.allergies ?? allergiesInText(draft.description)).slice(0, 120);
   const allergies = readAllergies(allergyText);
-  const wants = { ...wantsFrom(draft, hasText || draft.reading ? reading : null), ...(allergies.said.length ? { avoid: allergies } : {}) };
+  const asked: Wants = { ...wantsFrom(draft, hasText || draft.reading ? reading : null), ...(allergies.said.length ? { avoid: allergies } : {}) };
+  // Decorations they added (or took off) by hand stay in every design, through budget changes.
+  const wants = wantsWithPicked(menu, asked, draft.handPicked);
   // Placement and things the customer brings are always their own choice, even when colors follow the message.
   const keep = { flowerStyle: draft.look.flowerStyle ?? hints?.flowerStyle ?? undefined, topperSpot: draft.look.topperSpot ?? hints?.topperSpot ?? undefined, own: draft.look.own };
   // Name and age are never picked by hand: they always follow what was typed (or the photo).
@@ -83,6 +88,6 @@ export function currentCake(menu: PublicMenu, draft: Draft, today: Date, live?: 
   // Default pick: the tier they chose; if that tier isn't offered, the fullest design that still fits the budget.
   const fallback = [...designs.options].reverse().find((o) => !o.overBudget) ?? designs.options[0];
   const selection = draft.selection ?? designs.options.find((o) => o.tier === draft.tier)?.selection ?? fallback?.selection ?? null;
-  const isCustom = !!draft.selection && designs.options.every((o) => JSON.stringify(o.selection) !== JSON.stringify(draft.selection));
-  return { reading, hasText, occasion, eventDate, minDate, wants, look, designs, selection, isCustom, allergyText, allergies };
+  const isCustom = !!draft.selection && designs.options.every((o) => selectionKey(o.selection) !== selectionKey(draft.selection!));
+  return { reading, hasText, occasion, eventDate, minDate, asked, wants, look, designs, selection, isCustom, allergyText, allergies };
 }

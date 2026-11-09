@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { copyText, messengerUrl, shareOrCopy } from '../lib/links';
+import { canShareSheet, copyText, messengerUrl, shareOrCopy } from '../lib/links';
 import { useTx } from '../lib/prefs';
 import { IconChat, IconCopy, IconSend } from './icons';
 
@@ -24,42 +24,58 @@ export function QR({ value, label, size = 220 }: { value: string; label: string;
   );
 }
 
-/** Share a link the way Filipinos actually send things: Messenger, share sheet, or copy. */
+/**
+ * Share a link the way Filipinos actually send things: Messenger, share sheet, or copy.
+ * "Send" opens the phone's share menu. Laptop browsers usually have none, so there the
+ * buttons say what they really do (copy, then open Messenger) instead of a "Send" that only copies.
+ */
 export function ShareBox({ url, message, title, contact, qrLabel, showQr = true }: { url: string; message: string; title: string; contact?: string; qrLabel: string; showQr?: boolean }) {
   const tx = useTx();
   const [status, setStatus] = useState('');
   const [qr, setQr] = useState(false);
   const mUrl = contact ? messengerUrl(contact) : null;
+  const sheet = canShareSheet();
 
   const share = async () => {
     const r = await shareOrCopy({ title, text: message, url });
-    setStatus(r === 'shared' ? tx('Sent!', 'Naipadala!') : r === 'copied' ? tx('Copied. Paste it in Messenger.', 'Na-copy na. I-paste sa Messenger.') : r === 'cancelled' ? '' : tx('Could not share. Copy the link below.', 'Hindi ma-share. I-copy ang link sa baba.'));
+    setStatus(r === 'shared' ? tx('Done. Check that it went through in the app you picked.', 'Ayos. Tingnan kung naipadala sa app na pinili mo.') : r === 'copied' ? tx('Copied. Paste it in Messenger.', 'Na-copy na. I-paste sa Messenger.') : r === 'cancelled' ? '' : tx('Could not share. Copy the link below.', 'Hindi ma-share. I-copy ang link sa baba.'));
   };
   const copy = async () => {
     const ok = await copyText(`${message}\n${url}`);
     setStatus(ok ? tx('Copied. Paste it in Messenger.', 'Na-copy na. I-paste sa Messenger.') : tx('Copy failed. Long-press the link to copy.', 'Hindi na-copy. I-long press ang link.'));
   };
   const openMessenger = async () => {
-    await copyText(`${message}\n${url}`);
-    setStatus(tx('Message copied. Paste it in the chat.', 'Na-copy ang message. I-paste sa chat.'));
+    const ok = await copyText(`${message}\n${url}`);
+    setStatus(ok ? tx('Message copied. Paste it in the chat that opened.', 'Na-copy ang message. I-paste sa chat na bumukas.') : tx('Copy failed. Copy the link below, then paste it in the chat.', 'Hindi na-copy. I-copy ang link sa baba at i-paste sa chat.'));
     if (mUrl) window.open(mUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-share-box={sheet ? 'sheet' : 'copy'}>
       <div className="grid gap-2 sm:grid-cols-2">
-        <button type="button" className="btn" onClick={share}>
-          <IconSend /> {tx('Send', 'Ipadala')}
-        </button>
-        <button type="button" className="btn-secondary" onClick={copy}>
+        {sheet ? (
+          <button type="button" className="btn" onClick={share} data-share-send>
+            <IconSend /> {tx('Send', 'Ipadala')}
+          </button>
+        ) : mUrl ? (
+          <button type="button" className="btn sm:col-span-2" onClick={openMessenger} data-share-messenger>
+            <IconChat /> {tx('Copy and open Messenger', 'I-copy at buksan ang Messenger')}
+          </button>
+        ) : null}
+        <button type="button" className={sheet || mUrl ? 'btn-secondary' : 'btn sm:col-span-2'} onClick={copy} data-share-copy>
           <IconCopy /> {tx('Copy message', 'I-copy ang message')}
         </button>
-        {mUrl && (
-          <button type="button" className="btn-secondary sm:col-span-2" onClick={openMessenger}>
+        {sheet && mUrl && (
+          <button type="button" className="btn-secondary sm:col-span-2" onClick={openMessenger} data-share-messenger>
             <IconChat /> {tx('Open Messenger', 'Buksan ang Messenger')}
           </button>
         )}
       </div>
+      <p className="text-center text-sm text-ink-soft">
+        {sheet
+          ? tx('Send opens your share menu. Pick Messenger, Viber or SMS.', 'Bubuksan ng Ipadala ang share menu. Piliin ang Messenger, Viber o SMS.')
+          : tx('Copy it, then paste it in Messenger or any chat.', 'I-copy, tapos i-paste sa Messenger o kahit anong chat.')}
+      </p>
       <p className="min-h-6 text-center font-semibold text-ok-ink" aria-live="polite">
         {status}
       </p>

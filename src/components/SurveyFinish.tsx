@@ -77,31 +77,51 @@ const session = {
   },
 };
 
-/** After about 90 seconds of trying the app, ask once (per visit) for the last survey taps. */
+/** True while the person is typing in a box (the pop-up must not cover what they type). */
+function typing(): boolean {
+  const el = document.activeElement as HTMLElement | null;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+}
+
+/**
+ * After about 90 seconds of trying the app, ask once (per visit) for the last survey taps.
+ * Never while they are typing, and never on the feedback page (it popped up over people
+ * writing feedback, which felt glitchy).
+ */
 export function SurveyTimedPrompt() {
   const tx = useTx();
   const pending = useSurveyPending();
+  const calm = useLocation().pathname.startsWith('/feedback');
   const [show, setShow] = useState(false);
   useEffect(() => {
-    if (!pending || session.get(PROMPTED)) return;
+    if (!pending || calm || session.get(PROMPTED)) return;
     let start = Number(session.get(TRY_START) || 0);
     if (!start) {
       start = Date.now();
       session.set(TRY_START, String(start));
     }
-    const t = window.setTimeout(() => {
+    let wait: number | undefined;
+    const fire = () => {
+      if (typing()) return false;
       session.set(PROMPTED, '1');
       setShow(true);
+      return true;
+    };
+    const t = window.setTimeout(() => {
+      if (!fire()) wait = window.setInterval(() => fire() && window.clearInterval(wait), 2000);
     }, Math.max(0, promptDelay() - (Date.now() - start)));
-    return () => window.clearTimeout(t);
-  }, [pending]);
+    return () => {
+      window.clearTimeout(t);
+      window.clearInterval(wait);
+    };
+  }, [pending, calm]);
   useEffect(() => {
     if (!show) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setShow(false);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [show]);
-  if (!show || !pending) return null;
+  if (!show || !pending || calm) return null;
   return (
     <div className="no-print fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-3 sm:items-center" data-survey-prompt>
       <div role="dialog" aria-modal="true" aria-labelledby="survey-prompt-title" className="w-full max-w-sm space-y-3 rounded-3xl bg-white p-5 shadow-xl">

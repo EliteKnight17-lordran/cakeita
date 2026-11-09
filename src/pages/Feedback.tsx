@@ -5,6 +5,38 @@ import { Chip, Notice } from '../components/ui';
 import { cleanFeedback, FEEDBACK_TYPES } from '../domain/survey';
 import { flushOutbox, sendEntry } from '../cloud/feedback';
 import { usePrefs, useTx } from '../lib/prefs';
+import { readSurvey } from './surveyState';
+
+/**
+ * The survey link at the bottom, matched to where this phone is in the survey. It used to
+ * always open the start, which showed a "thank you" or a "try it" screen to people who had
+ * already answered, and looked broken.
+ */
+function SurveyLink() {
+  const tx = useTx();
+  const [s] = useState(() => readSurvey());
+  if (s?.done1 && s.done2) {
+    return <p className="text-sm text-ink-soft" data-survey-link="done">{tx('You already answered our pilot survey on this phone. Salamat!', 'Nasagot mo na ang pilot survey sa phone na ito. Salamat!')}</p>;
+  }
+  if (s?.done1) {
+    return (
+      <p className="text-sm text-ink-soft" data-survey-link="part2">
+        {tx('Our pilot survey has 3 quick taps left. ', 'May 3 mabilis na tap pa sa pilot survey. ')}
+        <Link to="/survey?step=2" className="inline-flex min-h-11 items-center text-berry underline">
+          {tx('Finish it (1 min)', 'Tapusin (1 min)')}
+        </Link>
+      </p>
+    );
+  }
+  return (
+    <p className="text-sm text-ink-soft" data-survey-link="start">
+      {tx('Have 2 minutes? ', 'May 2 minuto ka? ')}
+      <Link to="/survey" className="inline-flex min-h-11 items-center text-berry underline">
+        {tx('Answer our short pilot survey.', 'Sagutin ang maikling pilot survey.')}
+      </Link>
+    </p>
+  );
+}
 
 /** Feedback and support: reachable from every page footer and the menu. */
 export default function Feedback() {
@@ -88,12 +120,7 @@ export default function Feedback() {
         <button type="button" className="btn w-full" onClick={send} disabled={state === 'sending'} data-send-feedback>
           {state === 'sending' ? tx('Sending…', 'Ipinapadala…') : tx('Send feedback', 'Ipadala ang feedback')}
         </button>
-        <p className="text-sm text-ink-soft">
-          {tx('Have 2 minutes? ', 'May 2 minuto ka? ')}
-          <Link to="/survey" className="text-berry underline">
-            {tx('Answer our short pilot survey.', 'Sagutin ang maikling pilot survey.')}
-          </Link>
-        </p>
+        <SurveyLink />
       </div>
     </Layout>
   );

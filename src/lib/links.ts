@@ -63,6 +63,11 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
+/** True on phones (and some laptops) that have a share menu; most laptop browsers don't. */
+export function canShareSheet(): boolean {
+  return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+}
+
 /** Use the phone's share sheet (Messenger, Viber, SMS) when available, else copy. */
 export async function shareOrCopy(data: { title: string; text: string; url: string }): Promise<ShareOutcome> {
   const full = `${data.text}\n${data.url}`;

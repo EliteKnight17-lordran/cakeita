@@ -13,6 +13,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.20.0',
+    date: '2026-11-09',
+    en: [
+      'The cake you make in step 2 is kept: picking a budget no longer resets it, Simple, Classic and Showstopper are built from your own decorations, and your cake stays as its own card so you can switch back to it.',
+      'Each design card says what it is (Simple is plain and lowest price) and what it leaves out, with a bigger cake preview.',
+      'Laptops have no share menu, so the send screen now says "Copy message" and "Copy and open Messenger" instead of a "Send" button that only copied.',
+      'Pilot survey: the link on the feedback page now goes to the right part (or says you already answered), and the survey reminder no longer pops up on the feedback page or while you type.',
+    ],
+    tl: [
+      'Naiiwan na ang cake na ginawa mo sa step 2: hindi na ito nare-reset pag pumili ng budget, gawa sa sarili mong dekorasyon ang Simple, Classic at Showstopper, at may sariling card ang cake mo para mabalikan.',
+      'Sinasabi ng bawat design card kung ano ito (simple lang at pinakamura ang Simple) at kung ano ang wala rito, na may mas malaking preview ng cake.',
+      'Walang share menu ang laptop, kaya "I-copy ang message" at "I-copy at buksan ang Messenger" na ang nasa padala na screen, sa halip na "Ipadala" na nagko-copy lang.',
+      'Pilot survey: tama na ang punta ng link sa feedback page (o sinasabing nasagot mo na), at hindi na lumalabas ang paalala ng survey sa feedback page o habang nagta-type ka.',
+    ],
+  },
+  {
     version: '1.19.2',
     date: '2026-11-09',
     en: [

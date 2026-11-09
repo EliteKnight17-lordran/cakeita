@@ -12,6 +12,8 @@ interface Props {
   visual: CakeVisual;
   title: string;
   className?: string;
+  /** Thumbnails: trim the empty space above the cake so a small cake still fills the box. */
+  crop?: boolean;
 }
 
 function seeded(seed: number) {
@@ -29,7 +31,7 @@ function bannerRed(hex: string): string {
   return Number.isNaN(n) || lum > 150 ? '#c92a2a' : hex;
 }
 
-export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual: v, title, className }, ref) {
+export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual: v, title, className, crop }, ref) {
   const W = 320;
   const H = 300;
   const scale = 13; // px per inch
@@ -52,7 +54,7 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
   const frostEdge = shade(v.frosting, -0.12);
 
   return (
-    <svg ref={ref} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title} className={className} xmlns="http://www.w3.org/2000/svg">
+    <svg ref={ref} viewBox={crop && top ? `0 ${Math.max(0, Math.floor(top.y - 80))} ${W} ${H - Math.max(0, Math.floor(top.y - 80))}` : `0 0 ${W} ${H}`} role="img" aria-label={title} className={className} xmlns="http://www.w3.org/2000/svg">
       <title>{title}</title>
       <ellipse cx={W / 2} cy={groundY + 6} rx={(layout[0]?.w ?? 120) * 0.7} ry={8} fill="#000" opacity={0.08} />
       {/* stand */}

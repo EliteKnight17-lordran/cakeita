@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedParts, buildDesigns, leftOut, normalizeSelection, selectionKey, type Wants } from './designs';
+import { allowedParts, buildDesigns, leftOut, normalizeSelection, selectionKey, wantsWithPicked, type Wants } from './designs';
 import { readRequest, readServings } from './requestReader';
 import { estimateFromMenu, toPublicMenu } from './pricing';
 import { createBakeryFromStarter, createSampleBakery } from './starterMenus';
@@ -185,5 +185,43 @@ describe('what the request asked for', () => {
     const show = d.options.find((o) => o.tier === 'showstopper')!;
     expect(leftOut(m, w, show.selection).parts).toEqual([]);
     expect(leftOut(m, want('3 tier cake, 60 pax'), show.selection).maxTiers).toBe(2);
+  });
+});
+
+describe('designs built from the cake the customer made by hand', () => {
+  const picked = { baseCakeId: 'r8-2', componentIds: ['fl-ube', 'cv-whipped', 'dc-drip', 'dc-sprinkles', 'tp-candles'] };
+
+  it('their size, flavor, frosting and decorations replace what the message said', () => {
+    const w = wantsWithPicked(sample, W({ servings: 12, flavorId: 'fl-choco', componentIds: ['dc-flowers'], textOnCake: 'Happy 7th' }), picked);
+    expect(w.baseCakeId).toBe('r8-2');
+    expect(w.flavorId).toBe('fl-ube');
+    expect(w.coveringId).toBe('cv-whipped');
+    expect(w.componentIds).toEqual(['dc-drip', 'dc-sprinkles', 'tp-candles']);
+    // They took the words off: no design adds them back.
+    expect(w.textOnCake).toBe('');
+    expect(wantsWithPicked(sample, W(), null)).toEqual(W());
+  });
+
+  it('with no budget, Classic and Showstopper keep every decoration they added', () => {
+    const r = buildDesigns(sample, wantsWithPicked(sample, W({ servings: 12 }), picked));
+    for (const tier of ['classic', 'showstopper'] as const) {
+      const o = r.options.find((x) => x.tier === tier)!;
+      expect(o.selection.componentIds).toEqual(expect.arrayContaining(['fl-ube', 'cv-whipped', 'dc-drip', 'dc-sprinkles', 'tp-candles']));
+    }
+    expect(r.options.find((x) => x.tier === 'classic')!.selection.baseCakeId).toBe('r8-2');
+  });
+
+  it('with a budget, Classic keeps as many of their decorations as fit', () => {
+    const w = wantsWithPicked(sample, W({ servings: 12 }), picked);
+    const full = buildDesigns(sample, w).options.find((x) => x.tier === 'classic')!;
+    const r = buildDesigns(sample, { ...w, budget: full.estimate });
+    const classic = r.options.find((x) => x.tier === 'classic')!;
+    expect(classic.estimate).toBeLessThanOrEqual(full.estimate);
+    expect(classic.selection.componentIds).toEqual(expect.arrayContaining(['dc-drip', 'dc-sprinkles', 'tp-candles']));
+  });
+
+  it('a hand-picked size too small for everyone is not used', () => {
+    const w = wantsWithPicked(sample, W({ servings: 40 }), { ...picked, baseCakeId: 'bento-4' });
+    expect(buildDesigns(sample, w).options.every((o) => o.selection.baseCakeId !== 'bento-4')).toBe(true);
   });
 });

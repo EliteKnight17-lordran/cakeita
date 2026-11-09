@@ -19,6 +19,8 @@ export interface Wants {
   coveringId: string | null;
   componentIds: string[];
   textOnCake: string;
+  /** A cake size the customer picked by hand (used when it still feeds everyone). */
+  baseCakeId?: string | null;
   /** What the customer can't eat: auto designs leave those parts out. */
   avoid?: Allergies;
 }
@@ -92,7 +94,10 @@ export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
   // ----- bases -----
   const simpleBase = fit[0]!;
   let showBase: MenuBase = simpleBase;
-  if (wants.tiers) {
+  const pickedBase = wants.baseCakeId ? fit.find((b) => b.id === wants.baseCakeId) : undefined;
+  if (pickedBase) {
+    showBase = pickedBase;
+  } else if (wants.tiers) {
     const t = Math.min(wants.tiers, menu.maxTiers);
     const exact = fit.filter((b) => b.tiers.length === t);
     const lower = fit.filter((b) => b.tiers.length <= t).sort((a, b) => b.tiers.length - a.tiers.length || a.p - b.p);
@@ -113,7 +118,7 @@ export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
   // Classic adds a surprise decoration only when the customer didn't name any themselves.
   const classicExtras = wantedDecorCount ? [] : showExtras;
   // A size or tier count they typed is a requirement, not a suggestion.
-  const askedBase = wants.tiers || wants.sizeIn ? showBase : simpleBase;
+  const askedBase = pickedBase || wants.tiers || wants.sizeIn ? showBase : simpleBase;
   const showSel: Selection = { baseCakeId: showBase.id, componentIds: uniq([flavor, wantedCovering, ...wanted, ...withText, ...showExtras]) };
 
   // ----- simple -----
@@ -205,6 +210,29 @@ export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
     return true;
   });
   return { options: deduped, budgetTooLow, lowestPrice: simplePrice };
+}
+
+/**
+ * What the customer asked for, once they changed the cake by hand in Customize: their own
+ * size, flavor, frosting and decorations replace what was read from the message, so the
+ * Simple, Classic and Showstopper designs are built from the cake they made.
+ */
+export function wantsWithPicked(menu: PublicMenu, wants: Wants, picked: Selection | null | undefined): Wants {
+  if (!picked) return wants;
+  const byId = new Map(menu.components.map((c) => [c.id, c]));
+  const ids = picked.componentIds.filter((id) => byId.has(id));
+  const of = (cat: string) => ids.find((id) => byId.get(id)!.category === cat) ?? null;
+  const textPart = menu.components.find((p) => p.visual === 'text');
+  const base = menu.baseCakes.find((b) => b.id === picked.baseCakeId);
+  return {
+    ...wants,
+    baseCakeId: base?.id ?? wants.baseCakeId ?? null,
+    flavorId: of('flavor') ?? wants.flavorId,
+    coveringId: of('covering') ?? wants.coveringId,
+    componentIds: ids.filter((id) => !['flavor', 'covering'].includes(byId.get(id)!.category)),
+    // They took the words off by hand: don't add them back.
+    textOnCake: textPart && !ids.includes(textPart.id) ? '' : wants.textOnCake,
+  };
 }
 
 /** Ensure exactly one flavor and one covering, known IDs only, tiers within limit. */

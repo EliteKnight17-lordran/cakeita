@@ -34,6 +34,8 @@ export interface Draft {
   lookTouched: boolean;
   tier: DesignTier;
   selection: Selection | null;
+  /** The cake as they last changed it in Customize; the suggested designs are built from it. */
+  handPicked: Selection | null;
   look: CakeLook;
   name: string;
   contact: string;
@@ -62,6 +64,7 @@ export const EMPTY_DRAFT: Draft = {
   lookTouched: false,
   tier: 'classic',
   selection: null,
+  handPicked: null,
   look: { colors: [], textOnCake: '', candles: 0 },
   name: '',
   contact: '',

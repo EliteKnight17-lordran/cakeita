@@ -190,7 +190,9 @@ async function main() {
     await customer.locator('[data-quick-date]').first().click();
     check('customer sees 2-3 designs', (await cards.count()) >= 2, `${await cards.count()} designs`);
     check('designs show budget fit labels', (await customer.getByText('Pasok sa budget').count()) >= 1);
-    check('says what the budget design leaves out', await customer.locator('[data-left-out]').getByText(/Chocolate drip/).isVisible());
+    // The drip was taken off by hand (allergy "Remove"), so it is not "left out"; Simple still says what it skips.
+    const simpleCard = await customer.locator('[data-design="simple"]').innerText();
+    check('each design says what it leaves out (not what they removed themselves)', /Wala rito: /.test(simpleCard) && !/Chocolate drip/.test(simpleCard), simpleCard.replace(/\n+/g, ' / '));
     await customer.waitForTimeout(800);
     await axe(customer, 'step 3: price');
     await shot(customer, '02-designs');
@@ -312,6 +314,10 @@ async function main() {
     await listBox.check();
     check('baker map: then they can list themselves', await listBox.isChecked());
     await axe(baker, 'baker map listing');
+    // Laptop browsers have no share menu: no "Send" button there that only copies.
+    const sheet = await baker.evaluate(() => typeof navigator.share === 'function');
+    const box = baker.locator('[data-share-box]').first();
+    check('share box: "Send" only where the device has a share menu', (await box.getAttribute('data-share-box')) === (sheet ? 'sheet' : 'copy') && (await box.locator('[data-share-send]').count()) === (sheet ? 1 : 0), `share=${sheet}`);
 
     // ---------------- Laptop: the cake stays beside the controls ----------------
     const laptop = await phone(browser, 'laptop', { viewport: { width: 1280, height: 800 } });
@@ -330,6 +336,33 @@ async function main() {
     check('laptop: the cake stays beside the designs on the price step', await inView());
     await axe(laptop, 'laptop side by side');
     await shot(laptop, '05-laptop-side-by-side');
+
+    // The cake made by hand in step 2 survives the price step: a budget never wipes it, the
+    // other designs are built from it, and picking another design can be undone.
+    await laptop.locator('[data-stage-nav="cake"]').click();
+    await laptop.locator('[data-stage="cake"]').waitFor({ timeout: 5000 });
+    {
+      if (!(await laptop.locator('details[open] summary', { hasText: 'I-customize' }).count())) await laptop.getByText('I-customize').first().click();
+      await laptop.getByRole('button', { name: /Sprinkles/ }).first().click();
+      await laptop.getByRole('button', { name: /Buttercream rosettes/ }).first().click();
+      const handMade = await laptop.evaluate(() => JSON.parse(sessionStorage.getItem('cakeita.draft.sample')).handPicked);
+      await laptop.locator('[data-next-price]').click();
+      await laptop.locator('[data-stage="price"]').waitFor();
+      await laptop.getByRole('button', { name: '₱1,000 – ₱2,000' }).click();
+      const stillMine = await laptop.evaluate(() => JSON.parse(sessionStorage.getItem('cakeita.draft.sample')).handPicked);
+      check('a budget does not wipe the cake made by hand', !!handMade && JSON.stringify(handMade) === JSON.stringify(stillMine));
+      const own = laptop.locator('[data-design]', { hasText: /Sarili mong design|Kapareho ng cake na ginawa mo/ });
+      check('their own cake is one of the design cards', (await own.count()) === 1);
+      const classicParts = await laptop.locator('[data-design="classic"]').innerText().catch(() => '');
+      check('Classic is built from their decorations', /Sprinkles/.test(classicParts) || /Wala rito: .*Sprinkles/.test(classicParts), classicParts.replace(/\n+/g, ' / '));
+      await laptop.locator('[data-design="simple"]').click();
+      check('picking Simple keeps their own cake as a card', (await own.count()) === 1 && (await own.getAttribute('aria-checked')) === 'false');
+      await own.click();
+      const back = await laptop.evaluate(() => JSON.parse(sessionStorage.getItem('cakeita.draft.sample')));
+      check('tapping their own cake brings it back', (await own.getAttribute('aria-checked')) === 'true' && JSON.stringify(back.handPicked) === JSON.stringify(handMade));
+      check('design cards say what each one is', (await laptop.getByText('Simple lang, pinakamura').count()) === 1);
+      await axe(laptop, 'designs with your own cake');
+    }
     await laptop.context().close();
 
     // ---------------- Elder ----------------
@@ -496,6 +529,10 @@ async function main() {
     const fbItem = (await tester.evaluate(() => JSON.parse(localStorage.getItem('cakeita.outbox.v1') || '[]'))).at(-1);
     check('feedback from any page records where it came from', fbItem?.entry.kind === 'feedback' && fbItem.entry.page === '/near', fbItem?.entry.page);
     await axe(tester, 'feedback');
+    // The survey link on the feedback page follows this phone's survey: here, a new person.
+    await tester.goto(`${BASE}#/feedback`);
+    await tester.reload();
+    check('feedback page: survey link starts a fresh survey for the next person', await tester.locator('[data-survey-link="start"]').waitFor({ timeout: 5000 }).then(() => true, () => false));
 
 
     // ---------------- Choose a baker, counter-offers, sample bakers that answer ----------------
