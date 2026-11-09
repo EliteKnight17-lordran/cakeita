@@ -187,11 +187,19 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
 
       {top && v.flowers && (
         <g>
-          {[
-            [top.x + top.w * 0.78, top.y - 6, 13],
-            [top.x + top.w * 0.92, top.y + 10, 10],
-            [top.x + top.w * 0.64, top.y - 2, 9],
-          ].map(([cx, cy, r], k) => (
+          {(v.textStyle === 'piped' && v.text && !v.tableBoard
+            ? // Words on the tier: keep the flowers above them so every letter shows.
+              [
+                [top.x + top.w * 0.78, top.y - 10, 13],
+                [top.x + top.w * 0.93, top.y - 4, 10],
+                [top.x + top.w * 0.63, top.y - 7, 9],
+              ]
+            : [
+                [top.x + top.w * 0.78, top.y - 6, 13],
+                [top.x + top.w * 0.92, top.y + 10, 10],
+                [top.x + top.w * 0.64, top.y - 2, 9],
+              ]
+          ).map(([cx, cy, r], k) => (
             <g key={k}>
               {Array.from({ length: 6 }, (_, p) => (
                 <circle key={p} cx={cx! + Math.cos((p * Math.PI) / 3) * r! * 0.55} cy={cy! + Math.sin((p * Math.PI) / 3) * r! * 0.55} r={r! * 0.5} fill={k === 1 ? '#fffaf3' : v.accent} />

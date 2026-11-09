@@ -13,6 +13,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.19.2',
+    date: '2026-11-09',
+    en: [
+      'Words piped on top of the cake are no longer hidden by fresh flowers: with words on top, the flowers move to the back half (side, cascade, crown and scattered).',
+      'Laptops: the cake stays beside the controls again on the cake and price steps. Phones: the cake shows on the price step too, and the small floating cake follows you.',
+    ],
+    tl: [
+      'Hindi na natatakpan ng bulaklak ang sulat sa ibabaw ng cake: kapag may sulat, lumilipat sa likod ang mga bulaklak (side, cascade, crown at scattered).',
+      'Laptop: katabi na ulit ng mga pagpipilian ang cake sa cake at presyo na hakbang. Phone: makikita na rin ang cake sa presyo na hakbang, at sumusunod ang maliit na cake.',
+    ],
+  },
+  {
     version: '1.19.1',
     date: '2026-11-09',
     en: [

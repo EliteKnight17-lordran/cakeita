@@ -313,6 +313,25 @@ async function main() {
     check('baker map: then they can list themselves', await listBox.isChecked());
     await axe(baker, 'baker map listing');
 
+    // ---------------- Laptop: the cake stays beside the controls ----------------
+    const laptop = await phone(browser, 'laptop', { viewport: { width: 1280, height: 800 } });
+    await laptop.goto(`${BASE}#/b/sample`);
+    await laptop.locator('[data-stage="idea"]').waitFor({ timeout: 20000 });
+    await laptop.getByLabel(/Ilarawan ang cake/).fill('Ube cake with fresh flowers, 20 pax, "Happy 7th Mia"');
+    await laptop.locator('[data-make-cake]').click();
+    await laptop.locator('[data-stage="cake"]').waitFor({ timeout: 10000 });
+    await laptop.getByText('I-customize').first().click();
+    await laptop.getByLabel('Nakasulat sa cake').scrollIntoViewIfNeeded();
+    const inView = async () => laptop.locator('[data-side-cake] figure').first().evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.top < window.innerHeight * 0.5 && r.left > 0; });
+    check('laptop: the cake stays beside the controls while customizing', await inView());
+    await laptop.locator('[data-next-price]').click();
+    await laptop.locator('[data-stage="price"]').waitFor();
+    await laptop.locator('[data-choose-baker]').scrollIntoViewIfNeeded();
+    check('laptop: the cake stays beside the designs on the price step', await inView());
+    await axe(laptop, 'laptop side by side');
+    await shot(laptop, '05-laptop-side-by-side');
+    await laptop.context().close();
+
     // ---------------- Elder ----------------
     const elder = await phone(browser, 'elder', { reducedMotion: 'reduce' });
     await elder.goto(`${BASE}#/b/sample`);

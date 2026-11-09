@@ -740,9 +740,18 @@ function Flow({ menu }: { menu: PublicMenu }) {
 
   // ---------------- The open designer: one step at a time ----------------
   if (stage) {
+    // Laptops: the cake stays in view beside the controls on the cake and price steps.
+    const side = wide && stage !== 'idea';
     return (
-      <Layout>
+      <Layout wide={side}>
         <Stepper stage={stage} canGo={hasText} onGo={goStage} />
+        <div className={side ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10' : ''}>
+        {side && (
+          <aside className="sticky top-[calc(3.75rem+1.5rem)] space-y-3" aria-label={tx('Your cake', 'Ang cake mo')} data-side-cake>
+            {cakeStage}
+          </aside>
+        )}
+        <div>
         {stage === 'idea' && (
           <div className="space-y-4" data-open-designer data-stage="idea">
             <div className="space-y-1">
@@ -764,7 +773,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
               <h1 className="text-3xl leading-tight sm:text-4xl">{tx('Your cake', 'Ang cake mo')}</h1>
               <p className="text-ink-soft">{tx('Change anything below. The price updates as you go.', 'Baguhin kahit ano sa ibaba. Kusang nagbabago ang presyo.')}</p>
             </div>
-            {cakeStage}
+            {!side && cakeStage}
             {photoMatch}
             {photoNotRead}
             {hasText && <ReadSummary reading={reading} menu={menu} compact />}
@@ -784,6 +793,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
               <p className="text-ink-soft">{tx('Pick a range. We show what fits, then the bakers near you.', 'Pumili ng range. Ipapakita namin ang pasok, tapos ang mga baker na malapit.')}</p>
             </div>
             <section className="card">{rangeBlock}</section>
+            {!side && cakeStage}
             <section className="space-y-3" aria-labelledby="sec-designs">
               <h2 id="sec-designs" className="text-xl">{tx('Pick a design', 'Pumili ng design')}</h2>
               {designsBlock}
@@ -796,7 +806,9 @@ function Flow({ menu }: { menu: PublicMenu }) {
           </div>
         )}
 
-        {stage === 'cake' && visual && <MiniCake target={cakeRef} visual={visual} description={description} price={menu.showEstimates && estimate != null ? formatPeso(estimate) : null} />}
+        </div>
+        </div>
+        {stage !== 'idea' && !side && visual && <MiniCake key={stage} target={cakeRef} visual={visual} description={description} price={menu.showEstimates && estimate != null ? formatPeso(estimate) : null} />}
         {stage === 'cake' &&
           priceBar(
             <button type="button" className="btn shrink-0" disabled={!selection} onClick={() => goStage('price')} data-next-price>

@@ -875,19 +875,29 @@ function CutFace({ v, r, h, y, a }: { v: CakeVisual; r: number; h: number; y: nu
 
 type Layer = { r: number; h: number; y: number };
 /** Fresh roses arranged the way the customer picked: side cluster, cascade, crown or scattered. */
-function Flowers({ v, top, topY, stack }: { v: CakeVisual; top: Layer; topY: number; stack: Layer[] }) {
+function Flowers({ v, top, topY, stack, clearText = false }: { v: CakeVisual; top: Layer; topY: number; stack: Layer[]; clearText?: boolean }) {
   const colors = [v.accent, '#fff6ef', shade(v.accent, 0.35)];
   const base = stack[0]!;
   const roses: Array<{ p: [number, number, number]; s: number }> = [];
   const breath: Array<[number, number, number]> = [];
   const onEdge = (l: Layer, a: number, f: number, k = 0.92): [number, number, number] => [Math.cos(a) * l.r * k, l.y + l.h * f, Math.sin(a) * l.r * k];
+  // With words piped on top, flowers on the top stay on the back half so the words stay readable.
+  const arcFrom = clearText ? Math.PI + 0.2 : 0;
+  const arcSpan = clearText ? Math.PI - 0.4 : Math.PI * 2;
   if (v.flowerStyle === 'crown') {
-    for (let i = 0; i < 7; i++) roses.push({ p: [Math.cos((i / 7) * Math.PI * 2) * top.r * 0.8, topY + 0.004, Math.sin((i / 7) * Math.PI * 2) * top.r * 0.8], s: 0.85 });
-    for (let i = 0; i < 7; i++) breath.push([Math.cos(((i + 0.5) / 7) * Math.PI * 2) * top.r * 0.84, topY + 0.01, Math.sin(((i + 0.5) / 7) * Math.PI * 2) * top.r * 0.84]);
+    const n = clearText ? 5 : 7;
+    const at = (i: number) => arcFrom + (clearText ? i / (n - 1) : i / n) * arcSpan;
+    for (let i = 0; i < n; i++) roses.push({ p: [Math.cos(at(i)) * top.r * 0.8, topY + 0.004, Math.sin(at(i)) * top.r * 0.8], s: 0.85 });
+    for (let i = 0; i < n - (clearText ? 1 : 0); i++) breath.push([Math.cos(at(i + 0.5)) * top.r * 0.84, topY + 0.01, Math.sin(at(i + 0.5)) * top.r * 0.84]);
   } else if (v.flowerStyle === 'cascade') {
     // From the top edge, spiralling down the front-right of every tier to the board.
-    roses.push({ p: [top.r * 0.55, topY + 0.006, top.r * 0.3], s: 1.2 });
-    roses.push({ p: [top.r * 0.78, topY + 0.004, -top.r * 0.05], s: 0.95 });
+    if (clearText) {
+      roses.push({ p: [top.r * 0.5, topY + 0.006, -top.r * 0.55], s: 1.15 });
+      roses.push({ p: [top.r * 0.8, topY + 0.004, -top.r * 0.22], s: 0.9 });
+    } else {
+      roses.push({ p: [top.r * 0.55, topY + 0.006, top.r * 0.3], s: 1.2 });
+      roses.push({ p: [top.r * 0.78, topY + 0.004, -top.r * 0.05], s: 0.95 });
+    }
     const tiers = [...stack].reverse();
     let a = 0.35;
     tiers.forEach((l) => {
@@ -901,13 +911,23 @@ function Flowers({ v, top, topY, stack }: { v: CakeVisual; top: Layer; topY: num
   } else if (v.flowerStyle === 'scatter') {
     const rnd = seeded(11);
     for (let i = 0; i < 6; i++) {
-      const a = rnd() * Math.PI * 2;
+      const a = arcFrom + rnd() * arcSpan;
       const d = 0.25 + rnd() * 0.55;
       roses.push({ p: [Math.cos(a) * top.r * d, topY + 0.004, Math.sin(a) * top.r * d], s: 0.6 });
     }
     stack.forEach((l, i) => {
       for (let k = 0; k < 4; k++) roses.push({ p: onEdge(l, (k / 4) * Math.PI * 2 + i, 0.5, 0.99), s: 0.55 });
     });
+  } else if (clearText) {
+    // Side cluster moved to the back-right corner, behind the words.
+    roses.push({ p: [top.r * 0.42, topY + 0.006, -top.r * 0.52], s: 1.2 });
+    roses.push({ p: [top.r * 0.76, topY + 0.004, -top.r * 0.22], s: 1.0 });
+    roses.push({ p: [top.r * 0.06, topY + 0.004, -top.r * 0.78], s: 0.9 });
+    breath.push([top.r * 0.66, topY + 0.01, -top.r * 0.5]);
+    if (stack.length > 1) {
+      roses.push({ p: [base.r * 0.92, base.y + base.h * 0.98, base.r * 0.3], s: 1.1 });
+      breath.push([base.r * 0.86, base.y + base.h, base.r * 0.48]);
+    }
   } else {
     roses.push({ p: [top.r * 0.5, topY + 0.006, top.r * 0.35], s: 1.25 });
     roses.push({ p: [top.r * 0.78, topY + 0.004, -top.r * 0.12], s: 1.05 });
@@ -1074,7 +1094,7 @@ function CakeModel({ v, spin, cut = false, buildKey = 0 }: { v: CakeVisual; spin
       {v.print && <EdiblePrint r={base.r} y={base.y} h={base.h} accent={v.accent} low={v.drip && stack.length === 1} motif={v.motif} text={v.printText} />}
       {v.fruits && <Fruits r={top.r} y={topY} />}
       {v.gold && <GoldLeaf r={top.r} y={top.y} h={top.h} />}
-      {v.flowers && <Flowers v={v} top={top} topY={topY} stack={stack} />}
+      {v.flowers && <Flowers v={v} top={top} topY={topY} stack={stack} clearText={!!pipedTex} />}
       {v.candles > 0 && <Candles n={v.candles} r={top.r} y={topY} color={v.accent} back={!!v.text || !!v.motif || v.figure} />}
       {v.figure && <Figure y={topY} color={v.accent} x={figureX} z={v.motif || acrylicTex || side ? top.r * 0.15 : 0} />}
       {/* With blocky figures standing on top, the printed set shows only its small picks around the edge. */}
