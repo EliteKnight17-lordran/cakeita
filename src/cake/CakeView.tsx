@@ -139,12 +139,14 @@ interface Props {
   interactive?: boolean;
   className?: string;
   showTools?: boolean;
+  /** Shorter picture (pinned at the top of a phone while customizing). */
+  compact?: boolean;
   caption?: string;
   /** Change this number to play the build animation (cake from a photo). */
   buildKey?: number;
 }
 
-export function CakeView({ visual, description, interactive = true, className = '', showTools = true, buildKey = 0, caption = 'Concept only, final cake may look different. Made with Cakeita' }: Props) {
+export function CakeView({ visual, description, interactive = true, className = '', showTools = true, compact = false, buildKey = 0, caption = 'Concept only, final cake may look different. Made with Cakeita' }: Props) {
   const prefs = usePrefs();
   const tx = useTx();
   const [spin, setSpin] = useState(0);
@@ -180,7 +182,7 @@ export function CakeView({ visual, description, interactive = true, className = 
   return (
     <figure className={`relative ${className}`}>
       <div
-        className="relative aspect-[16/14] w-full overflow-hidden rounded-2xl border border-line bg-[radial-gradient(120%_90%_at_50%_10%,#fffdfa_0%,#f3ece4_55%,#e6dcd0_100%)]"
+        className={`relative ${compact ? 'aspect-[16/10]' : 'aspect-[16/14]'} w-full overflow-hidden rounded-2xl border border-line bg-[radial-gradient(120%_90%_at_50%_10%,#fffdfa_0%,#f3ece4_55%,#e6dcd0_100%)]`}
         role="img"
         aria-label={cut ? `${description} ${tx('Cut open to show the sponge and filling layers.', 'Hiniwa para makita ang sponge at palaman.')}` : description}
         onPointerDown={() => setTouched(true)}
@@ -203,7 +205,7 @@ export function CakeView({ visual, description, interactive = true, className = 
       </div>
       <figcaption className="sr-only">{description}</figcaption>
       {showTools ? (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <div className={`${compact ? 'mt-1' : 'mt-2'} flex flex-wrap items-center justify-between gap-2`}>
           <p className="min-w-[8.5rem] flex-1 text-xs leading-snug text-ink-soft">{tx('Concept only. The real cake may differ a little.', 'Concept lang. Puwedeng mag-iba nang kaunti.')}</p>
           <div className="flex shrink-0 items-center gap-1.5">
             {use3D && (

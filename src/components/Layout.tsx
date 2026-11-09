@@ -33,6 +33,16 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
   const [menuOpen, setMenuOpen] = useState(false);
   const loc = useLocation();
   useEffect(() => setMenuOpen(false), [loc.pathname]);
+  // Things pinned under the header (the cake while customizing on a phone) need its real height,
+  // which changes with the survey bar and the open menu.
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--header-h', `${el.offsetHeight}px`));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const links = [
     { to: '/near', label: tx('Find bakers', 'Maghanap ng baker') },
     { to: '/me', label: tx('My cakes', 'Mga cake ko') },
@@ -64,7 +74,7 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-xl focus:bg-white focus:p-3">
         {tx('Skip to content', 'Lumaktaw sa nilalaman')}
       </a>
-      <header className="scallop sticky top-0 z-30 bg-[#fffdfa]">
+      <header ref={headerRef} className="scallop sticky top-0 z-30 bg-[#fffdfa]">
         {/* The header keeps one width on every page, so it doesn't jump when the page width changes. */}
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2 lg:max-w-6xl">
           <Link to="/" onClick={onLogoTap} aria-label="Cakeita home">

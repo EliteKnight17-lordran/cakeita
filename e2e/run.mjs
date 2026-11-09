@@ -151,18 +151,12 @@ async function main() {
     await customer.waitForTimeout(1000);
     await shot(customer, '03-customize');
 
-    // Phones: the cake follows you down the page as a small floating cake.
+    // Phones: the cake stays pinned under the header while customizing.
     await customer.getByLabel('Nakasulat sa cake').scrollIntoViewIfNeeded();
-    const mini = customer.getByTestId('mini-cake');
-    await mini.waitFor({ timeout: 5000 }).catch(() => {});
-    check('small cake floats while customizing', await mini.isVisible());
-    await mini.click();
-    check('tapping the small cake enlarges it', await customer.getByTestId('mini-cake-open').isVisible());
-    await shot(customer, '03b-mini-cake');
-    await customer.getByRole('button', { name: /Tingnan sa 3D/ }).click();
-    await customer.waitForTimeout(1200);
-    const cakeTop = await customer.getByRole('img', { name: /cake/i }).first().evaluate((el) => el.getBoundingClientRect().top);
-    check('"See it in 3D" jumps back to the big cake', cakeTop >= 0 && cakeTop < 400, `top ${Math.round(cakeTop)}`);
+    await customer.waitForTimeout(300);
+    const pinnedBox = await customer.locator('[data-pinned-cake] [role="img"]').first().evaluate((el) => { const r = el.getBoundingClientRect(); return [r.top, r.bottom]; });
+    check('phone: the cake stays pinned at the top while customizing', pinnedBox[0] >= 0 && pinnedBox[1] < 420, pinnedBox.map(Math.round).join('-'));
+    await shot(customer, '03b-pinned-cake');
 
     // Allergies: the sponge itself, designs that skip a part, and a part added back by hand.
     const allergy = customer.locator('#allergies');
@@ -197,6 +191,17 @@ async function main() {
     await customer.waitForTimeout(800);
     await axe(customer, 'step 3: price');
     await shot(customer, '02-designs');
+    // Price step on phones: a small floating cake follows you down the page.
+    await customer.locator('#contact').scrollIntoViewIfNeeded();
+    const mini = customer.getByTestId('mini-cake');
+    await mini.waitFor({ timeout: 5000 }).catch(() => {});
+    check('small cake floats on the price step', await mini.isVisible());
+    await mini.click();
+    check('tapping the small cake enlarges it', await customer.getByTestId('mini-cake-open').isVisible());
+    await customer.getByRole('button', { name: /Tingnan sa 3D/ }).click();
+    await customer.waitForTimeout(1200);
+    const cakeTop = await customer.getByRole('img', { name: /cake/i }).first().evaluate((el) => el.getBoundingClientRect().top);
+    check('"See it in 3D" jumps back to the big cake', cakeTop >= 0 && cakeTop < 400, `top ${Math.round(cakeTop)}`);
 
     // Nearby bakers map: same cake, each baker's own price.
     await customer.goto(`${BASE}#/near?from=sample`);

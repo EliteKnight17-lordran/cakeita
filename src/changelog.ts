@@ -13,6 +13,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.23.0',
+    date: '2026-11-09',
+    en: [
+      'Phones: while customizing, the 3D cake stays pinned at the top of the screen, so every change shows without scrolling back up.',
+      'A picked date is now highlighted, and the button on the price step says "Find bakers".',
+    ],
+    tl: [
+      'Phone: habang nagka-customize, nakapako sa taas ang 3D cake kaya kita agad ang bawat pagbabago nang hindi umaakyat.',
+      'Naka-highlight na ang napiling petsa, at "Maghanap ng baker" na ang button sa presyo na hakbang.',
+    ],
+  },
+  {
     version: '1.22.0',
     date: '2026-11-09',
     en: [

@@ -609,7 +609,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const dateBlock = (
     <div>
       <Field id="date" label={tx('When do you need it?', 'Kailan kailangan?')} hint={pickOnMap ? tx('Most bakers need 2 to 7 days.', 'Karaniwang 2 hanggang 7 araw ang abiso.') : tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
-        <input id="date" type="date" className="input" min={minDate} max={addDays(today, 365)} value={eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" aria-invalid={!!errors.date || tooSoon || booked} />
+         <input id="date" type="date" className={`input ${eventDate ? '!border-berry !bg-berry-soft font-semibold' : ''}`} min={minDate} max={addDays(today, 365)} value={eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" aria-invalid={!!errors.date || tooSoon || booked} />
       </Field>
       <div className="mt-2 flex flex-wrap gap-2">
         {[menu.leadTimeDays, 7, 14].map((d, i) => {
@@ -617,7 +617,8 @@ function Flow({ menu }: { menu: PublicMenu }) {
           let day = addDays(today, Math.max(d, menu.leadTimeDays));
           for (let k = 0; k < 30 && isFullDate(menu, day); k++) day = addDays(day, 1);
           return (
-            <button key={i} type="button" data-quick-date className="btn-ghost" aria-pressed={eventDate === day} onClick={() => update({ eventDate: day })}>
+            <button key={i} type="button" data-quick-date className={`btn-ghost ${eventDate === day ? '!border-berry !bg-berry !text-white' : ''}`} aria-pressed={eventDate === day} onClick={() => update({ eventDate: day })}>
+              {eventDate === day && <IconCheck size={14} />}
               {new Date(`${day}T00:00:00`).toLocaleDateString(prefs.lang === 'tl' ? 'fil-PH' : 'en-PH', { weekday: 'short', month: 'short', day: 'numeric' })}
             </button>
           );
@@ -814,7 +815,14 @@ function Flow({ menu }: { menu: PublicMenu }) {
               <h1 className="text-3xl leading-tight sm:text-4xl">{tx('Your cake', 'Ang cake mo')}</h1>
               <p className="text-ink-soft">{tx('Change anything below. The price updates as you go.', 'Baguhin kahit ano sa ibaba. Kusang nagbabago ang presyo.')}</p>
             </div>
-            {!side && cakeStage}
+            {/* Phones: the cake stays pinned under the header while customizing, so every tap shows on it. */}
+            {!side && visual && (
+              <div className="sticky z-20 -mx-4 bg-[#faf6f1]/95 px-4 pb-1 pt-2 backdrop-blur-sm" style={{ top: 'var(--header-h, 4rem)' }} data-pinned-cake>
+                <div ref={cakeRef}>
+                  <CakeView visual={visual} description={description} buildKey={buildKey} compact />
+                </div>
+              </div>
+            )}
             {photoMatch}
             {photoNotRead}
             {hasText && <ReadSummary reading={reading} menu={menu} compact />}
@@ -850,7 +858,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
 
         </div>
         </div>
-        {stage !== 'idea' && !side && visual && <MiniCake key={stage} target={cakeRef} visual={visual} description={description} price={menu.showEstimates && estimate != null ? formatPeso(estimate) : null} />}
+        {stage === 'price' && !side && visual && <MiniCake key={stage} target={cakeRef} visual={visual} description={description} price={menu.showEstimates && estimate != null ? formatPeso(estimate) : null} />}
         {stage === 'cake' &&
           priceBar(
             <button type="button" className="btn shrink-0" disabled={!selection} onClick={() => goStage('price')} data-next-price>
@@ -861,7 +869,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
         {stage === 'price' &&
           priceBar(
             <button type="button" className="btn shrink-0" disabled={!selection} onClick={chooseBaker} data-choose-baker>
-              {tx('Next', 'Sunod')} <IconArrow />
+              {tx('Find bakers', 'Maghanap ng baker')} <IconArrow />
             </button>,
             backButton('cake'),
           )}
