@@ -381,6 +381,8 @@ async function main() {
 
 
     // ---------------- Choose a baker, counter-offers, sample bakers that answer ----------------
+    // Phones that are done close first: their 3D cakes keep drawing in software GL and starve a slow CI machine.
+    for (const done of [customer, elder, tester]) await done.context().close();
     const picker = await phone(browser, 'picker');
     await picker.goto(`${BASE}#/b/sample`);
     await picker.getByLabel(/Ilarawan ang cake/).fill('Ube birthday cake with drip and sprinkles, 20 pax, budget 1200');
@@ -397,7 +399,7 @@ async function main() {
     const firstName = (await picker.locator('article h3').first().innerText()).trim();
     await picker.locator('article').first().locator('[data-send-to]').click();
     check('request goes straight to the chosen baker', await picker.locator('[data-waiting-auto]').waitFor({ timeout: 8000 }).then(() => true, () => false), firstName);
-    check('sample baker answers by itself', await picker.locator('[data-quote-price]').waitFor({ timeout: 10000 }).then(() => true, () => false));
+    check('sample baker answers by itself', await picker.locator('[data-quote-price]').waitFor({ timeout: 20000 }).then(() => true, () => false));
     check('an over-budget answer shows as their counter-offer', (await picker.locator('[data-counter]').count()) === 1);
     const pPrice = Number((await picker.locator('[data-quote-price]').innerText()).replace(/[^\d]/g, ''));
     await picker.locator('[data-offer-open]').click();
@@ -414,7 +416,11 @@ async function main() {
     await picker.getByRole('button', { name: /Ito ang gusto ko/ }).click();
     check('confirming a sample bakery says no real order was made', await picker.getByText(/walang totoong order/).isVisible());
     await picker.goto(`${BASE}#/near?from=sample`);
-    check('the chosen baker shows as already asked', await picker.locator('[data-asked]').first().waitFor({ timeout: 8000 }).then(() => true, () => false));
+    check(
+      'the chosen baker shows as already asked',
+      await picker.locator('[data-asked]').first().waitFor({ timeout: 15000 }).then(() => true, () => false),
+      await picker.evaluate(() => JSON.stringify({ my: JSON.parse(localStorage.getItem('cakeita.db.v1') || '{}').myRequests?.map((r) => [r.bakerySlug, r.eventDate, r.status]), date: JSON.parse(sessionStorage.getItem('cakeita.draft.sample') || '{}').eventDate, from: JSON.parse(localStorage.getItem('cakeita.db.v1') || '{}').myRequests?.map((r) => r.fromSlug), asked: document.querySelectorAll('[data-asked]').length, url: location.hash, cards: [...document.querySelectorAll('[data-baker-card]')].map((e) => e.getAttribute('data-baker-card')).slice(0, 3) })),
+    );
     // A date too soon for a baker: they say no with a reason, and the customer picks another.
     const soon = new Date();
     soon.setDate(soon.getDate() + 2);
