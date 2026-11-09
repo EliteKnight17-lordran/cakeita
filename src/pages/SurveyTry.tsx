@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { EMPTY_DRAFT, writeDraft } from '../data/draft';
 import { Cake2D } from '../cake/Cake2D';
 import { CakeView } from '../cake/CakeView';
 import { describeCake } from '../cake/describe';
@@ -38,6 +40,12 @@ function CustomerTry({ onTried }: { onTried: () => void }) {
   const chosen = designs.options.find((o) => o.tier === pick) ?? [...designs.options].reverse().find((o) => !o.overBudget) ?? designs.options[0];
   const look = { colors: r.colors.slice(0, 2).map((c) => c.hex), textOnCake: r.textOnCake, candles: r.age ? Math.min(10, r.age) : 1, motif: motifFor(r.theme, r.occasion), age: r.age ?? undefined };
   const visual = chosen ? toVisual(menu, chosen.selection, look) : null;
+  const navigate = useNavigate();
+  // Next step after seeing the designs: open this same cake in the full designer to customize it.
+  const customize = () => {
+    writeDraft('sample', { ...EMPTY_DRAFT, description: text, stage: 'cake', tier: chosen?.tier ?? 'classic' });
+    navigate('/b/sample');
+  };
   return (
     <section className="card space-y-3" data-survey-try>
       <h2 className="text-xl">{tx('Try it here: describe a cake', 'Subukan dito: i-describe ang cake')}</h2>
@@ -59,6 +67,9 @@ function CustomerTry({ onTried }: { onTried: () => void }) {
         })}
       </div>
       <p className="text-xs text-ink-soft">{tx('Sample bakery prices (estimates).', 'Presyo ng sample bakery (tantya).')}</p>
+      <button type="button" className="btn-secondary w-full" onClick={customize} data-try-link>
+        {tx('Customize this cake', 'I-customize ang cake na ito')}
+      </button>
       <button type="button" className="btn w-full" onClick={onTried} data-part2>
         {tx('Done trying: 3 quick taps', 'Tapos na: 3 mabilis na tap')}
       </button>

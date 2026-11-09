@@ -226,6 +226,9 @@ export default function NearBakers() {
         <div className="space-y-1">
           {ready ? (
             <>
+              <Link to={`/b/${origin.slug}`} className="btn-secondary mb-2 !min-h-10 !px-3 text-sm" data-stage-back="price">
+                <IconArrow size={16} className="rotate-180" /> {tx('Back to price', 'Bumalik sa presyo')}
+              </Link>
               <p className="eyebrow">{tx('Step 4 of 4', 'Hakbang 4 sa 4')}</p>
               <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{tx('Choose who bakes your cake', 'Piliin kung sino ang magbe-bake ng cake mo')}</h1>
               <p className="text-ink-soft" data-choose-intro>

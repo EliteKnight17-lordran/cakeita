@@ -239,17 +239,19 @@ function TryIt({ role, note, onDone }: { role: Role; note: string; onDone: () =>
       <p className="text-ink-soft">{tx('One minute, right here. Then 3 quick taps and you are done.', 'Isang minuto, dito mismo. Tapos 3 mabilis na tap at tapos ka na.')}</p>
       {note && <Notice tone="info">{note}</Notice>}
       <SurveyTry role={role} onTried={onDone} />
-      <details className="card">
-        <summary className="cursor-pointer font-semibold">{tx('Want to try the full app first?', 'Gusto mo munang subukan ang buong app?')}</summary>
-        <div className="mt-3 space-y-3">
-          <p className="text-sm text-ink-soft">{tx('A red bar at the top of the screen brings you back here for the last taps.', 'May pulang bar sa taas ng screen na magbabalik sa iyo dito para sa huling tap.')}</p>
-          <Link to={TRY_LINK[role]} className="btn-secondary w-full" data-try-link>
-            {role === 'baker' ? tx('Open the baker side', 'Buksan ang baker side') : tx('Open the full order page', 'Buksan ang buong order page')}
-          </Link>
-          <p className="text-sm font-semibold">{tx('On another phone or laptop? Scan this', 'Sa ibang phone o laptop? I-scan ito')}</p>
-          <QR value={`${window.location.origin}${window.location.pathname}#${TRY_LINK[role]}`} label={tx('QR code to try Cakeita', 'QR code para subukan ang Cakeita')} size={160} />
-        </div>
-      </details>
+      {role === 'baker' ? (
+        <details className="card">
+          <summary className="cursor-pointer font-semibold">{tx('Want to see the full baker side?', 'Gusto mo bang makita ang buong baker side?')}</summary>
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-ink-soft">{tx('A red bar at the top of the screen brings you back here for the last taps.', 'May pulang bar sa taas ng screen na magbabalik sa iyo dito para sa huling tap.')}</p>
+            <Link to={TRY_LINK[role]} className="btn-secondary w-full" data-try-link>
+              {tx('Open the baker side', 'Buksan ang baker side')}
+            </Link>
+          </div>
+        </details>
+      ) : (
+        <p className="text-sm text-ink-soft">{tx('After customizing, a red bar at the top brings you back here for the last taps.', 'Pagkatapos mag-customize, may pulang bar sa taas na magbabalik sa iyo dito para sa huling tap.')}</p>
+      )}
     </div>
   );
 }

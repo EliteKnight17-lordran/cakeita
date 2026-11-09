@@ -10,7 +10,7 @@ import { Cake2D } from '../cake/Cake2D';
 import { MotifIcon } from '../cake/MotifIcon';
 import { AllergyNotice } from '../components/AllergyNotice';
 import { Layout } from '../components/Layout';
-import { IconArrow, IconCamera, IconCheck, IconChevron, IconPin, IconSparkle } from '../components/icons';
+import { IconArrow, IconCamera, IconCheck, IconChevron, IconSparkle } from '../components/icons';
 import { ShareBox } from '../components/ShareBox';
 import { Bubble, Chip, Field, Notice, SampleBadge } from '../components/ui';
 import { leftOut, selectionKey, type DesignOption } from '../domain/designs';
@@ -749,9 +749,16 @@ function Flow({ menu }: { menu: PublicMenu }) {
     </>
   );
 
-  const priceBar = (action: ReactNode) => (
+  const backButton = (to: Stage) => (
+    <button type="button" className="btn-secondary shrink-0 !px-3" onClick={() => goStage(to)} data-stage-back={to} aria-label={tx('Back', 'Bumalik')}>
+      <IconArrow className="rotate-180" /> <span className="hidden sm:inline">{tx('Back', 'Bumalik')}</span>
+    </button>
+  );
+
+  const priceBar = (action: ReactNode, back?: ReactNode) => (
     <div className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#fffdfa] p-3 shadow-[0_-12px_30px_-24px_rgb(36_26_23/0.45)]">
-      <div className={`mx-auto flex max-w-3xl items-center gap-3 ${pickOnMap ? '' : 'lg:max-w-6xl'}`}>
+      <div className={`mx-auto flex max-w-3xl items-center gap-2 sm:gap-3 ${pickOnMap ? '' : 'lg:max-w-6xl'}`}>
+        {back}
         <div className="min-w-0 flex-1" aria-live="polite">
           {menu.showEstimates && estimate != null ? (
             <>
@@ -778,7 +785,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
     const side = wide && stage !== 'idea';
     return (
       <Layout wide={side}>
-        <Stepper stage={stage} canGo={hasText} onGo={goStage} />
+        <Stepper stage={stage} />
         <div className={side ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10' : ''}>
         {side && (
           <aside className="sticky top-[calc(3.75rem+1.5rem)] space-y-3" aria-label={tx('Your cake', 'Ang cake mo')} data-side-cake>
@@ -847,14 +854,16 @@ function Flow({ menu }: { menu: PublicMenu }) {
         {stage === 'cake' &&
           priceBar(
             <button type="button" className="btn shrink-0" disabled={!selection} onClick={() => goStage('price')} data-next-price>
-              {tx('Next: price', 'Sunod: presyo')} <IconArrow />
+              {tx('Next', 'Sunod')} <IconArrow />
             </button>,
+            backButton('idea'),
           )}
         {stage === 'price' &&
           priceBar(
             <button type="button" className="btn shrink-0" disabled={!selection} onClick={chooseBaker} data-choose-baker>
-              <IconPin /> {tx('See bakers', 'Tingnan ang baker')}
+              {tx('Next', 'Sunod')} <IconArrow />
             </button>,
+            backButton('cake'),
           )}
       </Layout>
     );
@@ -941,7 +950,11 @@ const PRICE_RANGES: Array<[number, number]> = [
 ];
 
 /** 1 Idea, 2 Cake, 3 Price, 4 Bakers. Earlier steps can be revisited; later ones open once there is a cake. */
-function Stepper({ stage, canGo, onGo }: { stage: Stage; canGo: boolean; onGo: (s: Stage) => void }) {
+/**
+ * 1 Idea, 2 Cake, 3 Price, 4 Bakers. Shows progress only (not buttons): each finished step's
+ * circle fills in. Moving between steps is done with the Back and Next buttons at the bottom.
+ */
+function Stepper({ stage }: { stage: Stage }) {
   const tx = useTx();
   const steps: Array<[Stage | 'map', string]> = [
     ['idea', tx('Idea', 'Idea')],
@@ -951,36 +964,26 @@ function Stepper({ stage, canGo, onGo }: { stage: Stage; canGo: boolean; onGo: (
   ];
   const at = steps.findIndex(([k]) => k === stage);
   return (
-    <nav aria-label={tx('Steps', 'Mga hakbang')} className="mb-5">
-      <ol className="flex items-center gap-1">
+    <div className="mb-5" data-stepper>
+      <p className="sr-only">{tx(`Step ${at + 1} of 4: ${steps[at]![1]}`, `Hakbang ${at + 1} sa 4: ${steps[at]![1]}`)}</p>
+      <ol className="flex items-center gap-1" aria-hidden="true">
         {steps.map(([key, label], i) => {
-          const current = key === stage;
-          const reachable = key !== 'map' && !current && (i < at || canGo);
-          const dot = (
-            <>
-              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold ${current ? 'bg-berry text-white' : i < at ? 'bg-berry-soft text-berry-dark' : 'border border-line bg-white text-ink-soft'}`} aria-hidden="true">
-                {i < at ? <IconCheck size={14} /> : i + 1}
-              </span>
-              <span className={`step-label text-sm ${current ? 'font-semibold text-ink' : 'step-other text-ink-soft'}`}>{label}</span>
-            </>
-          );
+          const current = i === at;
+          const done = i < at;
           return (
-            <li key={key} className="flex min-w-0 flex-1 items-center gap-1">
-              {reachable ? (
-                <button type="button" className="flex min-h-11 items-center gap-1.5" onClick={() => onGo(key as Stage)} data-stage-nav={key} aria-label={tx(`Step ${i + 1}: ${label}`, `Hakbang ${i + 1}: ${label}`)}>
-                  {dot}
-                </button>
-              ) : (
-                <span className="flex min-h-11 items-center gap-1.5" aria-current={current ? 'step' : undefined}>
-                  {dot}
+            <li key={key} className="flex min-w-0 flex-1 items-center gap-1" data-step={key} data-step-state={done ? 'done' : current ? 'current' : 'todo'}>
+              <span className="flex min-h-11 items-center gap-1.5">
+                <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold transition-colors ${done ? 'bg-berry text-white' : current ? 'border-2 border-berry bg-white text-berry' : 'border border-line bg-white text-ink-soft'}`}>
+                  {done ? <IconCheck size={14} /> : i + 1}
                 </span>
-              )}
-              {i < steps.length - 1 && <span className="h-px min-w-2 flex-1 bg-line" aria-hidden="true" />}
+                <span className={`step-label text-sm ${current ? 'font-semibold text-ink' : 'step-other text-ink-soft'}`}>{label}</span>
+              </span>
+              {i < steps.length - 1 && <span className={`h-0.5 min-w-2 flex-1 rounded-full transition-colors ${done ? 'bg-berry' : 'bg-line'}`} />}
             </li>
           );
         })}
       </ol>
-    </nav>
+    </div>
   );
 }
 

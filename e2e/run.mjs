@@ -348,7 +348,7 @@ async function main() {
 
     // The cake made by hand in step 2 survives the price step: a budget never wipes it, the
     // other designs are built from it, and picking another design can be undone.
-    await laptop.locator('[data-stage-nav="cake"]').click();
+    await laptop.locator('[data-stage-back="cake"]').click();
     await laptop.locator('[data-stage="cake"]').waitFor({ timeout: 5000 });
     {
       if (!(await laptop.locator('details[open] summary', { hasText: 'I-customize' }).count())) await laptop.getByText('I-customize').first().click();
@@ -421,7 +421,8 @@ async function main() {
 
     // Customization: placement presets, cake stands and things the customer brings.
     await tester.goto(`${BASE}#/b/sample`);
-    await tester.locator('[data-stage-nav="idea"]').click().catch(() => {});
+    // Back to step 1 from wherever this phone's draft was left.
+    for (let i = 0; i < 3 && (await tester.locator('[data-stage-back]').count()); i++) await tester.locator('[data-stage-back]').first().click();
     await tester.getByLabel(/Ilarawan ang cake/).fill('2 tier wedding cake, fresh flowers, 40 pax, budget 6k');
     await tester.locator('[data-make-cake]').click();
     await tester.locator('[data-stage="cake"]').waitFor();
@@ -442,7 +443,8 @@ async function main() {
     const ownPrice = (await tester.getByTestId('live-price').innerText()).trim();
     const ownNote = (await tester.locator('[data-own-note]').isVisible()) ? 1 : 0;
     check('own stand is free, replaces the priced one, and Customize stays open', ownPrice === before && ownNote === 1, `${ownPrice}, note ${ownNote}`);
-    await tester.locator('[data-stage-nav="idea"]').click();
+    check('the steps show progress only (not tappable), with step 1 filled in', (await tester.locator('[data-stepper] button').count()) === 0 && (await tester.locator('[data-step="idea"]').getAttribute('data-step-state')) === 'done');
+    await tester.locator('[data-stage-back="idea"]').click();
     await tester.locator('[data-inspo]').waitFor();
     check('step 1 has a big inspo photo upload', await tester.locator('[data-inspo]').getByText('Mag-upload ng inspo photo').isVisible());
     // Inspo photo becomes the 3D cake: with no AI key, the phone still reads its colors.
@@ -500,8 +502,9 @@ async function main() {
     await axe(tester, 'survey: try it here');
     // Those who open the full app get a reminder bar, and a pop-up after a while (shortened for the test).
     await tester.evaluate(() => localStorage.setItem('cakeita.survey.promptMs', '1500'));
-    await tester.locator('[data-try-it] details summary').click();
+    check('after the designs, the survey leads to customizing the same cake', /I-customize ang cake na ito/.test(await tester.locator('[data-try-link]').innerText()));
     await tester.locator('[data-try-link]').click();
+    check('customizing opens the same cake on the cake step', await tester.locator('[data-stage="cake"]').waitFor({ timeout: 10000 }).then(() => true, () => false) && (await tester.evaluate(() => JSON.parse(sessionStorage.getItem('cakeita.draft.sample')).description)).includes('Chocolate cake with sprinkles'));
     await tester.locator('[data-open-designer]').first().waitFor();
     check('reminder to finish the survey shows while trying', await tester.locator('[data-survey-nudge]').isVisible());
     check('after a while of trying, a pop-up asks for the last taps', await tester.locator('[data-survey-prompt]').waitFor({ timeout: 6000 }).then(() => true, () => false));
@@ -559,6 +562,7 @@ async function main() {
     await picker.getByLabel(/Messenger name o mobile/).fill('0917 222 3333');
     await picker.locator('[data-choose-baker]').click();
     await picker.getByRole('heading', { name: /Piliin kung sino/ }).waitFor();
+    check('step 4 has a Back button to the price step', await picker.locator('[data-stage-back="price"]').isVisible());
     check('after designing, bakers are ranked with a best match', (await picker.locator('[data-best-match]').count()) === 1 && (await picker.locator('article').first().locator('[data-best-match]').count()) === 1);
     await picker.waitForTimeout(800);
     await axe(picker, 'choose a baker');

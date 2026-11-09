@@ -13,6 +13,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.22.0',
+    date: '2026-11-09',
+    en: [
+      'Survey: after the preview designs, a "Customize this cake" button opens the same cake in the full designer (it used to say "try the full app").',
+      'The order steps now show progress only: each finished step fills in. Move with the Back and Next buttons at the bottom, and step 4 has a Back button too.',
+    ],
+    tl: [
+      'Survey: pagkatapos ng preview ng mga design, may "I-customize ang cake na ito" na nagbubukas ng parehong cake sa buong designer (dati "subukan ang buong app").',
+      'Progreso na lang ang ipinapakita ng mga hakbang: napupuno ang bawat natapos. Gamitin ang Bumalik at Sunod sa baba, at may Bumalik din sa hakbang 4.',
+    ],
+  },
+  {
     version: '1.21.0',
     date: '2026-11-09',
     en: [
