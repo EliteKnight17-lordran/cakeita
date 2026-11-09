@@ -7,6 +7,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { MOTIFS, motifFill } from '../domain/motifs';
 import { shade, type CakeVisual } from '../domain/visual';
 import { candleStripes, crumbBump, frostingBump, strawberrySkin } from './textures';
+import { AgeNumber, BlockFigures, BrickWall, GameProps, NameBanner, ScallopBoard } from './BlockScene';
 
 /**
  * Parametric 3D cake. Every mesh comes from the same parts list that is priced,
@@ -931,6 +932,8 @@ function Flowers({ v, top, topY, stack }: { v: CakeVisual; top: Layer; topY: num
 
 /** How long the "building your cake" animation takes, in seconds. */
 const BUILD_SECONDS = 1.6;
+/** A cake on a plain board sits on the table, lower than one on a stand. */
+const TABLE_DROP = 0.2;
 const easeOutBack = (t: number) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
 const easeOutBounce = (t: number) => {
   const n = 7.5625;
@@ -1022,20 +1025,28 @@ function CakeModel({ v, spin, cut = false, buildKey = 0 }: { v: CakeVisual; spin
   // Piped words must stand out from whatever is on top (drip or frosting).
   const topColor = v.drip ? v.dripColor : v.frosting;
   const textColor = isLight(topColor) ? (isLight(v.accent) ? '#6b2e1f' : v.accent) : '#fff8f0';
-  const pipedTex = useTextTexture(v.textStyle === 'piped' ? v.text : '', textColor, 'piped');
+  // On a scalloped board the message goes on the board in front, leaving the top for the scene.
+  const boardText = v.tableBoard && v.textStyle === 'piped' ? v.text : '';
+  const pipedTex = useTextTexture(v.textStyle === 'piped' && !boardText ? v.text : '', textColor, 'piped');
   const acrylicTex = useTextTexture(v.textStyle === 'acrylic' ? v.text : '', v.accent, 'acrylic');
   // Topper placement: in the middle, or to one side (the figure goes opposite a topper).
   const side = v.topperSpot === 'side';
   const figureX = v.motif || acrylicTex ? -top.r * 0.45 : side ? -top.r * 0.42 : 0;
 
   return (
-    <group ref={group}>
-      <CakeStand r={base.r} kind={v.stand} />
-      {/* cake board under the bottom tier */}
-      <mesh position={[0, 0.054, 0]} receiveShadow>
-        <cylinderGeometry args={[base.r + 0.03, base.r + 0.03, 0.012, 96]} />
-        <meshPhysicalMaterial color="#efe8de" metalness={0.55} roughness={0.32} clearcoat={0.5} />
-      </mesh>
+    <group ref={group} position-y={v.tableBoard ? -TABLE_DROP : 0}>
+      {v.tableBoard ? (
+        <ScallopBoard r={base.r} text={boardText} textColor={isLight(v.accent) ? '#c92a2a' : v.accent} />
+      ) : (
+        <>
+          <CakeStand r={base.r} kind={v.stand} />
+          {/* cake board under the bottom tier */}
+          <mesh position={[0, 0.054, 0]} receiveShadow>
+            <cylinderGeometry args={[base.r + 0.03, base.r + 0.03, 0.012, 96]} />
+            <meshPhysicalMaterial color="#efe8de" metalness={0.55} roughness={0.32} clearcoat={0.5} />
+          </mesh>
+        </>
+      )}
 
       {cut &&
         stack.map((s, i) => (
@@ -1055,13 +1066,19 @@ function CakeModel({ v, spin, cut = false, buildKey = 0 }: { v: CakeVisual; spin
       {v.rosettes && <Rosettes r={top.r} y={topY} color={v.accent} />}
       {v.rosettes && <Rosettes r={base.r} y={base.y} color={v.accent} base />}
       {v.bricks && <Bricks top={top} topY={topY} base={base} frosting={v.frosting} clearFront={v.textStyle === 'piped' && !!v.text} />}
+      {v.brickwall && <BrickWall r={base.r} y={base.y} h={base.h} />}
+      {v.banner && <NameBanner r={base.r} y={base.y} h={base.h} word={v.banner} color={isLight(v.accent) ? '#c92a2a' : v.accent} low={v.brickwall} />}
+      {v.blockfigs && <BlockFigures top={top} topY={topY} base={base} boardY={0.06} crowded={!!v.ageNumber} />}
+      {v.ageNumber && <AgeNumber text={v.ageNumber} size={Math.max(0.12, Math.min(0.3, top.r * 0.42))} position={[top.r * 0.56, topY, -top.r * 0.3]} rim={isLight(v.accent) ? '#c92a2a' : v.accent} />}
+      {v.props && <GameProps r={top.r} y={topY} />}
       {v.print && <EdiblePrint r={base.r} y={base.y} h={base.h} accent={v.accent} low={v.drip && stack.length === 1} motif={v.motif} text={v.printText} />}
       {v.fruits && <Fruits r={top.r} y={topY} />}
       {v.gold && <GoldLeaf r={top.r} y={top.y} h={top.h} />}
       {v.flowers && <Flowers v={v} top={top} topY={topY} stack={stack} />}
       {v.candles > 0 && <Candles n={v.candles} r={top.r} y={topY} color={v.accent} back={!!v.text || !!v.motif || v.figure} />}
       {v.figure && <Figure y={topY} color={v.accent} x={figureX} z={v.motif || acrylicTex || side ? top.r * 0.15 : 0} />}
-      {v.motif && (
+      {/* With blocky figures standing on top, the printed set shows only its small picks around the edge. */}
+      {v.motif && !v.blockfigs && (
         <MotifTopper
           motif={v.motif}
           size={Math.max(0.2, top.r * (acrylicTex || side ? 0.62 : 0.85))}
@@ -1158,11 +1175,12 @@ export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady
   const cakeH = visual.tiers.reduce((a, t) => a + t.h * K, 0);
   // Leave room for whatever stands on top (theme topper on its pick, acrylic words).
   const topR = (visual.tiers[visual.tiers.length - 1]!.d / 2) * K * 1.6;
-  const onTop = visual.motif ? 0.13 + Math.max(0.2, topR * 0.85) * 1.2 : visual.textStyle === 'acrylic' ? 0.28 : 0;
+  const scene = visual.blockfigs || visual.ageNumber || visual.props ? Math.max(0.3, Math.min(0.42, topR * 0.62)) : 0;
+  const onTop = Math.max(scene, visual.motif && !visual.blockfigs ? 0.13 + Math.max(0.2, topR * 0.85) * 1.2 : visual.textStyle === 'acrylic' ? 0.28 : 0);
   const totalH = cakeH + onTop * 0.7;
   const maxR = Math.max(...visual.tiers.map((t) => (t.d / 2) * K * 1.6));
   const dist = Math.max(1.8, Math.max(totalH * 2.7, maxR * 4.3));
-  const lookY = totalH * 0.45;
+  const lookY = totalH * 0.45 - (visual.tableBoard ? TABLE_DROP * 0.8 : 0);
   // Start sharp; if this phone can't keep up, drop the resolution (and shadows) instead of stuttering.
   const [dpr, setDpr] = useState(lite ? 1 : 1.75);
   const [lowPower, setLowPower] = useState(lite);

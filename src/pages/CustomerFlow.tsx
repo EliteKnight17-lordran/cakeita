@@ -24,7 +24,8 @@ import { toVisual } from '../domain/visual';
 import { SCENARIOS } from '../data/demoScenarios';
 import { clearDraft, useDraft, type Draft } from '../data/draft';
 import { repo } from '../data/store';
-import { resizeImage, samplePhoto, type SmallImage } from '../lib/image';
+import { photoPixels, resizeImage, samplePhoto, type SmallImage } from '../lib/image';
+import { findShowcase, showcaseByKey, showcaseHints } from '../domain/showcase';
 import { colorsFromPhoto } from '../domain/photoColors';
 import type { PhotoHints } from '../domain/photoHints';
 import { linkErrorText } from '../lib/codec';
@@ -201,14 +202,16 @@ function Flow({ menu }: { menu: PublicMenu }) {
     setBusy(true);
     setBuilding(true);
     try {
+      // A featured design is recognized on the phone first: then no AI is needed at all.
+      const known = await photoPixels(img.dataUrl).then((p) => (p ? findShowcase(p) : null)).catch(() => null);
       // A short minimum so the "building your cake" steps can be seen even when reading is instant.
       const [ai, px] = await Promise.all([
-        smartAvailable && !prefs.aiOff ? analyzeRequest('', menu, { image: { mimeType: img.mimeType, base64: img.base64 }, allowAi: true }).catch(() => null) : Promise.resolve(null),
+        !known && smartAvailable && !prefs.aiOff ? analyzeRequest('', menu, { image: { mimeType: img.mimeType, base64: img.base64 }, allowAi: true }).catch(() => null) : Promise.resolve(null),
         samplePhoto(img.dataUrl).catch(() => ({ center: [], border: [] })),
         new Promise((res) => setTimeout(res, 1800)),
       ]);
       const usedAi = !!ai?.usedAi;
-      const hints: PhotoHints = {
+      const hints: PhotoHints = known ? showcaseHints(known, menu) : {
         colors: usedAi && ai!.colors.length ? ai!.colors.slice(0, 2) : colorsFromPhoto(px.center, px.border),
         componentIds: usedAi ? ai!.componentIds : [],
         flavorId: usedAi ? ai!.flavorId : null,
@@ -1084,9 +1087,13 @@ function PhotoMatch({ hints, menu, hasPhoto, onSee, onRemove }: { hints: PhotoHi
     ...names,
     hints.flowerStyle ? tx(`flowers: ${FLOWER_LABELS[hints.flowerStyle][0].toLowerCase()}`, `bulaklak: ${FLOWER_LABELS[hints.flowerStyle][1].toLowerCase()}`) : '',
   ].filter(Boolean);
+  const featured = showcaseByKey(hints.showcase);
   return (
-    <div className="space-y-2 rounded-2xl border border-line bg-white p-3" data-photo-match>
-      <p className="font-semibold">{hasPhoto ? tx('Your cake, made from the photo', 'Ang cake mo, mula sa photo') : tx('Using the details from your photo', 'Gamit ang detalye mula sa photo mo')}</p>
+    <div className="space-y-2 rounded-2xl border border-line bg-white p-3" data-photo-match data-showcase={featured?.key}>
+      {featured && <p className="eyebrow">{tx('Featured design', 'Featured design')}</p>}
+      <p className="font-semibold">
+        {featured ? tx(featured.name[0], featured.name[1]) : hasPhoto ? tx('Your cake, made from the photo', 'Ang cake mo, mula sa photo') : tx('Using the details from your photo', 'Gamit ang detalye mula sa photo mo')}
+      </p>
       {hints.colors.length > 0 && (
         <p className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-ink-soft">{tx('Colors', 'Kulay')}:</span>
@@ -1104,8 +1111,13 @@ function PhotoMatch({ hints, menu, hasPhoto, onSee, onRemove }: { hints: PhotoHi
           {tx(`Not on ${menu.name}'s menu, so not on the cake`, `Wala sa menu ng ${menu.name}, kaya wala sa cake`)}: {hints.unavailable.join(', ')}
         </p>
       )}
-      {!hints.usedAi && (
-        <p className="text-sm text-ink-soft">{tx('Colors matched. Type the tiers and decorations above.', 'Kinuha ang kulay. I-type sa itaas ang tier at dekorasyon.')}</p>
+      {featured ? (
+        <p className="text-sm text-ink-soft">
+          {tx('Make it theirs: type the name, age and colors above, e.g. "for Migo\'s 7th birthday, green".', 'Gawing kanya: i-type sa itaas ang pangalan, edad at kulay, hal. "para kay Migo, 7th birthday, green".')}{' '}
+          {tx('The logo and characters become generic blocky ones.', 'Generic na blocky ang logo at mga character.')}
+        </p>
+      ) : (
+        !hints.usedAi && <p className="text-sm text-ink-soft">{tx('Colors matched. Type the tiers and decorations above.', 'Kinuha ang kulay. I-type sa itaas ang tier at dekorasyon.')}</p>
       )}
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="link min-h-11 text-sm" onClick={onSee} data-see-photo-cake>

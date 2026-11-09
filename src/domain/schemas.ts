@@ -15,7 +15,7 @@ const money = z.number().finite().min(0).max(1_000_000);
 
 export const visualEnum = z.enum([
   'sponge', 'buttercream', 'whipped', 'fondant', 'ganache', 'naked', 'drip', 'sprinkles', 'flowers', 'rosettes',
-  'pearls', 'fruits', 'bricks', 'print', 'candles', 'text', 'acrylic', 'figure', 'motif', 'gold', 'stand-gold', 'stand-wood',
+  'pearls', 'fruits', 'bricks', 'print', 'brickwall', 'banner', 'blockfigs', 'number', 'props', 'candles', 'text', 'acrylic', 'figure', 'motif', 'gold', 'stand-gold', 'stand-wood',
 ]);
 export const categoryEnum = z.enum(['flavor', 'covering', 'decoration', 'topper', 'finish', 'display']);
 
@@ -33,6 +33,8 @@ export const lookSchema = z.object({
   flowerStyle: z.enum(FLOWER_STYLES).optional().catch(undefined),
   topperSpot: z.enum(TOPPER_SPOTS).optional().catch(undefined),
   own: z.array(z.enum(OWN_ITEMS)).max(3).optional().catch(undefined),
+  name: shortText(20).optional().catch(undefined),
+  age: z.number().int().min(1).max(120).optional().catch(undefined),
 });
 
 export const publicMenuSchema = z.object({
@@ -121,6 +123,13 @@ export const cakeVisualSchema = z.object({
   bricks: z.boolean().optional().default(false).catch(false),
   print: z.boolean().optional().default(false).catch(false),
   printText: shortText(40).optional().default('').catch(''),
+  // Added in v1.14 (block-game showcase parts): older quote links have none.
+  brickwall: z.boolean().optional().default(false).catch(false),
+  banner: shortText(16).optional().default('').catch(''),
+  blockfigs: z.boolean().optional().default(false).catch(false),
+  ageNumber: shortText(3).optional().default('').catch(''),
+  props: z.boolean().optional().default(false).catch(false),
+  tableBoard: z.boolean().optional().default(false).catch(false),
   candles: z.number().int().min(0).max(10),
   text: shortText(40),
   textStyle: z.enum(['piped', 'acrylic']).nullable(),

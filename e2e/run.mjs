@@ -343,6 +343,20 @@ async function main() {
     await axe(tester, 'cake from inspo photo');
     await axe(tester, 'customize with placement and stands');
 
+    // Block-game cake from words: generic blocky figures (no game characters), the child's name on a banner, the age as a number.
+    const gamer = await phone(browser, 'gamer');
+    await gamer.goto(`${BASE}#/b/sample`);
+    await gamer.getByLabel(/Ilarawan ang cake/).fill("Roblox cake for Migo's 7th birthday, sky blue fondant, brick wall, name banner, number topper, 12 pax");
+    await gamer.getByTestId('live-price').waitFor();
+    const gameCake = gamer.locator('figure [role="img"]').first();
+    await waitTrue(async () => /MIGO/.test((await gameCake.getAttribute('aria-label')) ?? ''));
+    const gameLabel = (await gameCake.getAttribute('aria-label')) ?? '';
+    check('block-game cake: name banner, age number, brick wall and blocky figures', /banner na "MIGO"/.test(gameLabel) && /numerong 7/.test(gameLabel) && /brick wall/.test(gameLabel) && /blocky/.test(gameLabel), gameLabel);
+    check('block-game cake: no game name on the cake', !/roblox/i.test(gameLabel));
+    check('block-game cake draws in 3D', await gamer.locator('figure canvas').first().waitFor({ timeout: 10000 }).then(() => true, () => false));
+    await gamer.waitForTimeout(1500);
+    await axe(gamer, 'block-game cake');
+
     // Pilot survey: tap-only part 1, try the app, reminder to come back, part 2 (saved on the phone when offline).
     await tester.goto(`${BASE}#/survey?role=customer`);
     await tester.locator('[data-survey]').waitFor();
@@ -479,7 +493,7 @@ async function main() {
     await picker.goto(q3);
     check('customer sees the accepted offer at their price', await picker.getByText('Pumayag sila sa alok mo').waitFor({ timeout: 8000 }).then(() => true, () => false) && Number((await picker.locator('[data-quote-price]').innerText()).replace(/[^\d]/g, '')) === est2);
 
-    for (const p of [customer, baker, elder, tester, picker]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+    for (const p of [customer, baker, elder, tester, picker, gamer]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
     await browser.close();
   } finally {
     server.kill();

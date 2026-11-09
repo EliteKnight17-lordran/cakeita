@@ -61,7 +61,8 @@ export const COLOR_WORDS: Array<[string[], string, string]> = [
   [['pink', 'rosas', 'pinkish'], 'pink', '#f4a7c0'],
   [['maroon', 'wine'], 'maroon', '#7a1f2b'],
   [['red', 'pula'], 'red', '#d23a3a'],
-  [['baby blue', 'light blue', 'sky blue'], 'baby blue', '#a9cdf0'],
+  [['sky blue'], 'sky blue', '#6db7e4'],
+  [['baby blue', 'light blue'], 'baby blue', '#a9cdf0'],
   [['navy', 'navy blue', 'dark blue'], 'navy', '#22335c'],
   [['blue', 'asul', 'bughaw'], 'blue', '#4a7bd0'],
   [['teal', 'turquoise'], 'teal', '#2f9c95'],
@@ -334,6 +335,33 @@ export function readTextOnCake(original: string): string {
   return '';
 }
 
+const NOT_NAMES = new Set([
+  'happy', 'birthday', 'bday', 'my', 'our', 'the', 'a', 'po', 'ko', 'sa', 'ng', 'na', 'and', 'with', 'cake', 'pax', 'people', 'tao',
+  'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december',
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'mommy', 'daddy', 'mama', 'papa', 'lola', 'lolo',
+  'mom', 'dad', 'him', 'her', 'christmas', 'pasko', 'valentines', 'valentine', 'graduation', 'wedding', 'debut', 'anniversary',
+  'team', 'office', 'company', 'boss', 'teacher', 'ube', 'chocolate', 'vanilla', 'mocha',
+]);
+
+/**
+ * The celebrant's name, for a name banner: "for Migo's 7th", "para kay Ana", "anak kong Lia",
+ * "name: Bea", or the name after "Happy Birthday" in the message. Only a capitalized word counts.
+ */
+export function readName(original: string, textOnCake = ''): string {
+  const word = '([A-Z\\u00d1][\\p{L}]{1,14})';
+  const tries = [
+    new RegExp(`\\b(?:[Nn]ame|[Nn]amed|[Pp]angalan)\\s*(?:is|ay)?\\s*[:-]?\\s*${word}`, 'u'),
+    new RegExp(`\\b(?:son|daughter|anak(?:\\s+kong?)?|apo(?:\\s+kong?)?|pamangkin(?:\\s+kong?)?|bunso|baby|kid|niece|nephew|grandson|granddaughter)\\s+${word}`, 'u'),
+    new RegExp(`\\b(?:[Pp]ara\\s+(?:kay|kina|sa)|[Ff]or|[Kk]ay|[Ss]i)\\s+${word}`, 'u'),
+  ];
+  for (const re of tries) {
+    const m = re.exec(original);
+    if (m && !NOT_NAMES.has(m[1]!.toLowerCase())) return m[1]!;
+  }
+  const inText = /(?:[Bb]irthday|[Bb]day|[Kk]aarawan)\s+([A-Z\u00d1][\p{L}]{1,14})/u.exec(textOnCake);
+  return inText && !NOT_NAMES.has(inText[1]!.toLowerCase()) ? inText[1]! : '';
+}
+
 export function findTrademark(text: string): { theme: string; colors: string[]; matched: string } | null {
   const t = text.toLowerCase();
   for (const [re, theme, colors] of TRADEMARKS) {
@@ -354,6 +382,9 @@ export function addThemeTopper(componentIds: string[], theme: string, menu: Publ
   // A building-blocks theme also gets the baker's fondant blocks, when they make them.
   const bricks = menu.components.find((c) => c.visual === 'bricks');
   if (bricks && /building block|brick/i.test(theme) && !out.includes(bricks.id)) out.push(bricks.id);
+  // A blocky game theme gets the baker's blocky fondant figures (generic avatars, never the game's own).
+  const figs = menu.components.find((c) => c.visual === 'blockfigs');
+  if (figs && /blocky game/i.test(theme) && !out.includes(figs.id)) out.push(figs.id);
   return out;
 }
 

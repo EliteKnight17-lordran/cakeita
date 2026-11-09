@@ -88,6 +88,9 @@ export const SAMPLE_COMPONENTS: CakeComponent[] = [
   comp({ id: 'dc-pearls', name: 'Sugar pearls border', category: 'decoration', visual: 'pearls', recipe: [r('sprinkles', 25)], laborMinutes: 15, extraCost: 0, scales: true, keywords: ['pearls', 'pearl', 'perlas', 'dragees', 'beads'] }),
   comp({ id: 'dc-bricks', name: 'Fondant building blocks', nameTl: 'Fondant na building blocks', category: 'decoration', visual: 'bricks', recipe: [r('fondant', 120), r('gel-color', 3)], laborMinutes: 35, extraCost: 0, scales: false, keywords: ['building blocks', 'toy blocks', 'fondant blocks', 'blocks', 'bricks', 'brick'] }),
   comp({ id: 'dc-print', name: 'Edible print', nameTl: 'Edible print', category: 'decoration', visual: 'print', recipe: [], laborMinutes: 10, extraCost: 150, scales: false, keywords: ['edible print', 'edible image', 'edible photo', 'printed image', 'photo print', 'photo cake', 'picture cake', 'logo', 'print'] }),
+  comp({ id: 'dc-brickwall', name: 'Fondant brick wall (lower half)', nameTl: 'Fondant na brick wall (ibabang kalahati)', category: 'decoration', visual: 'brickwall', recipe: [r('fondant', 200), r('gel-color', 3)], laborMinutes: 50, extraCost: 0, scales: true, keywords: ['brick wall', 'brick pattern', 'wall of bricks', 'pader'] }),
+  comp({ id: 'dc-banner', name: 'Fondant name banner', nameTl: 'Fondant na banner ng pangalan', category: 'decoration', visual: 'banner', recipe: [r('fondant', 70), r('gel-color', 2)], laborMinutes: 35, extraCost: 0, scales: false, keywords: ['name banner', 'banner', 'name plaque', 'plaque', 'name on the side'] }),
+  comp({ id: 'dc-props', name: 'Fondant tree, trophy and bars', nameTl: 'Fondant na puno, tropeo at bars', category: 'decoration', visual: 'props', recipe: [r('fondant', 90), r('gel-color', 3)], laborMinutes: 40, extraCost: 0, scales: false, keywords: ['fondant tree', 'trophy', 'tropeo', 'game props', 'props'] }),
   comp({ id: 'dc-fruits', name: 'Fresh fruits', nameTl: 'Prutas', category: 'decoration', visual: 'fruits', recipe: [], laborMinutes: 15, extraCost: 180, scales: false, keywords: ['fruits', 'fruit', 'prutas', 'strawberries', 'strawberry', 'berries', 'mango', 'mangga'] }),
 
   // Toppers
@@ -96,6 +99,8 @@ export const SAMPLE_COMPONENTS: CakeComponent[] = [
   comp({ id: 'tp-acrylic', name: 'Acrylic topper', category: 'topper', visual: 'acrylic', recipe: [], laborMinutes: 5, extraCost: 180, scales: false, keywords: ['acrylic', 'topper', 'cake topper', 'name topper'] }),
   comp({ id: 'tp-figure', name: 'Fondant figure', nameTl: 'Fondant na figure', category: 'topper', visual: 'figure', recipe: [r('fondant', 150), r('gel-color', 3)], laborMinutes: 90, extraCost: 0, scales: false, keywords: ['figure', 'figurine', 'character', 'fondant figure', 'toy', 'doll'] }),
   // A printed cardstock cut-out in the theme's colors (hero emblem, crown, dino...). Characters stay generic.
+  comp({ id: 'tp-blockfigs', name: 'Blocky fondant figures (set of 5)', nameTl: 'Blocky na fondant figures (5 piraso)', category: 'topper', visual: 'blockfigs', recipe: [r('fondant', 220), r('gel-color', 4)], laborMinutes: 150, extraCost: 0, scales: false, keywords: ['blocky figures', 'block figures', 'blocky characters', 'game characters', 'avatars', 'avatar'] }),
+  comp({ id: 'tp-number', name: 'Fondant age number', nameTl: 'Fondant na numero ng edad', category: 'topper', visual: 'number', recipe: [r('fondant', 70), r('gel-color', 1)], laborMinutes: 25, extraCost: 0, scales: false, keywords: ['number topper', 'age number', 'number cake topper', 'numero na topper'] }),
   comp({ id: 'tp-theme', name: 'Theme topper', nameTl: 'Theme topper', category: 'topper', visual: 'motif', recipe: [], laborMinutes: 10, extraCost: 120, scales: false, keywords: ['theme topper', 'printed topper', 'cardstock topper', 'paper topper', 'character topper', 'cupcake toppers'] }),
 
   // Finishes
@@ -215,7 +220,7 @@ export function defaultPartIds(components: Array<{ id: string; category: string 
 }
 
 /** Parts added after launch. Saved bakeries from older versions get them on first load. */
-const ADDED_LATER = ['tp-theme', 'ds-gold', 'ds-wood', 'dc-bricks', 'dc-print'];
+const ADDED_LATER = ['tp-theme', 'ds-gold', 'ds-wood', 'dc-bricks', 'dc-print', 'dc-brickwall', 'dc-banner', 'dc-props', 'tp-blockfigs', 'tp-number'];
 
 /**
  * Bring a saved bakery up to date with parts added in later versions. A real baker gets them

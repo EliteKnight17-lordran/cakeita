@@ -69,3 +69,24 @@ export async function samplePhoto(dataUrl: string, size = 64): Promise<{ center:
   }
   return { center, border };
 }
+
+/** The photo as a small RGBA grid (short side `short` px) for recognizing a known inspo photo. */
+export async function photoPixels(dataUrl: string, short = 72): Promise<{ w: number; h: number; data: Uint8ClampedArray } | null> {
+  const img = new Image();
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error('unreadable'));
+    img.src = dataUrl;
+  });
+  const k = short / Math.max(1, Math.min(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.min(short * 3, Math.round(img.naturalWidth * k)));
+  const h = Math.max(1, Math.min(short * 3, Math.round(img.naturalHeight * k)));
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, w, h);
+  return { w, h, data: ctx.getImageData(0, 0, w, h).data };
+}

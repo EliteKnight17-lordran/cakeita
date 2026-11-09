@@ -21,6 +21,18 @@ export interface CakeVisual {
   print: boolean;
   /** Words on the edible print, when there is no piped message part to carry them. */
   printText: string;
+  /** Fondant brick wall around the lower half of the bottom tier. */
+  brickwall: boolean;
+  /** Word on the fondant banner (the celebrant's name), or '' when there is no banner. */
+  banner: string;
+  /** Blocky game-style fondant figures: three on top, two standing at the base. */
+  blockfigs: boolean;
+  /** The age on a fondant number topper, or '' when there is none. */
+  ageNumber: string;
+  /** Fondant tree, small trophy and bars on top. */
+  props: boolean;
+  /** The cake sits on a scalloped cake board on the table (no stand), with the message on the board. */
+  tableBoard: boolean;
   candles: number;
   text: string;
   textStyle: 'piped' | 'acrylic' | null;
@@ -60,6 +72,12 @@ function isPale(hex: string): boolean {
   return lum > 225;
 }
 
+/** The banner carries the celebrant's name; with no name yet it says LEVEL UP (never a brand or logo). */
+export function bannerWord(look: CakeLook): string {
+  const name = (look.name ?? '').replace(/[^\p{L}\p{N} '-]/gu, '').trim().toUpperCase().slice(0, 12);
+  return name || 'LEVEL UP';
+}
+
 export function toVisual(menu: PublicMenu, sel: Selection, look: CakeLook): CakeVisual {
   const base = menu.baseCakes.find((b) => b.id === sel.baseCakeId) ?? menu.baseCakes[0];
   const parts = sel.componentIds.map((id) => menu.components.find((c) => c.id === id)).filter((c) => !!c);
@@ -92,6 +110,12 @@ export function toVisual(menu: PublicMenu, sel: Selection, look: CakeLook): Cake
     bricks: has('bricks'),
     print: has('print'),
     printText: has('print') && !textStyle ? look.textOnCake.trim().slice(0, 22) : '',
+    brickwall: has('brickwall'),
+    banner: has('banner') ? bannerWord(look) : '',
+    blockfigs: has('blockfigs'),
+    ageNumber: has('number') ? String(look.age ?? Math.max(1, look.candles || 1)).slice(0, 3) : '',
+    props: has('props'),
+    tableBoard: !has('stand-gold') && !has('stand-wood') && (has('brickwall') || has('blockfigs') || has('banner')),
     candles: has('candles') ? Math.max(1, Math.min(10, look.candles || 1)) : 0,
     text: textStyle ? look.textOnCake.slice(0, 32) : '',
     textStyle: textStyle && look.textOnCake.trim() ? textStyle : null,

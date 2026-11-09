@@ -26,6 +26,11 @@ export function describeCake(v: CakeVisual, lang: 'tl' | 'en', colorNames: strin
   }
   if (v.pearls) extras.push(tl ? 'pearls' : 'sugar pearls');
   if (v.bricks) extras.push(tl ? 'fondant na building blocks' : 'fondant building blocks');
+  if (v.brickwall) extras.push(tl ? 'fondant na brick wall sa ibaba' : 'a fondant brick wall around the bottom');
+  if (v.banner) extras.push(tl ? `banner na "${v.banner}"` : `a "${v.banner}" name banner`);
+  if (v.blockfigs) extras.push(tl ? 'blocky na fondant figures' : 'blocky fondant figures');
+  if (v.ageNumber) extras.push(tl ? `numerong ${v.ageNumber} sa ibabaw` : `a number ${v.ageNumber} on top`);
+  if (v.props) extras.push(tl ? 'puno, tropeo at bars' : 'a tree, a trophy and bars');
   if (v.print) extras.push(tl ? 'edible print sa gilid' : 'an edible print on the side');
   if (v.fruits) extras.push(tl ? 'prutas' : 'fresh fruit');
   if (v.gold) extras.push(tl ? 'gold leaf' : 'gold leaf');
@@ -34,7 +39,7 @@ export function describeCake(v: CakeVisual, lang: 'tl' | 'en', colorNames: strin
   if (v.stand === 'gold') extras.push(tl ? 'gold na pedestal stand' : 'a gold pedestal stand');
   if (v.stand === 'wood') extras.push(tl ? 'kahoy na stand' : 'a wooden slab stand');
   if (v.candles) extras.push(`${v.candles} ${tl ? 'kandila' : v.candles === 1 ? 'candle' : 'candles'}`);
-  if (v.text) extras.push(tl ? `nakasulat na "${v.text}"` : `the words "${v.text}"`);
+  if (v.text) extras.push(v.tableBoard ? (tl ? `"${v.text}" sa board` : `"${v.text}" on the board`) : tl ? `nakasulat na "${v.text}"` : `the words "${v.text}"`);
   const head = tl ? `${tiers} na ${color}${cov} cake` : `A ${tiers} ${color}${cov} cake`;
   if (!extras.length) return `${head}.`;
   return `${head} ${tl ? 'na may' : 'with'} ${extras.join(', ')}.`;

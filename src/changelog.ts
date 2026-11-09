@@ -13,6 +13,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.14.0',
+    date: '2026-11-09',
+    en: [
+      'Featured design: upload the block-game birthday cake photo and Cakeita recognizes it on the phone (no AI, no internet) and builds it in detailed 3D: brick wall, name banner, blocky figures, an age number, a tree, a trophy and the message on a scalloped board.',
+      'It follows what you type: the name goes on the banner, the age on the number and in the message, and your colors, number of people and budget change the cake and its three price levels.',
+      'The game logo and characters become generic blocky ones; the baker sees a note to use a licensed topper if the customer wants the real ones.',
+      'New menu parts with their own prices: fondant brick wall, name banner, blocky figures (set of 5), age number, and tree, trophy and bars. Typing "brick wall" or "number topper" also adds them.',
+    ],
+    tl: [
+      'Featured design: i-upload ang photo ng block-game birthday cake at makikilala ito ng Cakeita sa phone (walang AI, walang internet) at bubuuin nang detalyado sa 3D: brick wall, banner ng pangalan, blocky na figures, numero ng edad, puno, tropeo at ang bati sa scalloped na board.',
+      'Sinusunod nito ang i-type mo: ang pangalan sa banner, ang edad sa numero at sa bati, at nagbabago ang cake at ang tatlong presyo ayon sa kulay, dami ng tao at budget mo.',
+      'Generic na blocky ang logo at mga character ng game; may paalala sa baker na licensed topper ang gamitin kung gusto ng customer ang totoo.',
+      'Bagong part sa menu na may sariling presyo: fondant brick wall, banner ng pangalan, blocky figures (5 piraso), numero ng edad, at puno, tropeo at bars. Nadadagdag din pag nag-type ng "brick wall" o "number topper".',
+    ],
+  },
+  {
     version: '1.13.0',
     date: '2026-11-09',
     en: [

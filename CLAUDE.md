@@ -17,6 +17,7 @@ Budget-first custom cake quotes with a 3D cake for Filipino home bakers. Hackath
 - `src/cake/` 3D (three.js, lazy) and 2D fallback.
 - `src/data/` localStorage repo, customer draft, demo seed, `directory.ts` (fictional sample bakeries for the map). `src/lib/` link codec, sharing, prefs.
 - `src/domain/matching.ts` + `geo.ts` price the customer's cake at each listed baker (pure code). The map UI is `src/pages/NearBakers.tsx` (Leaflet, lazy).
+- `src/domain/showcase.ts` featured designs: known inspo photos recognized on the phone by fingerprint (`photoPrint.ts`, only hashes stored, never the photo) and rebuilt from priced parts; 3D parts in `src/cake/BlockScene.tsx`.
 - UI text is bilingual inline: `tx('English', 'Taglish')`.
 
 ## Commands

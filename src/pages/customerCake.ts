@@ -2,7 +2,7 @@ import type { Reading } from '../ai/client';
 import { buildDesigns, type DesignResult, type Wants } from '../domain/designs';
 import { earliestDate } from '../domain/insights';
 import { motifFor } from '../domain/motifs';
-import { readRequest } from '../domain/requestReader';
+import { readName, readRequest } from '../domain/requestReader';
 import type { CakeLook, PublicMenu, Selection } from '../domain/types';
 import type { Draft } from '../data/draft';
 import { withPhoto } from '../domain/photoHints';
@@ -69,7 +69,9 @@ export function currentCake(menu: PublicMenu, draft: Draft, today: Date, live?: 
   const wants = wantsFrom(draft, hasText || draft.reading ? reading : null);
   // Placement and things the customer brings are always their own choice, even when colors follow the message.
   const keep = { flowerStyle: draft.look.flowerStyle ?? hints?.flowerStyle ?? undefined, topperSpot: draft.look.topperSpot ?? hints?.topperSpot ?? undefined, own: draft.look.own };
-  const look = draft.lookTouched ? draft.look : { ...lookFromReading(hasText ? reading : null, occasion), ...keep };
+  // Name and age are never picked by hand: they always follow what was typed (or the photo).
+  const who = { name: readName(draft.description, reading.textOnCake) || undefined, age: (hasText ? reading.age : null) ?? undefined };
+  const look = { ...(draft.lookTouched ? draft.look : { ...lookFromReading(hasText ? reading : null, occasion), ...keep }), ...who };
   const designs = buildDesigns(menu, wants);
   // Default pick: the tier they chose; if that tier isn't offered, the fullest design that still fits the budget.
   const fallback = [...designs.options].reverse().find((o) => !o.overBudget) ?? designs.options[0];

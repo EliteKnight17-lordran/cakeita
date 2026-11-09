@@ -169,10 +169,13 @@ export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
   let finalShow = showSel;
   if (selectionKey(finalShow) === selectionKey(classicSel)) {
     const more = extras.find((id) => !finalShow.componentIds.includes(id));
-    if (more) finalShow = { ...finalShow, componentIds: [...finalShow.componentIds, more] };
+    const bigger = fit.find((b) => b.p > (bases.find((x) => x.id === finalShow.baseCakeId)?.p ?? 0) && b.tiers.length === (bases.find((x) => x.id === finalShow.baseCakeId)?.tiers.length ?? 1));
+    // A cake already full of decorations (a featured design) steps up in size, not in more decorations.
+    if (bigger && wantedDecorCount >= 3) finalShow = { ...finalShow, baseCakeId: bigger.id };
+    else if (more) finalShow = { ...finalShow, componentIds: [...finalShow.componentIds, more] };
     else {
-      const bigger = fit.find((b) => b.p > (bases.find((x) => x.id === finalShow.baseCakeId)?.p ?? 0));
-      if (bigger) finalShow = { ...finalShow, baseCakeId: bigger.id };
+      const anyBigger = fit.find((b) => b.p > (bases.find((x) => x.id === finalShow.baseCakeId)?.p ?? 0));
+      if (anyBigger) finalShow = { ...finalShow, baseCakeId: anyBigger.id };
     }
   }
 

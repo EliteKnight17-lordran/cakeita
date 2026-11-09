@@ -22,6 +22,25 @@ export interface PhotoHints {
   summary: string;
   /** true: AI looked at the photo. false: only its colors were read on the phone. */
   usedAi: boolean;
+  /** Age shown in the photo (e.g. a number topper); what the customer types wins. */
+  age?: number | null;
+  /** About how many people the cake in the photo feeds; what the customer types or picks wins. */
+  servings?: number | null;
+  /** Set when the photo is a known featured design (see showcase.ts). */
+  showcase?: string;
+}
+
+export const ordinal = (n: number): string => {
+  const t = n % 100;
+  const s = t >= 11 && t <= 13 ? 'th' : n % 10 === 1 ? 'st' : n % 10 === 2 ? 'nd' : n % 10 === 3 ? 'rd' : 'th';
+  return `${n}${s}`;
+};
+
+/** The photo's message ("Happy 11th Birthday") with the customer's own age, when they typed one. */
+export function photoText(hints: PhotoHints, typedAge: number | null): string {
+  const text = hints.textOnCake ?? '';
+  if (!text || !hints.age || !typedAge || typedAge === hints.age) return text;
+  return text.replace(ordinal(hints.age), ordinal(typedAge));
 }
 
 /** Add the photo's hints to a reading. What the customer typed always wins. */
@@ -38,7 +57,9 @@ export function withPhoto<R extends ParsedRequest>(reading: R, hints: PhotoHints
     coveringId: reading.coveringId ?? (hints.coveringId && cat(hints.coveringId) === 'covering' ? hints.coveringId : null),
     tiers: reading.tiers ?? hints.tiers,
     theme: reading.theme || hints.theme,
-    textOnCake: reading.textOnCake || (hints.textOnCake ?? '').slice(0, 40),
+    textOnCake: reading.textOnCake || photoText(hints, reading.age).slice(0, 40),
+    age: reading.age ?? hints.age ?? null,
+    servings: reading.servings ?? hints.servings ?? null,
     licensedNote: reading.licensedNote || hints.licensedNote,
     unavailable: [...new Set([...reading.unavailable, ...hints.unavailable])].slice(0, 10),
   };

@@ -22,6 +22,13 @@ function seeded(seed: number) {
   };
 }
 
+/** Banner and number rim color: the accent, or red when the accent is too pale to read on white. */
+function bannerRed(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  const lum = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  return Number.isNaN(n) || lum > 150 ? '#c92a2a' : hex;
+}
+
 export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual: v, title, className }, ref) {
   const W = 320;
   const H = 300;
@@ -49,7 +56,9 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
       <title>{title}</title>
       <ellipse cx={W / 2} cy={groundY + 6} rx={(layout[0]?.w ?? 120) * 0.7} ry={8} fill="#000" opacity={0.08} />
       {/* stand */}
-      {v.stand === 'wood' ? (
+      {v.tableBoard ? (
+        <rect x={(W - (layout[0]?.w ?? 100) * 1.45) / 2} y={groundY - standH} width={(layout[0]?.w ?? 100) * 1.45} height={5} rx={2} fill="#fbf9f5" stroke="#d9cdbb" />
+      ) : v.stand === 'wood' ? (
         <rect x={(W - (layout[0]?.w ?? 100) * 1.3) / 2} y={groundY - standH} width={(layout[0]?.w ?? 100) * 1.3} height={standH + 4} rx={4} fill="#b88552" stroke="#5b3a22" strokeWidth={3} />
       ) : (
         <>
@@ -105,7 +114,13 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
         />
       )}
 
-      {top && v.textStyle === 'piped' && v.text && (
+      {v.tableBoard && v.textStyle === 'piped' && v.text && (
+        <text x={W / 2} y={groundY - 1} textAnchor="middle" fontFamily="Inter, Arial, sans-serif" fontWeight={900} fontSize={Math.min(12, ((layout[0]?.w ?? 120) * 1.4) / Math.max(8, v.text.length))} fill={bannerRed(v.accent)}>
+          {v.text.toUpperCase()}
+        </text>
+      )}
+
+      {top && !v.tableBoard && v.textStyle === 'piped' && v.text && (
         <text x={W / 2} y={top.y + top.h * 0.58} textAnchor="middle" fontFamily="Georgia, serif" fontStyle="italic" fontWeight={700} fontSize={Math.min(18, (top.w / Math.max(6, v.text.length)) * 1.7)} fill={v.accent}>
           {v.text}
         </text>
@@ -188,7 +203,7 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
         </g>
       )}
 
-      {top && v.motif && (() => {
+      {top && v.motif && !v.blockfigs && (() => {
         const withWords = v.textStyle === 'acrylic' && !!v.text;
         const size = Math.max(44, Math.min(78, top.w * (withWords ? 0.36 : 0.5)));
         const cx = withWords ? top.x + top.w * 0.8 : W / 2;
@@ -225,6 +240,89 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
             {v.text}
           </text>
         </g>
+      )}
+
+      {layout[0] && v.brickwall && (() => {
+        const b = layout[0];
+        const h = b.h * 0.42;
+        const rows = 4;
+        const rh = h / rows;
+        return (
+          <g data-part="brickwall">
+            <rect x={b.x - 1} y={b.y + b.h - h} width={b.w + 2} height={h} fill="#5a3a26" />
+            {Array.from({ length: rows }, (_, r) =>
+              Array.from({ length: Math.ceil(b.w / 16) + 1 }, (_, k) => {
+                const x = b.x - 1 + k * 16 - (r % 2 ? 8 : 0);
+                const x0 = Math.max(b.x - 1, x + 1);
+                const x1 = Math.min(b.x + b.w + 1, x + 15);
+                return x1 > x0 ? <rect key={`${r}-${k}`} x={x0} y={b.y + b.h - h + r * rh + 1} width={x1 - x0} height={rh - 2} rx={1} fill={(r + k) % 3 ? '#96603e' : '#a86e48'} /> : null;
+              }),
+            )}
+          </g>
+        );
+      })()}
+
+      {layout[0] && v.banner && (() => {
+        const b = layout[0];
+        const h = b.h * 0.3;
+        const w = Math.min(b.w * 0.8, Math.max(b.w * 0.45, v.banner.length * h * 0.62 + h));
+        const y = b.y + b.h * (v.brickwall ? 0.51 : 0.4);
+        const x = W / 2 - w / 2;
+        const red = bannerRed(v.accent);
+        return (
+          <g data-part="banner">
+            <path d={`M ${x + h * 0.25} ${y} L ${x + w + h * 0.1} ${y} L ${x + w - h * 0.25} ${y + h} L ${x - h * 0.1} ${y + h} Z`} fill={red} />
+            <text x={W / 2} y={y + h * 0.74} textAnchor="middle" fontFamily="Inter, Arial, sans-serif" fontWeight={900} fontSize={Math.min(h * 0.72, (w * 1.5) / Math.max(4, v.banner.length))} fill="#ffffff">
+              {v.banner}
+            </text>
+          </g>
+        );
+      })()}
+
+      {top && v.props && (
+        <g data-part="props">
+          <rect x={top.x + top.w * 0.3} y={top.y - 30} width={6} height={30} fill="#7a4e2d" />
+          {[[0, -36, 11], [-8, -30, 8], [8, -31, 9], [2, -44, 8]].map(([dx, dy, r], k) => (
+            <circle key={k} cx={top.x + top.w * 0.3 + 3 + dx!} cy={top.y + dy!} r={r} fill={k % 2 ? '#3f9d43' : '#35893a'} />
+          ))}
+          <path d={`M ${top.x + top.w * 0.56} ${top.y - 2} h 8 v -2 h -2 v -5 q 5 -1 5 -9 h -14 q 0 8 5 9 v 5 h -2 z`} fill="#d4a017" />
+        </g>
+      )}
+
+      {top && v.blockfigs && (() => {
+        const fig = (cx: number, by: number, hgt: number, suit: string, head: string, k: string) => {
+          const u = hgt / 10;
+          return (
+            <g key={k}>
+              <rect x={cx - 2 * u} y={by - 3.6 * u} width={1.9 * u} height={3.6 * u} fill={shade(suit, -0.15)} />
+              <rect x={cx + 0.1 * u} y={by - 3.6 * u} width={1.9 * u} height={3.6 * u} fill={shade(suit, -0.15)} />
+              <rect x={cx - 2 * u} y={by - 7.2 * u} width={4 * u} height={3.6 * u} fill={suit} />
+              <rect x={cx - 3.9 * u} y={by - 7.2 * u} width={1.8 * u} height={3.4 * u} fill={suit} />
+              <rect x={cx + 2.1 * u} y={by - 7.2 * u} width={1.8 * u} height={3.4 * u} fill={suit} />
+              <rect x={cx - 1.4 * u} y={by - 9.6 * u} width={2.8 * u} height={2.4 * u} rx={0.4 * u} fill={head} />
+              <circle cx={cx - 0.6 * u} cy={by - 8.6 * u} r={0.25 * u} fill="#1b1b1d" />
+              <circle cx={cx + 0.6 * u} cy={by - 8.6 * u} r={0.25 * u} fill="#1b1b1d" />
+            </g>
+          );
+        };
+        const hTop = Math.max(26, Math.min(44, top.w * 0.28));
+        const b = layout[0]!;
+        const hb = Math.max(28, b.h * 0.62);
+        return (
+          <g data-part="blockfigs">
+            {fig(top.x + top.w * 0.22, top.y + 2, hTop, '#7a5236', '#e9b98f', 't1')}
+            {fig(top.x + top.w * 0.45, top.y, hTop, '#d4a017', '#d4a017', 't2')}
+            {fig(top.x + top.w * 0.66, top.y + 2, hTop, '#8a5a32', '#e9b98f', 't3')}
+            {fig(b.x + 4, groundY - standH + 2, hb, '#232326', '#e9b98f', 'b1')}
+            {fig(b.x + b.w - 4, groundY - standH + 2, hb, '#6f7f8f', '#e9b98f', 'b2')}
+          </g>
+        );
+      })()}
+
+      {top && v.ageNumber && (
+        <text data-part="number" x={top.x + top.w * 0.86} y={top.y - 4} textAnchor="middle" fontFamily="Inter, Arial, sans-serif" fontWeight={900} fontSize={Math.max(26, Math.min(44, top.w * 0.3))} fill="#ffffff" stroke={bannerRed(v.accent)} strokeWidth={2.5} paintOrder="stroke">
+          {v.ageNumber}
+        </text>
       )}
 
       {top && v.figure && (

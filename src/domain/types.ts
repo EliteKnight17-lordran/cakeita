@@ -42,6 +42,11 @@ export type Visual =
   | 'fruits'
   | 'bricks'
   | 'print'
+  | 'brickwall'
+  | 'banner'
+  | 'blockfigs'
+  | 'number'
+  | 'props'
   | 'candles'
   | 'text'
   | 'acrylic'
@@ -149,6 +154,10 @@ export interface CakeLook {
   topperSpot?: TopperSpot;
   /** Things the customer brings themselves (free; the baker places them). */
   own?: OwnItem[];
+  /** Who the cake is for (shown on a name banner, when one is picked). */
+  name?: string;
+  /** Their age (shown on a number topper, when one is picked). */
+  age?: number;
 }
 
 export const FLOWER_STYLES = ['side', 'cascade', 'crown', 'scatter'] as const;
