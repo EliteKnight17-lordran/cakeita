@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { markDemoSeen } from '../lib/me';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { IconArrow, IconPlay, IconStore, IconWrench } from '../components/icons';
@@ -19,6 +20,7 @@ export default function Demo() {
   const db = useDb();
   const [cloud, setCloud] = useState(cloudEnabled());
   const [changed, setChanged] = useState(false);
+  useEffect(() => markDemoSeen(), []);
   const ownReal = !!db.bakery && !db.bakery.isSample;
 
   const openDemoBakery = () => {

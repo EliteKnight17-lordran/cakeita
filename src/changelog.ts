@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.12.0',
+    date: '2026-11-09',
+    en: [
+      'Shorter contact step: no "Anything else?" box (the description covers it) and no checkbox; one line explains what the baker will see when you send.',
+      'Your name fills in from your account, and this phone remembers your name and contact, so next time it is one "Sending as…" line with a Change link.',
+      'The "send it straight to the demo bakery" link only shows after the guided demo is opened.',
+    ],
+    tl: [
+      'Mas maikli ang contact: wala nang "May iba pa?" (sakop na ng description) at wala nang checkbox; isang linya na lang ang nagsasabi kung ano ang makikita ng baker pag ipinadala.',
+      'Kusang napupunan ang pangalan mula sa account mo, at tinatandaan ng phone ang pangalan at contact mo, kaya sa susunod isang "Ipapadala bilang…" na linya na lang na may Palitan.',
+      'Lumalabas lang ang "ipadala diretso sa demo bakery" pagkatapos buksan ang guided demo.',
+    ],
+  },
+  {
     version: '1.11.0',
     date: '2026-11-09',
     en: [

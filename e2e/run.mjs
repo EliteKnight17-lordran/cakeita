@@ -189,7 +189,7 @@ async function main() {
     check('choosing a baker first asks for name and contact', await customer.getByText(/Pakilagay ang pangalan/).isVisible());
     await customer.getByLabel('Pangalan mo').fill('Ana Test');
     await customer.getByLabel(/Messenger name o mobile/).fill('0917 123 4567');
-    await customer.locator('#consent').check();
+    check('sending explains what the baker will see (no extra checkbox)', await customer.locator('[data-consent-note]').isVisible());
     await axe(customer, 'customer contact');
     // Two-phone demo: send straight to the demo bakery and pass the link like Messenger would.
     await customer.locator('[data-send-direct]').click();
@@ -386,12 +386,13 @@ async function main() {
     // Phones that are done close first: their 3D cakes keep drawing in software GL and starve a slow CI machine.
     for (const done of [customer, elder, tester]) await done.context().close();
     const picker = await phone(browser, 'picker');
+    await picker.goto(`${BASE}#/demo`); // the guided demo unlocks the two-phone "send straight to the demo bakery" link
+    await picker.getByRole('link', { name: /Mag-order bilang customer/ }).waitFor();
     await picker.goto(`${BASE}#/b/sample`);
     await picker.getByLabel(/Ilarawan ang cake/).fill('Ube birthday cake with drip and sprinkles, 20 pax, budget 1200');
     await picker.locator('[data-quick-date]').nth(2).click();
     await picker.getByLabel('Pangalan mo').fill('Carla Test');
     await picker.getByLabel(/Messenger name o mobile/).fill('0917 222 3333');
-    await picker.locator('#consent').check();
     await picker.locator('[data-choose-baker]').click();
     await picker.getByRole('heading', { name: /Piliin kung sino/ }).waitFor();
     check('after designing, bakers are ranked with a best match', (await picker.locator('[data-best-match]').count()) === 1 && (await picker.locator('article').first().locator('[data-best-match]').count()) === 1);
@@ -441,6 +442,7 @@ async function main() {
 
     // Counter-offer over Messenger links (no cloud): baker counters, customer offers once, baker accepts.
     await picker.goto(`${BASE}#/b/sample`);
+    check('the phone remembers the customer: name and contact show as one line', await picker.locator('[data-me-summary]').getByText('Carla Test').isVisible());
     await picker.locator('[data-quick-date]').nth(1).click();
     await picker.locator('[data-send-direct]').click();
     await picker.getByRole('heading', { name: /Ipadala na sa baker/ }).waitFor();

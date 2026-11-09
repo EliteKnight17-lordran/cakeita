@@ -1,3 +1,5 @@
+import { useAccount } from '../cloud/account';
+import { demoSeen, readMe, saveMe } from '../lib/me';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { aiAvailable, analyzeRequest, type Reading } from '../ai/client';
@@ -108,7 +110,21 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const [busy, setBusy] = useState(false);
   const [building, setBuilding] = useState(false);
   const [buildKey, setBuildKey] = useState(0);
-  const [errors, setErrors] = useState<Partial<Record<'date' | 'name' | 'contact' | 'consent' | 'form', string>>>({});
+  // Name and contact: filled from this phone (or the signed-in account) and shown as one line.
+  const account = useAccount();
+  const [editMe, setEditMe] = useState(() => {
+    const me = readMe();
+    return !(me.name && me.contact);
+  });
+  const accountName = account.status === 'signed-in' ? account.user.name : '';
+  useEffect(() => {
+    const me = readMe();
+    const name = draft.name.trim() ? '' : me.name || accountName || '';
+    const contact = draft.contact.trim() ? '' : me.contact;
+    if (name || contact) update({ ...(name ? { name } : {}), ...(contact ? { contact } : {}) });
+    // Only when the page opens or the account loads; typing must not be overwritten.
+  }, [accountName]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [errors, setErrors] = useState<Partial<Record<'date' | 'name' | 'contact' | 'form', string>>>({});
   const [smartAvailable, setSmartAvailable] = useState(false);
   const [notifySub, setNotifySub] = useState<string | null>(null);
   const doneRef = useRef<HTMLHeadingElement>(null);
@@ -233,15 +249,18 @@ function Flow({ menu }: { menu: PublicMenu }) {
     else if (!anyBaker && isFullDate(menu, eventDate)) e.date = tx('The baker is fully booked that day. Please pick another date.', 'Puno na ang baker sa araw na iyon. Pumili ng ibang petsa.');
     if (!draft.name.trim()) e.name = tx('Please add your name.', 'Pakilagay ang pangalan mo.');
     if (draft.contact.trim().length < 5) e.contact = tx('Please add your Messenger name or mobile number.', 'Pakilagay ang Messenger name o mobile number mo.');
-    if (!draft.consent) e.consent = tx('Please tick the box so we can send this to the baker.', 'Pakicheck ang box para maipadala namin ito sa baker.');
     setErrors(e);
-    const first = (['date', 'name', 'contact', 'consent'] as const).find((k) => e[k]);
+    const first = (['date', 'name', 'contact'] as const).find((k) => e[k]);
     if (first) {
-      const el = document.getElementById(first === 'consent' ? 'consent' : first);
+      if (first !== 'date') setEditMe(true);
+      const el = document.getElementById(first);
       el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       el?.focus({ preventScroll: true });
       return false;
     }
+    // Tapping send after the notice in section 4 is the customer's consent to share these details.
+    if (!draft.consent) update({ consent: true });
+    saveMe({ name: draft.name, contact: draft.contact });
     return true;
   };
 
@@ -588,28 +607,33 @@ function Flow({ menu }: { menu: PublicMenu }) {
           <SectionTitle id="sec-contact" n="04">
             {tx('Where can the baker reach you?', 'Saan ka makokontak ng baker?')}
           </SectionTitle>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field id="name" label={tx('Your name', 'Pangalan mo')}>
-              <input id="name" className="input" autoComplete="name" maxLength={80} value={draft.name} aria-invalid={!!errors.name} onChange={(e) => update({ name: e.target.value })} />
-            </Field>
-            <Field id="contact" label={tx('Messenger name or mobile number', 'Messenger name o mobile number')}>
-              <input id="contact" className="input" autoComplete="tel" maxLength={120} value={draft.contact} aria-invalid={!!errors.contact} onChange={(e) => update({ contact: e.target.value })} />
-            </Field>
-          </div>
-          <Field id="note" label={tx('Anything else? (optional)', 'May iba pa? (optional)')}>
-            <input id="note" className="input" maxLength={300} value={draft.note} onChange={(e) => update({ note: e.target.value })} />
-          </Field>
-          <QuoteAlertToggle show={!!menu.owner} value={notifySub} onChange={setNotifySub} />
-          <label className="flex items-start gap-3 rounded-xl border border-line bg-[#fffdfa] p-3.5">
-            <input id="consent" type="checkbox" className="mt-0.5 h-6 w-6 shrink-0 accent-[#8c2246]" checked={draft.consent} onChange={(e) => update({ consent: e.target.checked })} />
-            <span>
-              {tx('Send my name, contact, request and photo (if any) to the baker. Free, no payment in Cakeita, and the photo is never saved.', 'Ipadala sa baker ang pangalan, contact, request at photo ko (kung meron). Libre, walang bayaran sa Cakeita, at hindi sine-save ang photo.')}
-            </span>
-          </label>
-          {(errors.name || errors.contact || errors.consent || errors.form) && (
-            <Notice tone="danger">{[errors.name, errors.contact, errors.consent, errors.form].filter(Boolean).join(' ')}</Notice>
+          {!editMe && draft.name.trim() && draft.contact.trim() ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[#fffdfa] px-3.5 py-2" data-me-summary>
+              <p className="min-w-0 text-[0.95rem]">
+                <span className="text-ink-soft">{tx('Sending as', 'Ipapadala bilang')}</span> <strong>{draft.name}</strong> · {draft.contact}
+              </p>
+              <button type="button" className="link min-h-11 shrink-0 text-sm" onClick={() => setEditMe(true)}>
+                {tx('Change', 'Palitan')}
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field id="name" label={tx('Your name', 'Pangalan mo')}>
+                <input id="name" className="input" autoComplete="name" maxLength={80} value={draft.name} aria-invalid={!!errors.name} onChange={(e) => update({ name: e.target.value })} />
+              </Field>
+              <Field id="contact" label={tx('Messenger name or mobile number', 'Messenger name o mobile number')}>
+                <input id="contact" className="input" autoComplete="tel" maxLength={120} value={draft.contact} aria-invalid={!!errors.contact} onChange={(e) => update({ contact: e.target.value })} />
+              </Field>
+            </div>
           )}
-          {pickOnMap && (
+          <QuoteAlertToggle show={!!menu.owner} value={notifySub} onChange={setNotifySub} />
+          {(errors.name || errors.contact || errors.form) && (
+            <Notice tone="danger">{[errors.name, errors.contact, errors.form].filter(Boolean).join(' ')}</Notice>
+          )}
+          <p className="text-sm text-ink-soft" data-consent-note>
+            {tx('Sending shares your name, contact, request and photo (if any) with the baker. Free; no payment in Cakeita; the photo is never saved.', 'Kapag ipinadala, makikita ng baker ang pangalan, contact, request at photo mo (kung meron). Libre; walang bayaran sa Cakeita; hindi sine-save ang photo.')}
+          </p>
+          {pickOnMap && (demoSeen() || prefs.dev) && (
             <p className="text-center text-sm">
               <button type="button" className="min-h-11 text-ink-soft underline underline-offset-4" onClick={submit} disabled={!selection} data-send-direct>
                 {tx(`Or send it straight to ${menu.name}`, `O ipadala diretso sa ${menu.name}`)}
