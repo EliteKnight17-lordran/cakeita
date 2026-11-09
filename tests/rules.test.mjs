@@ -80,6 +80,21 @@ await t('cannot set someone else\'s alert phones', assertFails(setDoc(doc(ben, '
 await t('alert list size limited', assertFails(setDoc(doc(ana, 'push/anaUid0000001'), { subs: 'x'.repeat(8001), updatedAt: now })));
 await t('baker deletes own menu', assertSucceeds(deleteDoc(doc(ana, 'menus/ana-bakes'))));
 
+
+const fb = (extra = {}) => ({ kind: 'customer', part: 1, ref: 'r-123', answers: '{"count":"1"}', page: '/survey', lang: 'tl', createdAt: now, ...extra });
+await t('anyone can send a survey answer', assertSucceeds(setDoc(doc(anon, 'feedback/fb-abcdef123456'), fb())));
+await t('survey answer cannot be changed', assertFails(setDoc(doc(anon, 'feedback/fb-abcdef123456'), fb({ ref: 'r-999' }))));
+await t('survey answers are not public', assertFails(getDoc(doc(anon, 'feedback/fb-abcdef123456'))));
+await t('signed-in non-admins cannot read answers', assertFails(getDocs(collection(ben, 'feedback'))));
+await t('unknown kind rejected', assertFails(setDoc(doc(anon, 'feedback/fb-abcdef123457'), fb({ kind: 'spam' }))));
+await t('extra fields rejected', assertFails(setDoc(doc(anon, 'feedback/fb-abcdef123458'), fb({ email: 'x@y.z' }))));
+await t('oversized answers rejected', assertFails(setDoc(doc(anon, 'feedback/fb-abcdef123459'), fb({ answers: 'x'.repeat(4001) }))));
+await t('nobody can make themselves admin', assertFails(setDoc(doc(ben, 'admins/benUid0000001'), { ok: true })));
+await env.withSecurityRulesDisabled(async (ctx) => { await setDoc(doc(ctx.firestore(), 'admins/anaUid0000001'), { ok: true }); });
+await t('admin checks own admin flag', assertSucceeds(getDoc(doc(ana, 'admins/anaUid0000001'))));
+await t('admin reads answers', assertSucceeds(getDocs(collection(ana, 'feedback'))));
+await t('others cannot read admin list', assertFails(getDoc(doc(ben, 'admins/anaUid0000001'))));
+
 await env.cleanup();
 console.log(fails ? `${fails} rule checks FAILED` : 'all rule checks passed');
 process.exit(fails ? 1 : 0);

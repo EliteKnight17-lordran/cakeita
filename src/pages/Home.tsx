@@ -52,6 +52,11 @@ export default function Home() {
               {db.bakery ? tx('Open my bakery', 'Buksan ang bakery ko') : tx('Set up your bakery in 3 minutes', 'I-set up ang bakery mo sa 3 minuto')}
             </Link>
           </p>
+          <p className="text-sm text-ink-soft">
+            <Link to="/survey" className="font-semibold text-berry underline underline-offset-4" data-home-survey>
+              {tx('Help our pilot: 2-minute survey', 'Tumulong sa pilot: 2-minutong survey')}
+            </Link>
+          </p>
         </section>
 
         <div className="rise relative" style={{ ['--d' as string]: '120ms' }}>

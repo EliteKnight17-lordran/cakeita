@@ -108,6 +108,28 @@ service cloud.firestore {
         && stamp(request.resource.data.updatedAt);
     }
 
+    // Cakeita team members. Added by hand in the Firebase console (document id = their account id).
+    match /admins/{uid} {
+      allow get: if isUid(uid);
+      allow list, write: if false;
+    }
+
+    // Pilot survey answers and feedback. Anyone can send (no account needed); nobody can change
+    // or read them except Cakeita admins.
+    match /feedback/{id} {
+      allow create: if id.matches('^fb-[A-Za-z0-9]{8,40}$')
+        && request.resource.data.keys().hasOnly(['kind', 'part', 'ref', 'answers', 'page', 'lang', 'createdAt'])
+        && request.resource.data.kind in ['baker', 'customer', 'feedback']
+        && request.resource.data.part in [0, 1, 2]
+        && text(request.resource.data.ref, 40)
+        && text(request.resource.data.answers, 4000)
+        && text(request.resource.data.page, 120)
+        && text(request.resource.data.lang, 4)
+        && stamp(request.resource.data.createdAt);
+      allow read: if signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow update, delete: if false;
+    }
+
     // A customer's own "My cakes" list.
     match /users/{uid} {
       allow read, delete: if isUid(uid);

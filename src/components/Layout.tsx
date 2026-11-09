@@ -4,6 +4,7 @@ import { useAccount } from '../cloud/account';
 import { IconMenu, IconUser } from './icons';
 import { setPrefs, usePrefs, useTx } from '../lib/prefs';
 import { DevPanel } from './DevPanel';
+import { readSurvey } from '../pages/surveyState';
 
 export function Logo() {
   return (
@@ -37,6 +38,7 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
     { to: '/me', label: tx('My cakes', 'Mga cake ko') },
     { to: '/baker', label: tx('For bakers', 'Para sa baker') },
     { to: '/demo', label: 'Demo' },
+    { to: '/feedback', label: tx('Feedback', 'Feedback') },
   ];
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `inline-flex min-h-11 items-center rounded-lg px-3 text-[0.95rem] font-medium ${isActive ? 'text-berry' : 'text-ink hover:text-berry'}`;
@@ -121,15 +123,25 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
         )}
         {nav && <nav className="mx-auto max-w-3xl px-2 pb-2">{nav}</nav>}
       </header>
+      <SurveyNudge />
       <main id="main" className={`page-in mx-auto ${w} px-4 pb-28 pt-7 sm:pt-9`}>
         {children}
       </main>
-      <footer className="no-print mx-auto max-w-3xl px-4 pb-24 text-center text-sm text-ink-soft">
-        <p>
-          {tx('Cakeita never handles payments. Pay your baker directly.', 'Hindi humahawak ng bayad ang Cakeita. Sa baker ka mismo magbabayad.')}{' '}
-          <Link to="/about" className="underline">
-            {tx('About and privacy', 'Tungkol at privacy')}
+      <footer className="no-print mx-auto max-w-3xl space-y-2 px-4 pb-24 text-center text-sm text-ink-soft">
+        <p>{tx('Cakeita never handles payments. Pay your baker directly.', 'Hindi humahawak ng bayad ang Cakeita. Sa baker ka mismo magbabayad.')}</p>
+        <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          <Link to={`/feedback?from=${encodeURIComponent(loc.pathname)}`} className="inline-flex min-h-11 items-center underline" data-footer-feedback>
+            {tx('Feedback and help', 'Feedback at tulong')}
           </Link>
+          <Link to="/about" className="inline-flex min-h-11 items-center underline">
+            {tx('About', 'Tungkol')}
+          </Link>
+          <a href="./privacy.html" className="inline-flex min-h-11 items-center underline">
+            {tx('Privacy', 'Privacy')}
+          </a>
+          <a href="./terms.html" className="inline-flex min-h-11 items-center underline">
+            {tx('Terms', 'Terms')}
+          </a>
         </p>
       </footer>
       {prefs.dev && <DevPanel />}
@@ -155,5 +167,30 @@ export function TabNav({ tabs }: { tabs: Array<{ to: string; label: string; badg
         </li>
       ))}
     </ul>
+  );
+}
+
+/** After part 1 of the pilot survey, a small reminder to come back for part 2. */
+function SurveyNudge() {
+  const tx = useTx();
+  const loc = useLocation();
+  const [s, setS] = useState(() => readSurvey());
+  useEffect(() => {
+    const on = () => setS(readSurvey());
+    window.addEventListener('cakeita-survey', on);
+    window.addEventListener('storage', on);
+    return () => {
+      window.removeEventListener('cakeita-survey', on);
+      window.removeEventListener('storage', on);
+    };
+  }, []);
+  useEffect(() => setS(readSurvey()), [loc.pathname]);
+  if (!s || !s.done1 || s.done2 || loc.pathname.startsWith('/survey')) return null;
+  return (
+    <div className="no-print mx-auto flex max-w-3xl justify-center px-4 pt-3" data-survey-nudge>
+      <Link to="/survey?step=2" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white">
+        {tx('Done trying? Finish the survey (1 min)', 'Tapos na? Tapusin ang survey (1 min)')}
+      </Link>
+    </div>
   );
 }

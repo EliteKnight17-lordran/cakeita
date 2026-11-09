@@ -304,6 +304,44 @@ async function main() {
     await tester.goto(`${BASE}#/o/fake?q=zzzz`);
     check('tampered quote link shows a friendly error', await waitTrue(() => tester.getByText('Hindi mabuksan ang quote').isVisible()));
 
+    // Pilot survey: tap-only part 1, try the app, reminder to come back, part 2 (saved on the phone when offline).
+    await tester.goto(`${BASE}#/survey?role=customer`);
+    await tester.locator('[data-survey]').waitFor();
+    const pick = async (name) => { await tester.getByRole('button', { name, exact: true }).click(); await tester.waitForTimeout(350); };
+    await pick('2 hanggang 3');
+    await tester.getByRole('button', { name: 'Home baker sa Facebook o IG' }).click();
+    await tester.locator('[data-next]').click();
+    await tester.getByRole('button', { name: 'Matagal maghintay ng presyo' }).click();
+    await tester.getByRole('button', { name: 'Sobrang lampas sa budget ko' }).click();
+    await tester.locator('[data-next]').click();
+    await pick('Kinabukasan o mas matagal');
+    await pick('Oo');
+    check('survey part 1 takes only taps and leads to trying the app', await tester.locator('[data-try-link]').waitFor({ timeout: 8000 }).then(() => true, () => false));
+    check('survey answers wait on the phone when offline', await tester.getByText(/Naka-save sa phone na ito/).isVisible());
+    await tester.locator('[data-try-link]').click();
+    await tester.getByTestId('live-price').waitFor();
+    check('reminder to finish the survey shows while trying', await tester.locator('[data-survey-nudge]').isVisible());
+    await tester.locator('[data-survey-nudge] a').click();
+    await pick('Oo, malaki');
+    await pick('Kaunti');
+    await pick('Oo');
+    await tester.locator('[data-next]').click();
+    check('survey part 2 finishes with a share QR', await tester.locator('[data-survey-done] img').waitFor({ timeout: 8000 }).then(() => true, () => false));
+    const outbox = await tester.evaluate(() => JSON.parse(localStorage.getItem('cakeita.outbox.v1') || '[]'));
+    check('both survey parts are kept for sending, linked but anonymous', outbox.length === 2 && outbox[0].entry.ref === outbox[1].entry.ref && outbox[1].entry.answers.see3d === 'lot', JSON.stringify(outbox.map((o) => o.entry.part)));
+    await axe(tester, 'survey');
+    await tester.goto(`${BASE}#/near`);
+    await tester.locator('[data-footer-feedback]').click();
+    await tester.locator('[data-send-feedback]').click();
+    check('feedback asks what it is about first', await tester.getByRole('alert').isVisible());
+    await tester.getByRole('button', { name: 'May sira' }).click();
+    await tester.getByLabel('Message mo').fill('Hindi lumalabas ang mapa');
+    await tester.locator('[data-send-feedback]').click();
+    await tester.locator('[data-feedback-done]').waitFor();
+    const fbItem = (await tester.evaluate(() => JSON.parse(localStorage.getItem('cakeita.outbox.v1') || '[]'))).at(-1);
+    check('feedback from any page records where it came from', fbItem?.entry.kind === 'feedback' && fbItem.entry.page === '/near', fbItem?.entry.page);
+    await axe(tester, 'feedback');
+
     for (const p of [customer, baker, elder, tester]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
     await browser.close();
   } finally {

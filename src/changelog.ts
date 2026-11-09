@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.0',
+    date: '2026-11-09',
+    en: [
+      'Pilot survey (about 2 minutes, mostly taps) for bakers and customers: a few questions about ordering cakes today, then try Cakeita, then a few questions after.',
+      'Feedback and help on every page. Answers wait on the phone if there is no signal.',
+      'Terms of use, and a team-only results page with booth QR codes and a CSV download.',
+    ],
+    tl: [
+      'Pilot survey (mga 2 minuto, puro tap) para sa baker at customer: ilang tanong tungkol sa pag-order ng cake ngayon, subukan ang Cakeita, tapos ilang tanong pagkatapos.',
+      'Feedback at tulong sa bawat page. Naka-save muna sa phone kung walang signal.',
+      'Terms of use, at results page para sa team na may QR codes para sa booth at CSV download.',
+    ],
+  },
+  {
     version: '1.4.1',
     date: '2026-11-09',
     en: ['Demo tab: owners can make the phone alert keys right on their device, ready to paste into Vercel.'],

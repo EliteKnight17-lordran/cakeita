@@ -20,6 +20,9 @@ const Import = lazy(() => import('./pages/baker/Import'));
 const Account = lazy(() => import('./pages/Account'));
 const Demo = lazy(() => import('./pages/Demo'));
 const MyCakes = lazy(() => import('./pages/MyCakes'));
+const Survey = lazy(() => import('./pages/Survey'));
+const SurveyResults = lazy(() => import('./pages/SurveyResults'));
+const Feedback = lazy(() => import('./pages/Feedback'));
 
 function DevFlag() {
   const loc = useLocation();
@@ -62,6 +65,9 @@ export default function App() {
           <Route path="/me" element={<MyCakes />} />
           <Route path="/b/:slug" element={<CustomerFlow />} />
           <Route path="/near" element={<NearBakers />} />
+          <Route path="/survey" element={<Survey />} />
+          <Route path="/survey/results" element={<SurveyResults />} />
+          <Route path="/feedback" element={<Feedback />} />
           <Route path="/o/:id" element={<QuotePage />} />
           <Route path="/baker" element={<Inbox />} />
           <Route path="/baker/board" element={<Board />} />

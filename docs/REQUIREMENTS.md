@@ -55,6 +55,12 @@ Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quo
 - **B9** I can back up and restore my data.
 - **B10** I see insights: requests, conversion, time to quote, average order value, % below target, design mix.
 
+### Pilot (survey and feedback)
+- **P1** A baker or customer finishes part 1 of the survey (the problem today) in about a minute, mostly by tapping, without giving a name.
+- **P2** After part 1 they get a one-tap way to try Cakeita (and a QR for another phone), plus a reminder to come back for part 2.
+- **P3** Answers and feedback are sent to the cloud, or wait on the phone when offline. Only team admins can read them (results page with counts, CSV and booth QR codes).
+- **P4** Every page has "Feedback and help" in the footer.
+
 ### Elder / accessibility
 - **E1** A big-text toggle on every screen enlarges all text and tap targets.
 - **E2** All inputs have labels, all images have text alternatives, contrast meets WCAG AA, everything works with a keyboard and screen reader, reduced-motion is respected.

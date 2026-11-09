@@ -1,17 +1,17 @@
 # QA report
 
-**Build:** v1.4.0 · **Date:** 2026-11-08 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+**Build:** v1.5.0 · **Date:** 2026-11-09 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
 
 ## Results
 
 | Suite | Result |
 | --- | --- |
-| Unit tests (Vitest) | **190 / 190 passed** |
+| Unit tests (Vitest) | **197 / 197 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
-| End-to-end checks (4 phones) | **63 / 63 passed** |
-| Firestore security rules (emulator) | **42 / 42 passed** |
-| Accessibility (axe, 12 screens) | **0 serious or critical issues** |
+| End-to-end checks (4 phones) | **72 / 72 passed** |
+| Firestore security rules (emulator) | **54 / 54 passed** |
+| Accessibility (axe, 14 screens) | **0 serious or critical issues** |
 | JavaScript errors during e2e | 0 on all phones |
 | `npm audit` | 0 known vulnerabilities |
 | First load (gzip) | ≈ 128 KB; 3D engine ≈ 243 KB loaded on demand |
