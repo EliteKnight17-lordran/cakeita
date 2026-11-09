@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanAnswers, cleanFeedback, isComplete, QUESTIONS, tally, toCsv, type Entry } from './survey';
+import { cleanAnswers, cleanFeedback, dedupeEntries, isComplete, QUESTIONS, tally, toCsv, type Entry } from './survey';
 
 const entry = (over: Partial<Entry>): Entry => ({ kind: 'baker', part: 1, ref: 'r1', answers: {}, page: '/survey', lang: 'tl', createdAt: '2026-11-09T01:00:00Z', ...over });
 
@@ -55,5 +55,17 @@ describe('survey', () => {
     expect(cleanFeedback({ type: 'bug', message: '  map is blank ', contact: '' })).toEqual({ type: 'bug', message: 'map is blank' });
     expect(cleanFeedback({ type: 'bug', message: '   ' })).toBeNull();
     expect(cleanFeedback({ type: 'hack', message: 'x' })).toBeNull();
+  });
+});
+
+describe('dedupeEntries', () => {
+  const e = (ref: string, part: 1 | 2, at: string, gaveUp = 'yes', kind: 'customer' | 'feedback' = 'customer') => ({ kind, part: kind === 'feedback' ? (0 as const) : part, ref, answers: { gaveUp }, page: '/survey', lang: 'tl', createdAt: at });
+  it('keeps one answer set per person and part, the newest', () => {
+    const out = dedupeEntries([e('a', 1, '1', 'yes'), e('a', 1, '3', 'no'), e('a', 1, '2', 'yes'), e('a', 2, '4'), e('b', 1, '5')]);
+    expect(out).toHaveLength(3);
+    expect(out.find((x) => x.ref === 'a' && x.part === 1)?.answers.gaveUp).toBe('no');
+  });
+  it('never merges general feedback', () => {
+    expect(dedupeEntries([e('', 1, '1', 'x', 'feedback'), e('', 1, '2', 'y', 'feedback')])).toHaveLength(2);
   });
 });

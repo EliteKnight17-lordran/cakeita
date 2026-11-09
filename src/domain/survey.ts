@@ -234,6 +234,25 @@ export interface Entry {
   createdAt: string;
 }
 
+/**
+ * One answer set per person and part: keeps the newest when the same phone sent the same part
+ * more than once (repeat taps before v1.20). General feedback is kept as is.
+ */
+export function dedupeEntries(entries: Entry[]): Entry[] {
+  const latest = new Map<string, Entry>();
+  const other: Entry[] = [];
+  for (const e of entries) {
+    if (e.kind === 'feedback' || !e.ref) {
+      other.push(e);
+      continue;
+    }
+    const k = `${e.kind}|${e.part}|${e.ref}`;
+    const cur = latest.get(k);
+    if (!cur || e.createdAt >= cur.createdAt) latest.set(k, e);
+  }
+  return [...latest.values(), ...other];
+}
+
 export interface Tally {
   question: Question;
   total: number;

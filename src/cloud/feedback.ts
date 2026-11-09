@@ -48,18 +48,27 @@ async function put(id: string, e: Entry): Promise<void> {
   });
 }
 
+/**
+ * One id per survey person and part: a second send of the same answers (a repeat tap, or a slow
+ * send that also went to the outbox) is refused by the create-only rule instead of adding a row.
+ */
+export function surveyEntryId(ref: string, part: number): string {
+  return `fb-${ref.replace(/[^A-Za-z0-9]/g, '').slice(0, 30)}p${part}`;
+}
+
 /** 'sent' when it reached the cloud, 'saved' when it waits on this phone. */
-export async function sendEntry(e: Entry): Promise<'sent' | 'saved'> {
-  const id = newEntryId();
+export async function sendEntry(e: Entry, fixedId?: string): Promise<'sent' | 'saved'> {
+  const id = fixedId ?? newEntryId();
   if (cloudEnabled()) {
     try {
       await Promise.race([put(id, e), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))]);
       return 'sent';
-    } catch {
-      /* fall through to the outbox */
+    } catch (err) {
+      // Same person and part already arrived (create-only): nothing more to send.
+      if (fixedId && (err as { code?: string })?.code === 'permission-denied') return 'sent';
     }
   }
-  writeOutbox([...readOutbox(), { id, entry: e }]);
+  writeOutbox([...readOutbox().filter((p) => p.id !== id), { id, entry: e }]);
   return 'saved';
 }
 

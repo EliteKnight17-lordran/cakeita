@@ -13,6 +13,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.19.1',
+    date: '2026-11-09',
+    en: [
+      'Fix: tapping an answer again while the survey was sending saved the same answers more than once. Answers now lock while sending, and each person and part is saved once.',
+      'Survey results count each person once (repeat sends are merged), and a "Next person on this phone" button starts a fresh survey on a shared booth phone.',
+    ],
+    tl: [
+      'Ayos: kapag na-tap ulit ang sagot habang ipinapadala pa ang survey, paulit-ulit itong na-save. Naka-lock na ang mga sagot habang ipinapadala, at isang beses lang naise-save bawat tao at part.',
+      'Isang beses na lang binibilang ang bawat tao sa resulta (pinagsama ang paulit-ulit na padala), at may "Susunod na tao sa phone na ito" para sa phone na pinagpapasa-pasahan sa booth.',
+    ],
+  },
+  {
     version: '1.19.0',
     date: '2026-11-09',
     en: [

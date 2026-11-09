@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { QR } from '../components/ShareBox';
 import { Chip, Notice } from '../components/ui';
 import { cleanAnswers, isComplete, MAX_TEXT, QUESTIONS, type Answers, type Part, type Question, type Role } from '../domain/survey';
-import { flushOutbox, sendEntry } from '../cloud/feedback';
+import { flushOutbox, sendEntry, surveyEntryId } from '../cloud/feedback';
 import { newId } from '../data/store';
 import { usePrefs, useTx } from '../lib/prefs';
 import { readSurvey, saveSurvey, surveyUrl, TRY_LINK, type SurveyState } from './surveyState';
@@ -44,11 +44,20 @@ export default function Survey() {
   const q = part === 2 && !started2 ? undefined : qs[step];
   const L = (o: { en: string; tl: string }) => (lang === 'en' ? o.en : o.tl);
 
+  // Each person sends each part once: repeat taps (while sending, or just after) are ignored.
+  // They used to save the same answers again at the booth.
+  const busy = useRef(false);
+  const sentKey = useRef('');
+  const pickTimer = useRef<number | undefined>(undefined);
   const submit = async (final: Answers) => {
-    if (!st.role || !part) return;
+    if (!st.role || !part || busy.current || sentKey.current === `${st.ref}|${part}`) return;
+    busy.current = true;
+    sentKey.current = `${st.ref}|${part}`;
     setSending(true);
     const clean = cleanAnswers(st.role, part, final);
-    const r = await sendEntry({ kind: st.role, part, ref: st.ref, answers: clean, page: '/survey', lang, createdAt: new Date().toISOString() });
+    const r = await sendEntry({ kind: st.role, part, ref: st.ref, answers: clean, page: '/survey', lang, createdAt: new Date().toISOString() }, surveyEntryId(st.ref, part)).finally(() => {
+      busy.current = false;
+    });
     setSending(false);
     setSendNote(r === 'saved' ? tx('Saved on this phone. It will be sent when you are online.', 'Naka-save sa phone na ito. Ipapadala pag may internet na.') : '');
     setAnswers({});
@@ -62,10 +71,12 @@ export default function Survey() {
     else if (st.role && part && isComplete(st.role, part, a)) void submit(a);
   };
   const pickOne = (id: string) => {
-    if (!q) return;
+    if (!q || busy.current) return;
     const a = { ...answers, [q.id]: id };
     setAnswers(a);
-    window.setTimeout(() => next(a), 180);
+    // A second tap replaces the first instead of moving on twice.
+    window.clearTimeout(pickTimer.current);
+    pickTimer.current = window.setTimeout(() => next(a), 180);
   };
   const toggleMany = (id: string) => {
     if (!q) return;
@@ -114,7 +125,7 @@ export default function Survey() {
             <div className="h-2 w-full overflow-hidden rounded-full bg-berry-soft" role="progressbar" aria-label={tx('Survey progress', 'Progress ng survey')} aria-valuemin={0} aria-valuemax={qs.length} aria-valuenow={step + 1}>
               <div className="h-full rounded-full bg-berry transition-all" style={{ width: `${((step + 1) / qs.length) * 100}%` }} />
             </div>
-            <QuestionView q={q} answers={answers} L={L} onPick={pickOne} onToggle={toggleMany} onText={(v) => setAnswers({ ...answers, [q.id]: v })} />
+            <QuestionView q={q} answers={answers} L={L} busy={sending} onPick={pickOne} onToggle={toggleMany} onText={(v) => setAnswers({ ...answers, [q.id]: v })} />
             <div className="flex items-center justify-between gap-2">
               <button type="button" className="btn-ghost" onClick={() => (step > 0 ? setStep(step - 1) : part === 1 ? setSt((s) => ({ ...s, role: null })) : setStarted2(false))}>
                 {tx('Back', 'Bumalik')}
@@ -152,6 +163,25 @@ export default function Survey() {
                 {tx('Send more feedback', 'Magpadala pa ng feedback')}
               </Link>
             </div>
+            <button
+              type="button"
+              className="btn-ghost w-full"
+              onClick={() => {
+                setSt({ ref: newId('sv'), role: null, done1: false, done2: false });
+                setSendNote('');
+                setStarted2(false);
+                try {
+                  sessionStorage.removeItem('cakeita.survey.tryStart');
+                  sessionStorage.removeItem('cakeita.survey.prompted');
+                } catch {
+                  /* storage blocked */
+                }
+                window.scrollTo({ top: 0 });
+              }}
+              data-survey-next-person
+            >
+              {tx('Next person on this phone', 'Susunod na tao sa phone na ito')}
+            </button>
           </div>
         )}
       </div>
@@ -159,7 +189,7 @@ export default function Survey() {
   );
 }
 
-function QuestionView({ q, answers, L, onPick, onToggle, onText }: { q: Question; answers: Answers; L: (o: { en: string; tl: string }) => string; onPick: (id: string) => void; onToggle: (id: string) => void; onText: (v: string) => void }) {
+function QuestionView({ q, answers, L, busy, onPick, onToggle, onText }: { q: Question; answers: Answers; L: (o: { en: string; tl: string }) => string; busy: boolean; onPick: (id: string) => void; onToggle: (id: string) => void; onText: (v: string) => void }) {
   const tx = useTx();
   const v = answers[q.id];
   const id = `q-${q.id}`;
@@ -171,7 +201,7 @@ function QuestionView({ q, answers, L, onPick, onToggle, onText }: { q: Question
       {q.kind === 'one' && (
         <div className="grid gap-2">
           {q.choices!.map((ch) => (
-            <button key={ch.id} type="button" className="chip !justify-start !rounded-xl !px-4 !py-3 text-left text-base" aria-pressed={v === ch.id} onClick={() => onPick(ch.id)}>
+            <button key={ch.id} type="button" className="chip !justify-start !rounded-xl !px-4 !py-3 text-left text-base" aria-pressed={v === ch.id} disabled={busy} onClick={() => onPick(ch.id)}>
               {L(ch)}
             </button>
           ))}

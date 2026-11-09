@@ -5,7 +5,7 @@ import { QR } from '../components/ShareBox';
 import { Notice } from '../components/ui';
 import { startAccount, useAccount } from '../cloud/account';
 import { isAdmin, loadEntries } from '../cloud/feedback';
-import { FEEDBACK_TYPES, tally, toCsv, type Entry, type Part, type Role } from '../domain/survey';
+import { dedupeEntries, FEEDBACK_TYPES, tally, toCsv, type Entry, type Part, type Role } from '../domain/survey';
 import { useTx } from '../lib/prefs';
 import { surveyUrl } from './surveyState';
 
@@ -15,6 +15,7 @@ export default function SurveyResults() {
   const account = useAccount();
   const [admin, setAdmin] = useState<boolean | null>(null);
   const [entries, setEntries] = useState<Entry[] | null>(null);
+  const [dupes, setDupes] = useState(0);
   const [error, setError] = useState('');
   const uid = account.status === 'signed-in' ? account.user.uid : null;
 
@@ -25,7 +26,16 @@ export default function SurveyResults() {
     isAdmin(uid).then((ok) => {
       if (!alive) return;
       setAdmin(ok);
-      if (ok) loadEntries().then((e) => alive && setEntries(e)).catch((e: unknown) => alive && setError(String((e as Error)?.message || e)));
+      if (ok)
+        loadEntries()
+          .then((all) => {
+            if (!alive) return;
+            // Repeat taps saved the same person's answers more than once; count each person once.
+            const one = dedupeEntries(all);
+            setDupes(all.length - one.length);
+            setEntries(one);
+          })
+          .catch((e: unknown) => alive && setError(String((e as Error)?.message || e)));
     });
     return () => {
       alive = false;
@@ -84,6 +94,7 @@ export default function SurveyResults() {
         )}
         {error && <Notice tone="danger">{error}</Notice>}
         {admin && !entries && !error && <p className="text-ink-soft">{tx('Loading…', 'Naglo-load…')}</p>}
+        {entries && dupes > 0 && <p className="text-sm text-ink-soft" data-dupes>{tx(`${dupes} repeated sends from the same phone are counted once.`, `${dupes} na paulit-ulit na padala mula sa iisang phone ang binilang nang isa lang.`)}</p>}
         {entries && <Results entries={entries} onCsv={download} />}
       </div>
     </Layout>

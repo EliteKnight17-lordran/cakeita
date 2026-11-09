@@ -428,7 +428,9 @@ async function main() {
     await tester.getByRole('button', { name: 'Sobrang lampas sa budget ko' }).click();
     await tester.locator('[data-next]').click();
     await pick('Kinabukasan o mas matagal');
-    await pick('Oo');
+    // A double tap on the last answer must not save part 1 twice (it did at the booth).
+    await tester.getByRole('button', { name: 'Oo', exact: true }).dblclick();
+    await tester.waitForTimeout(350);
     check('survey part 1 takes only taps and leads to trying the app', await tester.locator('[data-survey-try]').waitFor({ timeout: 15000 }).then(() => true, () => false));
     check('survey answers wait on the phone when offline', await tester.getByText(/Naka-save sa phone na ito/).isVisible());
     const tryHere = tester.locator('[data-survey-try]');
@@ -460,7 +462,10 @@ async function main() {
     check('survey part 2 finishes with a share QR', await tester.locator('[data-survey-done] img').waitFor({ timeout: 8000 }).then(() => true, () => false));
     const outbox = await tester.evaluate(() => JSON.parse(localStorage.getItem('cakeita.outbox.v1') || '[]'));
     check('both survey parts are kept for sending, linked but anonymous', outbox.length === 2 && outbox[0].entry.ref === outbox[1].entry.ref && outbox[1].entry.answers.see3d === 'lot', JSON.stringify(outbox.map((o) => o.entry.part)));
+    check('a double tap saves each part once, under one id per person and part', /p1$/.test(outbox[0].id) && /p2$/.test(outbox[1].id), outbox.map((o) => o.id).join(' '));
     await axe(tester, 'survey');
+    await tester.locator('[data-survey-next-person]').click();
+    check('"next person" starts a fresh survey on a shared phone', await tester.locator('[data-role="customer"]').isVisible() && (await tester.evaluate((r) => JSON.parse(localStorage.getItem('cakeita.survey.v1') || 'null')?.ref !== r, outbox[0].entry.ref)));
     await tester.goto(`${BASE}#/near`);
     await tester.locator('[data-footer-feedback]').click();
     await tester.locator('[data-send-feedback]').click();
