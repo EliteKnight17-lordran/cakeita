@@ -49,12 +49,16 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
   }, [v.tiers, groundY]);
 
   const top = layout[layout.length - 1];
+  // Thumbnails: trim empty sky and sides (room is kept for the stand, toppers and flowers).
+  const cropY = crop && top ? Math.max(0, Math.floor(top.y - 80)) : 0;
+  const cropX = crop && layout[0] ? Math.max(0, Math.floor(layout[0].x - layout[0].w * 0.25 - 8)) : 0;
+  const viewBox = `${cropX} ${cropY} ${W - 2 * cropX} ${H - cropY}`;
   const rand = seeded(7);
   const sprinkleColors = ['#e0457b', '#4a7bd0', '#f5d34a', '#5fae6b', '#ffffff'];
   const frostEdge = shade(v.frosting, -0.12);
 
   return (
-    <svg ref={ref} viewBox={crop && top ? `0 ${Math.max(0, Math.floor(top.y - 80))} ${W} ${H - Math.max(0, Math.floor(top.y - 80))}` : `0 0 ${W} ${H}`} role="img" aria-label={title} className={className} xmlns="http://www.w3.org/2000/svg">
+    <svg ref={ref} viewBox={viewBox} role="img" aria-label={title} className={className} xmlns="http://www.w3.org/2000/svg">
       <title>{title}</title>
       <ellipse cx={W / 2} cy={groundY + 6} rx={(layout[0]?.w ?? 120) * 0.7} ry={8} fill="#000" opacity={0.08} />
       {/* stand */}

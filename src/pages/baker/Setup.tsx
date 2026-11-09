@@ -155,7 +155,7 @@ export default function Setup() {
                 <p className="text-sm font-semibold text-ink-soft">{tx('With these numbers, a plain 6" 2-layer buttercream cake is', 'Sa mga numerong ito, ang simpleng 6" 2-layer buttercream cake ay')}</p>
                 <p className="price">{formatPeso(preview.suggestedPrice)}</p>
                 <p className="text-sm">
-                  {tx('Cost', 'Gastos')} {formatPeso(preview.costTotal)} · {tx('margin', 'tubo')} {preview.marginPct}%
+                  {tx('Cost', 'Gastos')} {formatPeso(preview.costTotal)} · {tx('margin', 'tubo')} {Math.round(preview.marginPct * 10) / 10}%
                 </p>
               </div>
             )}

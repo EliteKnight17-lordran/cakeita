@@ -60,7 +60,7 @@ export function MiniCake({ target, visual, description, price }: { target: RefOb
         aria-label={tx('Show my cake', 'Ipakita ang cake ko')}
         className="no-print fixed bottom-24 right-3 z-30 flex flex-col items-center rounded-2xl border border-line bg-white p-1.5 shadow-[0_10px_28px_-12px_rgb(36_26_23/0.5)] transition hover:border-[#cdbdb0]"
       >
-        <Cake2D visual={visual} title={description} className="h-16 w-16" />
+        <Cake2D visual={visual} title={description} crop className="h-16 w-16" />
         <span className="px-1 pb-0.5 text-[0.7rem] font-semibold text-ink-soft">{tx('My cake', 'Cake ko')}</span>
       </button>
     );

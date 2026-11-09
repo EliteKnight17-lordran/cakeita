@@ -9,14 +9,14 @@ export function BakerShell({ children }: { children: ReactNode }) {
   const tx = useTx();
   if (!db.bakery) return <Setup />;
   const fresh = db.orders.filter((o) => o.status === 'new').length;
-  const toConfirm = db.orders.filter((o) => o.status === 'quoted').length;
   return (
     <Layout
       nav={
         <TabNav
           tabs={[
             { to: '/baker', label: tx('Requests', 'Requests'), badge: fresh },
-            { to: '/baker/board', label: tx('Orders', 'Orders'), badge: toConfirm },
+            // No badge here: quotes waiting on the customer are listed under Requests, not Orders.
+            { to: '/baker/board', label: tx('Orders', 'Orders') },
             { to: '/baker/menu', label: tx('Menu & prices', 'Menu at presyo') },
             { to: '/baker/insights', label: 'Insights' },
             { to: '/baker/share', label: tx('My link', 'Link ko') },

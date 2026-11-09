@@ -242,12 +242,12 @@ export default function NearBakers() {
 
         {/* The cake being compared */}
         <section className="card flex items-center gap-3" aria-label={tx('Your cake', 'Ang cake mo')}>
-          {visual && <Cake2D visual={visual} title={cakeText} className="h-20 w-24 shrink-0" />}
+          {visual && <Cake2D visual={visual} title={cakeText} crop className="h-20 w-24 shrink-0" />}
           <div className="min-w-0 flex-1">
             <p className="font-bold">{hasCake ? tx('Your cake', 'Ang cake mo') : tx('Example cake', 'Halimbawang cake')}</p>
             <p className="line-clamp-2 text-sm">{cakeText}</p>
             <p className="text-sm text-ink-soft">
-              {[cake.wants.servings ? `${cake.wants.servings} ${tx('people', 'tao')}` : '', cake.wants.budget != null ? `budget ${formatPeso(cake.wants.budget)}` : '', cake.eventDate].filter(Boolean).join(' · ')}
+              {[cake.wants.servings ? `${cake.wants.servings} ${tx('people', 'tao')}` : '', cake.wants.budget != null ? `budget ${formatPeso(cake.wants.budget)}` : '', cake.eventDate ? new Date(`${cake.eventDate}T00:00:00`).toLocaleDateString(prefs.lang === 'tl' ? 'fil-PH' : 'en-PH', { month: 'short', day: 'numeric' }) : ''].filter(Boolean).join(' · ')}
             </p>
           </div>
           <Link to={`/b/${origin.slug}`} className="btn-ghost shrink-0">

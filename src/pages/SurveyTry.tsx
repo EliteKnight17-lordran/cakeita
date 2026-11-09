@@ -87,7 +87,7 @@ function BakerTry({ onTried }: { onTried: () => void }) {
       <h2 className="text-xl">{tx('Try it here: a customer asks for a quote', 'Subukan dito: may nagpa-quote na customer')}</h2>
       <p className="rounded-2xl bg-[#f3eee8] p-3 text-[0.95rem]">“{message}”</p>
       <div className="flex items-center gap-3">
-        <Cake2D visual={visual} title={describeCake(visual, prefs.lang)} className="h-24 w-28 shrink-0" />
+        <Cake2D visual={visual} title={describeCake(visual, prefs.lang)} crop className="h-24 w-28 shrink-0" />
         <dl className="grid flex-1 grid-cols-[1fr_auto] gap-x-3 text-sm">
           <dt>{tx('Ingredients', 'Sangkap')}</dt>
           <dd className="text-right">{formatPeso(q.ingredientsTotal)}</dd>

@@ -78,12 +78,13 @@ export function currentCake(menu: PublicMenu, draft: Draft, today: Date, live?: 
   const allergies = readAllergies(allergyText);
   const asked: Wants = { ...wantsFrom(draft, hasText || draft.reading ? reading : null), ...(allergies.said.length ? { avoid: allergies } : {}) };
   // Decorations they added (or took off) by hand stay in every design, through budget changes.
-  const wants = wantsWithPicked(menu, asked, draft.handPicked);
+  const picked = wantsWithPicked(menu, asked, draft.handPicked);
   // Placement and things the customer brings are always their own choice, even when colors follow the message.
   const keep = { flowerStyle: draft.look.flowerStyle ?? hints?.flowerStyle ?? undefined, topperSpot: draft.look.topperSpot ?? hints?.topperSpot ?? undefined, own: draft.look.own };
   // Name and age are never picked by hand: they always follow what was typed (or the photo).
   const who = { name: readName(draft.description, reading.textOnCake) || undefined, age: (hasText ? reading.age : null) ?? undefined };
   const look = { ...(draft.lookTouched ? draft.look : { ...lookFromReading(hasText ? reading : null, occasion), ...keep }), ...who };
+  const wants: Wants = look.colors.length ? { ...picked, colored: true } : picked;
   const designs = buildDesigns(menu, wants);
   // Default pick: the tier they chose; if that tier isn't offered, the fullest design that still fits the budget.
   const fallback = [...designs.options].reverse().find((o) => !o.overBudget) ?? designs.options[0];

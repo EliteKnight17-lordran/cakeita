@@ -111,6 +111,7 @@ async function main() {
     // Real-product pages: Demo tab, My cakes, Account (cloud is off for test robots, so it says so).
     await customer.goto(`${BASE}#/demo`);
     check('demo tab offers the sample customer and bakery', await customer.getByRole('link', { name: /Mag-order bilang customer/ }).waitFor({ timeout: 10000 }).then(() => true, () => false));
+    check('presenter tools are folded away from visitors', !(await customer.getByRole('button', { name: /Buksan ang developer panel/ }).isVisible()));
     await axe(customer, 'demo tab');
     await customer.goto(`${BASE}#/me`);
     check('my cakes shows an empty state', await customer.getByText(/Wala pang request/).waitFor({ timeout: 10000 }).then(() => true, () => false));
@@ -204,7 +205,10 @@ async function main() {
     const requestButtons = customer.getByRole('button', { name: /^Mag-request kay/ });
     check('map lists bakers who can make it', (await requestButtons.count()) >= 1, `${await requestButtons.count()} bakers`);
     const pinPrices = await customer.locator('.leaflet-marker-icon .pin').allInnerTexts();
-    check('pins show the bakery name and a peso estimate', pinPrices.every((t) => /^\S.*\n₱[\d,]+$/.test(t.trim())), pinPrices.join(' | '));
+    check('pins show a peso estimate, with the bakery name where there is room', pinPrices.every((t) => /(^|\n)₱[\d,]+$/.test(t.trim())) && pinPrices.some((t) => /^\S.*\n₱[\d,]+$/.test(t.trim())), pinPrices.join(' | '));
+    const pinBoxes = await customer.locator('.leaflet-marker-icon .pin').evaluateAll((els) => els.filter((e) => e.querySelector('.pin-name')).map((e) => { const r = e.getBoundingClientRect(); return [r.left, r.right, r.top, r.bottom]; }));
+    const pileUp = pinBoxes.some((a, i) => pinBoxes.some((b, j) => j > i && a[0] < b[1] - 2 && a[1] > b[0] + 2 && a[2] < b[3] - 2 && a[3] > b[2] + 2));
+    check('pin names never pile on top of each other', !pileUp, `${pinBoxes.length} named pins`);
     await customer.locator('[data-filters] summary').click();
     await customer.getByRole('button', { name: 'Kahit gaano kalayo' }).click();
     await customer.getByLabel('Yung kaya lang gawin').uncheck();
@@ -290,6 +294,8 @@ async function main() {
     await axe(baker, 'baker menu');
     await shot(baker, '09-menu');
     await baker.goto(`${BASE}#/baker/insights`);
+    await baker.waitForTimeout(300);
+    check('phone: the open baker tab is scrolled into view', await baker.getByRole('link', { name: 'Insights' }).evaluate((el) => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= window.innerWidth; }));
     await axe(baker, 'baker insights');
     await shot(baker, '10-insights');
 

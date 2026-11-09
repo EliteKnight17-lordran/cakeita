@@ -1,5 +1,5 @@
 import { Layout } from '../components/Layout';
-import { CHANGELOG, APP_VERSION } from '../changelog';
+import { CHANGELOG, APP_VERSION, type Release as ReleaseT } from '../changelog';
 import { usePrefs, useTx } from '../lib/prefs';
 
 export default function About() {
@@ -22,7 +22,12 @@ export default function About() {
               'Sa Messenger nagko-quote ang mga home baker, paisa-isang palitan ng message. Madalas mas mahal ang inspo photo kaysa sa budget ng customer, at marami ang nagpe-presyo mula sa alaala, kaya tahimik na nauubos ang tubo kapag tumaas ang presyo ng sangkap.',
             )}
           </p>
-          <p className="text-sm text-ink-soft">{tx('This is our hypothesis from talking to bakers. We are still collecting numbers to confirm it.', 'Ito ang hypothesis namin mula sa pakikipag-usap sa mga baker. Nangongolekta pa kami ng datos para patunayan ito.')}</p>
+          <p className="text-sm text-ink-soft">
+            {tx(
+              'Our pilot survey (Nov 2026, 28 people, a small sample): 9 of 15 customers have given up on a baker over a slow reply or the price, budget was the problem they named most, and 8 of 13 bakers say 3 to 5 of every 10 people they quote stop replying.',
+              'Pilot survey namin (Nov 2026, 28 tao, maliit na sample): 9 sa 15 customer ang nag-give up na sa isang baker dahil sa bagal ng reply o sa presyo, budget ang pinakamadalas nilang problema, at sabi ng 8 sa 13 baker, 3 hanggang 5 sa bawat 10 binigyan nila ng presyo ang hindi na nagre-reply.',
+            )}
+          </p>
         </S>
         <S title={tx('How prices are made', 'Paano ginagawa ang presyo')}>
           <ul className="list-disc space-y-1 pl-5">
@@ -53,23 +58,40 @@ export default function About() {
           </ul>
         </S>
         <S title={tx('Update history', 'Mga update')}>
+          {/* The newest three; the rest fold away so the page stays short. */}
           <ol className="space-y-3" aria-label={tx('Update history', 'Mga update')}>
-            {CHANGELOG.map((r) => (
-              <li key={r.version}>
-                <h3 className="font-bold">
-                  v{r.version} <span className="font-normal text-sm text-ink-soft">· {r.date}</span>
-                </h3>
-                <ul className="list-disc space-y-1 pl-5">
-                  {(lang === 'tl' ? r.tl : r.en).map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              </li>
+            {CHANGELOG.slice(0, 3).map((r) => (
+              <Release key={r.version} r={r} lang={lang} />
             ))}
           </ol>
+          {CHANGELOG.length > 3 && (
+            <details className="rounded-xl border border-line p-3">
+              <summary className="min-h-11 cursor-pointer content-center font-semibold">{tx(`Older updates (${CHANGELOG.length - 3})`, `Mga lumang update (${CHANGELOG.length - 3})`)}</summary>
+              <ol className="mt-2 space-y-3">
+                {CHANGELOG.slice(3).map((r) => (
+                  <Release key={r.version} r={r} lang={lang} />
+                ))}
+              </ol>
+            </details>
+          )}
         </S>
         <p className="text-center text-sm text-ink-soft">Build-Off 2026 · {tx('Prototype', 'Prototype')} · v{APP_VERSION}</p>
       </div>
     </Layout>
+  );
+}
+
+function Release({ r, lang }: { r: ReleaseT; lang: 'tl' | 'en' }) {
+  return (
+    <li>
+      <h3 className="font-bold">
+        v{r.version} <span className="font-normal text-sm text-ink-soft">· {r.date}</span>
+      </h3>
+      <ul className="list-disc space-y-1 pl-5">
+        {(lang === 'tl' ? r.tl : r.en).map((line) => (
+          <li key={line}>{line}</li>
+        ))}
+      </ul>
+    </li>
   );
 }

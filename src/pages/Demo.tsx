@@ -63,8 +63,12 @@ export default function Demo() {
         </div>
         {ownReal && <Notice tone="info">{tx('To keep your real bakery safe, the sample dashboard opens only on a phone without one. The customer demo works anywhere.', 'Para ligtas ang totoong bakery mo, bubukas lang ang sample dashboard sa phone na wala pang bakery.')}</Notice>}
 
-        <section className="card space-y-3" aria-labelledby="tools-h">
-          <h2 id="tools-h" className="flex items-center gap-2 text-xl"><IconWrench className="text-berry" /> {tx('Presenter tools', 'Para sa nagpe-present')}</h2>
+        {/* Folded: visitors at a public demo don't need these, presenters know where they are. */}
+        <details className="card" aria-labelledby="tools-h">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2">
+            <h2 id="tools-h" className="flex items-center gap-2 text-lg"><IconWrench className="text-berry" /> {tx('Presenter tools', 'Para sa nagpe-present')}</h2>
+          </summary>
+          <div className="mt-3 space-y-3">
           <ul className="list-disc space-y-1 pl-5 text-[0.95rem]">
             <li>{tx('Tap the Cakeita logo 5 times (or add ?dev=1) for the developer panel: jump to any step, fill sample customers, force 2D.', 'I-tap ang logo nang 5 beses (o ?dev=1) para sa developer panel.')}</li>
             <li>{tx('Offline mode keeps the demo fully on this device (no internet needed after the page loads).', 'Sa offline mode, nasa device lang ang demo (hindi kailangan ng internet).')}</li>
@@ -76,7 +80,8 @@ export default function Demo() {
           {changed && <p className="text-sm text-ink-soft">{tx('Reload the page to apply.', 'I-reload ang page.')}</p>}
           <button type="button" className="btn-ghost" onClick={() => { setPrefs({ dev: true }); }}>{tx('Open developer panel', 'Buksan ang developer panel')}</button>
           <AlertKeys />
-        </section>
+          </div>
+        </details>
       </div>
     </Layout>
   );

@@ -12,6 +12,7 @@ import { toVisual } from '../../domain/visual';
 import { demoOrders, orderFromMessage } from '../../data/seed';
 import { repo, useDb } from '../../data/store';
 import { usePrefs, useTx } from '../../lib/prefs';
+import { niceDate } from '../../lib/dates';
 import { BakerShell } from './BakerShell';
 
 export function StatusTag({ status }: { status: Order['status'] }) {
@@ -39,7 +40,7 @@ export function OrderRow({ order }: { order: Order }) {
   return (
     <li>
       <Link to={`/baker/order/${order.id}`} className="card flex items-center gap-3 hover:border-berry">
-        <Cake2D visual={v} title={describeCake(v, prefs.lang)} className="h-20 w-20 shrink-0" />
+        <Cake2D visual={v} title={describeCake(v, prefs.lang)} crop className="h-20 w-20 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate font-bold">{order.customer.name}</p>
@@ -48,7 +49,7 @@ export function OrderRow({ order }: { order: Order }) {
             {order.unavailable.length > 0 && <span className="tag bg-amber-bg text-amber-ink"><IconAlert size={13} /> {order.unavailable.length}</span>}
           </div>
           <p className="text-sm text-ink-soft">
-            {order.occasion} · {order.eventDate} · {order.servings} {tx('people', 'tao')}
+            {order.occasion} · {niceDate(order.eventDate, prefs.lang)} · {order.servings} {tx('people', 'tao')}
           </p>
           <p className="text-sm">
             {order.quote ? <strong>{formatPeso(order.quote.price)}</strong> : order.estimate ? `${tx('Est.', 'Tantya')} ${formatPeso(order.estimate)}` : ''}

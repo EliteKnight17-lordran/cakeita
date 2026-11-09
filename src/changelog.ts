@@ -13,6 +13,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.21.0',
+    date: '2026-11-09',
+    en: [
+      'Polish for the public demo: bakery names on the map no longer pile on top of each other (crowded pins show the price only until you zoom in), and cake previews on cards and lists are bigger.',
+      'A cake asked for in a color (like pink) is no longer swapped to semi-naked, which has no frosting to color, to fit the budget. What a design leaves out now also shows on the cake step, and the "show it complete" button only appears when it changes something.',
+      'Shorter screens: the accent color is folded, the presenter tools on Demo are folded, and About shows the latest 3 updates (older ones fold). About now quotes our pilot survey numbers.',
+      'Dates read like "Thu, Nov 12" instead of 2026-11-12, margins show one decimal, the header no longer jumps between pages on a laptop, the open baker tab scrolls into view on a phone, and the Orders tab no longer shows a count for quotes that are listed under Requests.',
+    ],
+    tl: [
+      'Ayos para sa public demo: hindi na nagpapatong-patong ang pangalan ng bakery sa mapa (presyo lang ang makikita sa siksik na pin hanggang i-zoom), at mas malaki na ang preview ng cake sa mga card at listahan.',
+      'Ang cake na may kulay (hal. pink) ay hindi na ginagawang semi-naked para pumasok sa budget, dahil walang frosting na makukulayan doon. Makikita na rin sa cake na hakbang kung ano ang tinanggal, at lalabas lang ang "ipakita nang kumpleto" kung may mababago ito.',
+      'Mas maiikling screen: naka-fold ang pangalawang kulay at ang tools para sa nagpe-present sa Demo, at 3 pinakabagong update lang ang nasa Tungkol (naka-fold ang luma). May numero na rin mula sa pilot survey namin sa Tungkol.',
+      'Mas madaling basahin ang petsa (hal. "Huw, Nob 12"), isang decimal na lang ang tubo, hindi na gumagalaw ang header sa laptop, lumilitaw na ang bukas na baker tab sa phone, at wala nang bilang ang Orders tab para sa mga quote na nasa Requests.',
+    ],
+  },
+  {
     version: '1.20.0',
     date: '2026-11-09',
     en: [

@@ -18,6 +18,7 @@ import { repo, useDb, type MyRequest } from '../data/store';
 import { decodePayload, linkErrorText } from '../lib/codec';
 import { confirmLink, offerLink, quoteCodeFrom } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
+import { niceDate } from '../lib/dates';
 
 export default function QuotePage() {
   const { id = '' } = useParams();
@@ -288,10 +289,10 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
               </li>
             )}
             <li>
-              <strong>{tx('For', 'Para sa')}:</strong> {quote.occasion}, {quote.eventDate}
+              <strong>{tx('For', 'Para sa')}:</strong> {quote.occasion}, {niceDate(quote.eventDate, prefs.lang)}
             </li>
             <li>
-              <strong>{tx('Valid until', 'Valid hanggang')}:</strong> {quote.validUntil}
+              <strong>{tx('Valid until', 'Valid hanggang')}:</strong> {niceDate(quote.validUntil, prefs.lang)}
             </li>
           </ul>
           {quote.note && (
@@ -331,7 +332,7 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
               title="Cake confirmation"
               contact={quote.bakery.contact}
               qrLabel="QR"
-              message={tx(`Hi ${quote.bakery.name}! I confirm my cake for ${quote.eventDate} at ${formatPeso(quote.price)}.`, `Hi ${quote.bakery.name}! Kinukumpirma ko po ang cake ko para sa ${quote.eventDate}, ${formatPeso(quote.price)}.`)}
+              message={tx(`Hi ${quote.bakery.name}! I confirm my cake for ${niceDate(quote.eventDate, 'en')} at ${formatPeso(quote.price)}.`, `Hi ${quote.bakery.name}! Kinukumpirma ko po ang cake ko para sa ${niceDate(quote.eventDate, 'tl')}, ${formatPeso(quote.price)}.`)}
             />
           </div>
         ) : offerPending && myOffer ? (

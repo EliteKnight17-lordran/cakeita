@@ -72,6 +72,41 @@ function FitAll({ spot, matches, radiusKm }: { spot: LatLng; matches: BakeryMatc
   return null;
 }
 
+/**
+ * Names on pins overlapped into an unreadable pile where bakers sit close together. Pins are
+ * placed best match first; a pin whose name would cover one already placed shows its price only
+ * (zoom in, or tap it, to see the name). Re-checked after every zoom.
+ */
+function Declutter({ matches, selected, onCompact }: { matches: BakeryMatch[]; selected: string | null; onCompact: (s: Set<string>) => void }) {
+  const map = useMap();
+  const run = () => {
+    const order = [...matches].sort((a, b) => Number(b.slug === selected) - Number(a.slug === selected));
+    const placed: Array<{ x0: number; x1: number; y0: number; y1: number }> = [];
+    const hits = (r: { x0: number; x1: number; y0: number; y1: number }) => placed.some((q) => r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0);
+    const compact = new Set<string>();
+    for (const m of order) {
+      const pt = map.latLngToContainerPoint([m.lat, m.lng]);
+      const price = m.estimate != null ? formatPeso(m.estimate) : '?';
+      const box = (w: number, h: number) => ({ x0: pt.x - w / 2, x1: pt.x + w / 2, y0: pt.y - 7 - h, y1: pt.y - 7 });
+      const full = box(Math.max(pinName(m.name).length * 5.6, price.length * 8.5) + 18, 36);
+      if (m.slug === selected || !hits(full)) placed.push(full);
+      else {
+        compact.add(m.slug);
+        placed.push(box(price.length * 8.5 + 20, 22));
+      }
+    }
+    onCompact(compact);
+  };
+  useMapEvents({ zoomend: run, resize: run });
+  const key = `${selected}|${matches.map((m) => `${m.slug}:${m.estimate}`).join(',')}`;
+  useEffect(() => {
+    // After FitAll has zoomed to the pins.
+    const t = window.setTimeout(run, 0);
+    return () => window.clearTimeout(t);
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
 function ClickToMove({ onMove }: { onMove: (p: LatLng) => void }) {
   useMapEvents({ click: (e) => onMove({ lat: e.latlng.lat, lng: e.latlng.lng }) });
   return null;
@@ -83,6 +118,7 @@ export default function BakeryMap({ spot, matches, selected, radiusKm, onSelect,
   const errors = useRef(0);
   const loaded = useRef(0);
   const tile = TILES[tileIdx]!;
+  const [compact, setCompact] = useState<Set<string>>(() => new Set());
 
   // Some networks and blockers make tiles hang instead of failing. If nothing has drawn after a
   // few seconds, try the next map provider, then say so (pins and the list still work).
@@ -104,13 +140,13 @@ export default function BakeryMap({ spot, matches, selected, radiusKm, onSelect,
           m.slug,
           L.divIcon({
             className: '',
-            html: `<span class="${pinClass(m, m.slug === selected)}"><span class="pin-name">${pinName(m.name)}</span>${m.estimate != null ? formatPeso(m.estimate) : '?'}</span>`,
+            html: `<span class="${pinClass(m, m.slug === selected)}">${compact.has(m.slug) ? '' : `<span class="pin-name">${pinName(m.name)}</span>`}${m.estimate != null ? formatPeso(m.estimate) : '?'}</span>`,
             iconSize: [0, 0],
             iconAnchor: [0, 0],
           }),
         ]),
       ),
-    [matches, selected],
+    [matches, selected, compact],
   );
 
   return (
@@ -140,6 +176,7 @@ export default function BakeryMap({ spot, matches, selected, radiusKm, onSelect,
         />
         <FitAll spot={spot} matches={matches} radiusKm={matches.length ? null : radiusKm} />
         <PanToSelected selected={selected} matches={matches} />
+        <Declutter matches={matches} selected={selected} onCompact={(c) => setCompact((old) => (old.size === c.size && [...c].every((x) => old.has(x)) ? old : c))} />
         <ClickToMove onMove={onMoveSpot} />
         {radiusKm != null && <Circle center={[spot.lat, spot.lng]} radius={radiusKm * 1000} pathOptions={{ color: '#8c2246', weight: 1.5, fillColor: '#f5e9ec', fillOpacity: 0.18, dashArray: '6 6' }} />}
         <Marker position={[spot.lat, spot.lng]} icon={youIcon} title={labels.you} alt={labels.you} keyboard={false}>

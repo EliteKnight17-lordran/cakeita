@@ -225,3 +225,17 @@ describe('designs built from the cake the customer made by hand', () => {
     expect(buildDesigns(sample, w).options.every((o) => o.selection.baseCakeId !== 'bento-4')).toBe(true);
   });
 });
+
+describe('colors they asked for', () => {
+  const w = W({ servings: 30, tiers: 2, flavorId: 'fl-ube', componentIds: ['dc-flowers'], textOnCake: 'Happy 7th Mia' });
+  it('Classic does not swap to semi-naked (no frosting to color) to fit the budget', () => {
+    const plain = buildDesigns(sample, { ...w, budget: 3000 }).options.find((o) => o.tier === 'classic');
+    expect(plain?.selection.componentIds).toContain('cv-naked');
+    const colored = buildDesigns(sample, { ...w, budget: 3000, colored: true }).options;
+    for (const o of colored) if (o.tier !== 'simple') expect(o.selection.componentIds).not.toContain('cv-naked');
+  });
+  it('with room in the budget, Classic keeps both the colors and the decorations', () => {
+    const c = buildDesigns(sample, { ...w, budget: 3500, colored: true }).options.find((o) => o.tier === 'classic')!;
+    expect(c.selection.componentIds).toEqual(expect.arrayContaining(['cv-buttercream', 'dc-flowers']));
+  });
+});

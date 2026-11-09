@@ -18,6 +18,7 @@ import { toVisual } from '../../domain/visual';
 import { repo, useDb } from '../../data/store';
 import { copyText, quoteLink } from '../../lib/links';
 import { usePrefs, useTx } from '../../lib/prefs';
+import { niceDate } from '../../lib/dates';
 import { Customizer } from '../CustomerFlow';
 import { celebrate } from '../../lib/celebrate';
 import { currentUid } from '../../cloud/account';
@@ -100,7 +101,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
   };
 
   const REASONS: Array<[string, string]> = [
-    [tx(`We're fully booked on ${order.eventDate}.`, `Puno na kami sa ${order.eventDate}.`), tx('Fully booked', 'Puno na')],
+    [tx(`We're fully booked on ${niceDate(order.eventDate, 'en')}.`, `Puno na kami sa ${niceDate(order.eventDate, 'tl')}.`), tx('Fully booked', 'Puno na')],
     [tx(`We need ${bakery.leadTimeDays} days' notice, so your date is too soon.`, `Kailangan namin ng ${bakery.leadTimeDays} araw na abiso, kaya masyadong maaga ang petsa mo.`), tx('Too soon', 'Masyadong maaga')],
     [tx("We don't make this kind of design.", 'Hindi namin ginagawa ang ganitong design.'), tx("Don't make this", 'Hindi namin ginagawa')],
     [tx("We can't make it work for this budget.", 'Hindi namin kaya sa budget na ito.'), tx('Budget too low', 'Kulang ang budget')],
@@ -109,8 +110,8 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
   const decline = async () => {
     const why = reason.trim();
     const msg = tx(
-      `Hi ${order.customer.name.split(' ')[0]}! Thank you for thinking of us. Sorry, we can't take this order for ${order.eventDate}.${why ? ` ${why}` : ''} We hope to bake for you next time!`,
-      `Hi ${order.customer.name.split(' ')[0]}! Salamat sa pag-message. Pasensya na, hindi namin kaya ang order para sa ${order.eventDate}.${why ? ` ${why}` : ''} Sana makapag-bake kami para sa iyo sa susunod!`,
+      `Hi ${order.customer.name.split(' ')[0]}! Thank you for thinking of us. Sorry, we can't take this order for ${niceDate(order.eventDate, 'en')}.${why ? ` ${why}` : ''} We hope to bake for you next time!`,
+      `Hi ${order.customer.name.split(' ')[0]}! Salamat sa pag-message. Pasensya na, hindi namin kaya ang order para sa ${niceDate(order.eventDate, 'tl')}.${why ? ` ${why}` : ''} Sana makapag-bake kami para sa iyo sa susunod!`,
     );
     const ok = await copyText(msg);
     repo.upsertOrder(declineOrder(order, why));
@@ -159,7 +160,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
         </div>
         <div>
           <dt className="text-sm text-ink-soft">{tx('Date', 'Petsa')}</dt>
-          <dd className="font-bold">{order.eventDate}</dd>
+          <dd className="font-bold">{niceDate(order.eventDate, prefs.lang)}</dd>
         </div>
         <div>
           <dt className="text-sm text-ink-soft">{tx('People', 'Tao')}</dt>
@@ -271,7 +272,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
             <input id="price" type="number" inputMode="numeric" min={0} step={50} className="input text-xl font-bold" placeholder={String(suggested)} value={priceText} onChange={(e) => setPriceText(e.target.value)} aria-describedby="price-hint" />
           </Field>
           <p aria-live="polite" className="font-semibold">
-            {tx('Your margin', 'Tubo mo')}: {ev.marginPct}% ({tx('target', 'target')} {bakery.targetMarginPct}%)
+            {tx('Your margin', 'Tubo mo')}: {Math.round(ev.marginPct * 10) / 10}% ({tx('target', 'target')} {bakery.targetMarginPct}%)
           </p>
           {ev.loss ? (
             <Notice tone="danger" title={tx('You will lose money', 'Lugi ka rito')}>
@@ -347,7 +348,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
                 <p className="text-sm text-ink-soft">{tx('Approved price', 'Approved na presyo')}</p>
                 <p className="price">{formatPeso(order.quote.price)}</p>
                 <p className="text-sm">
-                  {tx('Margin', 'Tubo')} {order.quote.marginPct}% · {tx('valid until', 'valid hanggang')} {order.quote.validUntil}
+                  {tx('Margin', 'Tubo')} {Math.round(order.quote.marginPct * 10) / 10}% · {tx('valid until', 'valid hanggang')} {niceDate(order.quote.validUntil, prefs.lang)}
                 </p>
               </div>
               {!confirmed && (
@@ -364,8 +365,8 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
                   title="Cake quote"
                   qrLabel={tx('QR code of the quote', 'QR code ng quote')}
                   message={tx(
-                    `Hi ${order.customer.name.split(' ')[0]}! Here's the quote for your cake: ${formatPeso(order.quote.price)}, valid until ${order.quote.validUntil}. See the design and confirm here:`,
-                    `Hi ${order.customer.name.split(' ')[0]}! Ito na po ang quote para sa cake mo: ${formatPeso(order.quote.price)}, valid hanggang ${order.quote.validUntil}. Tingnan ang design at i-confirm dito:`,
+                    `Hi ${order.customer.name.split(' ')[0]}! Here's the quote for your cake: ${formatPeso(order.quote.price)}, valid until ${niceDate(order.quote.validUntil, 'en')}. See the design and confirm here:`,
+                    `Hi ${order.customer.name.split(' ')[0]}! Ito na po ang quote para sa cake mo: ${formatPeso(order.quote.price)}, valid hanggang ${niceDate(order.quote.validUntil, 'tl')}. Tingnan ang design at i-confirm dito:`,
                   )}
                 />
                 <button
@@ -483,7 +484,7 @@ function OfferCard({ bakery, quoted, cost, offer, onAnswer }: { bakery: Bakery; 
         {tx(`Your quote was ${formatPeso(quoted)}.`, `${formatPeso(quoted)} ang quote mo.`)} {offer.note && <span>“{offer.note}”</span>}
       </p>
       <p className="font-semibold" aria-live="polite">
-        {tx('Your margin at their price', 'Tubo mo sa presyo nila')}: {ev.marginPct}% ({tx('target', 'target')} {bakery.targetMarginPct}%)
+        {tx('Your margin at their price', 'Tubo mo sa presyo nila')}: {Math.round(ev.marginPct * 10) / 10}% ({tx('target', 'target')} {bakery.targetMarginPct}%)
       </p>
       {ev.loss ? (
         <Notice tone="danger" title={tx('You will lose money', 'Lugi ka rito')}>{tx(`Below your cost of ${formatPeso(cost)}.`, `Mas mababa sa gastos mong ${formatPeso(cost)}.`)}</Notice>

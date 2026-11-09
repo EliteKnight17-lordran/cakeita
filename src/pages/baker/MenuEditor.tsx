@@ -202,7 +202,7 @@ export default function MenuEditor() {
                 </div>
                 {check.menuPrice != null && (
                   <p className={`mt-1 text-sm font-semibold ${check.belowTarget ? 'text-danger-ink' : 'text-ok-ink'}`}>
-                    {check.loss ? tx('You lose money at this price.', 'Lugi ka sa presyong ito.') : `${tx('Margin', 'Tubo')} ${check.marginPct}%`}
+                    {check.loss ? tx('You lose money at this price.', 'Lugi ka sa presyong ito.') : `${tx('Margin', 'Tubo')} ${Math.round(check.marginPct * 10) / 10}%`}
                   </p>
                 )}
               </li>

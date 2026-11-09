@@ -41,7 +41,7 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
     { to: '/feedback', label: tx('Feedback', 'Feedback') },
   ];
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `inline-flex min-h-11 items-center rounded-lg px-3 text-[0.95rem] font-medium ${isActive ? 'text-berry' : 'text-ink hover:text-berry'}`;
+    `inline-flex min-h-11 items-center whitespace-nowrap rounded-lg px-3 text-[0.95rem] font-medium ${isActive ? 'text-berry' : 'text-ink hover:text-berry'}`;
   const user = account.status === 'signed-in' ? account.user : null;
 
   // Hidden way to open the developer panel on a phone: tap the logo 5 times quickly.
@@ -65,7 +65,8 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
         {tx('Skip to content', 'Lumaktaw sa nilalaman')}
       </a>
       <header className="scallop sticky top-0 z-30 bg-[#fffdfa]">
-        <div className={`mx-auto flex ${w} items-center justify-between gap-2 px-4 py-2`}>
+        {/* The header keeps one width on every page, so it doesn't jump when the page width changes. */}
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2 px-4 py-2 lg:max-w-6xl">
           <Link to="/" onClick={onLogoTap} aria-label="Cakeita home">
             <Logo />
           </Link>
@@ -100,7 +101,7 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
             {account.status !== 'off' && (
               <Link to="/account" className="btn-ghost !px-2" aria-label={user ? tx(`Account: ${user.name || user.email}`, `Account: ${user.name || user.email}`) : tx('Sign in', 'Mag-sign in')}>
                 {user?.photo ? <img src={user.photo} alt="" className="h-7 w-7 rounded-full object-cover" referrerPolicy="no-referrer" /> : <IconUser />}
-                <span className="hidden text-sm sm:inline">{user ? tx('Account', 'Account') : tx('Sign in', 'Sign in')}</span>
+                <span className="hidden whitespace-nowrap text-sm sm:inline">{user ? tx('Account', 'Account') : tx('Sign in', 'Sign in')}</span>
               </Link>
             )}
             <button type="button" className="btn-ghost lg:hidden" aria-expanded={menuOpen} aria-controls="main-menu" aria-label={tx('Menu', 'Menu')} onClick={() => setMenuOpen((o) => !o)}>
@@ -151,8 +152,19 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
 }
 
 export function TabNav({ tabs }: { tabs: Array<{ to: string; label: string; badge?: number }> }) {
+  // On a phone the last tabs sit past the right edge: bring the open one into view.
+  const list = useRef<HTMLUListElement>(null);
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const ul = list.current;
+    const on = ul?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!ul || !on) return;
+    const r = on.getBoundingClientRect();
+    const u = ul.getBoundingClientRect();
+    if (r.left < u.left || r.right > u.right) ul.scrollLeft += r.left - u.left - (u.width - r.width) / 2;
+  }, [pathname]);
   return (
-    <ul className="flex gap-1 overflow-x-auto">
+    <ul ref={list} className="flex gap-1 overflow-x-auto">
       {tabs.map((t) => (
         <li key={t.to}>
           <NavLink

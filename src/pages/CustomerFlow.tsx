@@ -649,6 +649,24 @@ function Flow({ menu }: { menu: PublicMenu }) {
     </div>
   );
 
+  // What the shown design leaves out of what they asked for (to fit the budget), with a way to see it all.
+  const leftOutBlock = (
+    <>
+      {!isCustom && missing && missing.parts.length > 0 && (
+        <div data-left-out>
+          <Notice tone="info" title={wants.budget != null ? tx(`Left out to fit ${formatPeso(wants.budget)}`, `Tinanggal para pumasok sa ${formatPeso(wants.budget)}`) : tx('Not in this design', 'Wala sa design na ito')}>
+            <p>{missing.parts.join(', ')}</p>
+            {fullest && fullest.n < missing.parts.length && selection && selectionKey(fullest.o.selection) !== selectionKey(selection) && (
+              <button type="button" className="btn-secondary mt-2" onClick={() => update({ tier: fullest.o.tier, selection: null })}>
+                {fullest.n === 0 ? tx(`Show it with everything (${formatPeso(fullest.o.estimate)})`, `Ipakita nang kumpleto (${formatPeso(fullest.o.estimate)})`) : tx(`Show the closest match (${formatPeso(fullest.o.estimate)})`, `Ipakita ang pinakamalapit (${formatPeso(fullest.o.estimate)})`)}
+              </button>
+            )}
+          </Notice>
+        </div>
+      )}
+    </>
+  );
+
   const designsBlock = (
     <>
       {designs.budgetTooLow && wants.budget != null && (
@@ -667,18 +685,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
       {missing?.maxTiers && (
         <Notice tone="info">{tx(`${menu.name} makes cakes up to ${missing.maxTiers} tiers, so the designs use ${missing.maxTiers}.`, `Hanggang ${missing.maxTiers} tier lang ang ginagawa ng ${menu.name}, kaya ${missing.maxTiers} tier ang mga design.`)}</Notice>
       )}
-      {!isCustom && missing && missing.parts.length > 0 && (
-        <div data-left-out>
-          <Notice tone="info" title={wants.budget != null ? tx(`Left out to fit ${formatPeso(wants.budget)}`, `Tinanggal para pumasok sa ${formatPeso(wants.budget)}`) : tx('Not in this design', 'Wala sa design na ito')}>
-            <p>{missing.parts.join(', ')}</p>
-            {fullest && fullest.n < missing.parts.length && (
-              <button type="button" className="btn-secondary mt-2" onClick={() => update({ tier: fullest.o.tier, selection: null })}>
-                {fullest.n === 0 ? tx(`Show it with everything (${formatPeso(fullest.o.estimate)})`, `Ipakita nang kumpleto (${formatPeso(fullest.o.estimate)})`) : tx(`Show the closest match (${formatPeso(fullest.o.estimate)})`, `Ipakita ang pinakamalapit (${formatPeso(fullest.o.estimate)})`)}
-              </button>
-            )}
-          </Notice>
-        </div>
-      )}
+      {leftOutBlock}
       {draft.handPicked && (
         <p className="text-sm">
           <button type="button" className="min-h-11 text-berry underline" onClick={() => update({ selection: null, handPicked: null })} data-clear-hand>
@@ -805,6 +812,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
             {photoNotRead}
             {hasText && <ReadSummary reading={reading} menu={menu} compact />}
             {smartButton}
+            {leftOutBlock}
             <section className="card space-y-4" aria-label={tx('Size and allergies', 'Laki at allergy')}>
               {peopleBlock}
               {allergyBlock}
@@ -1178,8 +1186,11 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
         <h2 className="label">{tx('Colors', 'Kulay')}</h2>
         <p className="hint mb-2">{tx('Main', 'Pangunahin')}</p>
         {swatch(0)}
-        <p className="hint mb-2 mt-3">{tx('Accent', 'Pangalawa')}</p>
-        {swatch(1)}
+        {/* A second color is rarely needed: folded so the list stays short. */}
+        <details className="mt-3" open={!!look.colors[1] || undefined}>
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-ink-soft">{tx('Add an accent color (optional)', 'Magdagdag ng pangalawang kulay (optional)')}</summary>
+          <div className="mt-1">{swatch(1)}</div>
+        </details>
       </section>
       <section>
         <h2 className="label">{tx('Decorations', 'Dekorasyon')}</h2>
@@ -1187,7 +1198,7 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
           {extras.map((c) => (
             <Chip key={c.id} pressed={has(c.id)} onClick={() => toggle(c.id)}>
               {tx(c.name, c.nameTl ?? c.name)}
-              {prices && <span className="text-sm text-ink-soft">+{formatPeso(delta(c.id))}</span>}
+              {prices && <span className="whitespace-nowrap text-sm text-ink-soft">+{formatPeso(delta(c.id))}</span>}
             </Chip>
           ))}
         </div>
@@ -1259,7 +1270,7 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
                 onChange({ ...selection, componentIds: has(c!.id) ? ids : [...ids, c!.id] }, look);
               }}>
                 {tx(c!.name, c!.nameTl ?? c!.name)}
-                {prices && <span className="text-sm text-ink-soft">+{formatPeso(delta(c!.id))}</span>}
+                {prices && <span className="whitespace-nowrap text-sm text-ink-soft">+{formatPeso(delta(c!.id))}</span>}
               </Chip>
             ))}
           </div>
@@ -1286,7 +1297,7 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
             }}>
               +
             </button>
-            {prices && <span className="text-sm text-ink-soft">+{formatPeso(delta(candlePart.id))}</span>}
+            {prices && <span className="whitespace-nowrap text-sm text-ink-soft">+{formatPeso(delta(candlePart.id))}</span>}
           </div>
         </section>
       )}
@@ -1357,7 +1368,7 @@ function StandAndOwn({ menu, selection, look, onChange, prices, delta }: { menu:
           {stands.map((c) => (
             <Chip key={c.id} pressed={pickedStand === c.id} onClick={() => onChange({ ...selection, componentIds: [...noStands, c.id] }, setOwn('stand', false))}>
               {tx(c.name, c.nameTl ?? c.name)}
-              {prices && <span className="text-sm text-ink-soft">+{formatPeso(delta(c.id))}</span>}
+              {prices && <span className="whitespace-nowrap text-sm text-ink-soft">+{formatPeso(delta(c.id))}</span>}
             </Chip>
           ))}
           <Chip pressed={ownStand} onClick={() => onChange({ ...selection, componentIds: noStands }, setOwn('stand', !ownStand))}>

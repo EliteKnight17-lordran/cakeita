@@ -23,6 +23,8 @@ export interface Wants {
   baseCakeId?: string | null;
   /** What the customer can't eat: auto designs leave those parts out. */
   avoid?: Allergies;
+  /** They asked for frosting colors: Classic won't swap to a frosting that can't show them (semi-naked). */
+  colored?: boolean;
 }
 
 export interface DesignOption {
@@ -151,7 +153,10 @@ export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
   } else {
     const budget = wants.budget;
     const baseChoices = uniq([showBase.id, simpleBase.id]);
-    const coverChoices = uniq([wantedCovering, cheapCovering]);
+    // "Pink cake" on a semi-naked cake shows no pink: keep a frosting that shows their colors.
+    const allCovers = uniq([wantedCovering, cheapCovering]);
+    const showsColor = allCovers.filter((id) => id === wants.coveringId || partById.get(id)?.visual !== 'naked');
+    const coverChoices = wants.colored && showsColor.length ? showsColor : allCovers;
     let best: { sel: Selection; score: number; price: number } | null = null;
     for (const baseId of baseChoices) {
       for (const cov of coverChoices) {
