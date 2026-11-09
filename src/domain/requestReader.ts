@@ -96,6 +96,17 @@ export const TRADEMARKS: Array<[RegExp, string, string[]]> = [
   [/\b(pokemon|pikachu)\b/, 'yellow electric creature', ['yellow', 'red']],
   [/\bbarbie\b/, 'pink fashion doll', ['hot pink', 'white']],
   [/\b(minecraft)\b/, 'pixel blocks', ['green', 'brown']],
+  [/\b(lego|legos|ninjago|duplo)\b/, 'building blocks', ['yellow', 'red', 'blue']],
+  [/\b(hot wheels)\b/, 'race cars', ['orange', 'blue']],
+  [/\b(sonic)( the hedgehog)?\b/, 'speedy blue hedgehog', ['blue', 'red']],
+  [/\b(harry potter|hogwarts)\b/, 'wizard school', ['maroon', 'gold']],
+  [/\b(star wars|mandalorian|grogu|baby yoda)\b/, 'space adventure', ['black', 'silver']],
+  [/\b(baby shark|pinkfong)\b/, 'ocean shark family', ['yellow', 'baby blue']],
+  [/\b(among us)\b/, 'space crewmates', ['red', 'baby blue']],
+  [/\b(spongebob)\b/, 'undersea friends', ['yellow', 'baby blue']],
+  [/\b(unicorn academy|my little pony)\b/, 'magical pony', ['lavender', 'pink']],
+  [/\b(ms\.? rachel)\b/, 'preschool sing-along', ['pink', 'baby blue']],
+  [/\b(kpop demon hunters|demon hunters)\b/, 'K-pop concert', ['purple', 'black']],
   [/\broblox\b/, 'blocky game world', ['red', 'black']],
   [/\b(super mario|mario bros|mario)\b/, 'mushroom kingdom game', ['red', 'blue']],
   [/\b(stitch|lilo)\b/, 'blue space creature', ['blue', 'purple']],
@@ -337,9 +348,13 @@ export function findTrademark(text: string): { theme: string; colors: string[]; 
  * if they offer one: a generic printed cut-out, never the character itself.
  */
 export function addThemeTopper(componentIds: string[], theme: string, menu: PublicMenu): string[] {
+  const out = [...componentIds];
   const part = menu.components.find((c) => c.visual === 'motif');
-  if (!part || !themeMotif(theme) || componentIds.includes(part.id)) return componentIds;
-  return [...componentIds, part.id];
+  if (part && themeMotif(theme) && !out.includes(part.id)) out.push(part.id);
+  // A building-blocks theme also gets the baker's fondant blocks, when they make them.
+  const bricks = menu.components.find((c) => c.visual === 'bricks');
+  if (bricks && /building block|brick/i.test(theme) && !out.includes(bricks.id)) out.push(bricks.id);
+  return out;
 }
 
 /** Swap trademarked names in a free-text string for their generic theme. */

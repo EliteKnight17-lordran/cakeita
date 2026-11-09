@@ -40,6 +40,8 @@ export type Visual =
   | 'rosettes'
   | 'pearls'
   | 'fruits'
+  | 'bricks'
+  | 'print'
   | 'candles'
   | 'text'
   | 'acrylic'

@@ -117,6 +117,14 @@ describe('mergeReading', () => {
     expect(m.licensedNote).toMatch(/licensed/);
     expect(m.summary).toBe('');
   });
+  it('turns a toy-brick photo into the generic blocks theme with its parts', () => {
+    const rule = readRequest('', menu, TODAY);
+    const ai = aiReadingSchema.parse({ theme: 'LEGO', componentIds: ['dc-rosettes', 'dc-print'], colors: ['yellow', 'red'] });
+    const m = mergeReading(rule, ai, menu);
+    expect(m.theme).toBe('building blocks');
+    expect(m.componentIds).toEqual(expect.arrayContaining(['dc-rosettes', 'dc-print', 'tp-theme', 'dc-bricks']));
+    expect(m.licensedNote).toMatch(/licensed/);
+  });
 });
 
 describe('RateLimiter', () => {

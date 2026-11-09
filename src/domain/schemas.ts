@@ -15,7 +15,7 @@ const money = z.number().finite().min(0).max(1_000_000);
 
 export const visualEnum = z.enum([
   'sponge', 'buttercream', 'whipped', 'fondant', 'ganache', 'naked', 'drip', 'sprinkles', 'flowers', 'rosettes',
-  'pearls', 'fruits', 'candles', 'text', 'acrylic', 'figure', 'motif', 'gold', 'stand-gold', 'stand-wood',
+  'pearls', 'fruits', 'bricks', 'print', 'candles', 'text', 'acrylic', 'figure', 'motif', 'gold', 'stand-gold', 'stand-wood',
 ]);
 export const categoryEnum = z.enum(['flavor', 'covering', 'decoration', 'topper', 'finish', 'display']);
 
@@ -117,6 +117,9 @@ export const cakeVisualSchema = z.object({
   rosettes: z.boolean(),
   pearls: z.boolean(),
   fruits: z.boolean(),
+  // Added in v1.10: older quote links have neither.
+  bricks: z.boolean().optional().default(false).catch(false),
+  print: z.boolean().optional().default(false).catch(false),
   candles: z.number().int().min(0).max(10),
   text: shortText(40),
   textStyle: z.enum(['piped', 'acrylic']).nullable(),

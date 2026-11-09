@@ -15,6 +15,10 @@ export interface CakeVisual {
   rosettes: boolean;
   pearls: boolean;
   fruits: boolean;
+  /** Toy building bricks made of fondant, on top and around the base. */
+  bricks: boolean;
+  /** Edible printed picture on the front of the bottom tier (a plain picture frame, never a logo). */
+  print: boolean;
   candles: number;
   text: string;
   textStyle: 'piped' | 'acrylic' | null;
@@ -83,6 +87,8 @@ export function toVisual(menu: PublicMenu, sel: Selection, look: CakeLook): Cake
     rosettes: has('rosettes'),
     pearls: has('pearls'),
     fruits: has('fruits'),
+    bricks: has('bricks'),
+    print: has('print'),
     candles: has('candles') ? Math.max(1, Math.min(10, look.candles || 1)) : 0,
     text: textStyle ? look.textOnCake.slice(0, 32) : '',
     textStyle: textStyle && look.textOnCake.trim() ? textStyle : null,

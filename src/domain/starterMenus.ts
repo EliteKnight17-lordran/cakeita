@@ -86,6 +86,8 @@ export const SAMPLE_COMPONENTS: CakeComponent[] = [
   comp({ id: 'dc-rosettes', name: 'Buttercream rosettes', category: 'decoration', visual: 'rosettes', recipe: [r('butter', 90), r('icing-sugar', 140), r('gel-color', 1)], laborMinutes: 35, extraCost: 0, scales: true, keywords: ['rosettes', 'rosette', 'piped flowers', 'buttercream flowers', 'swirls', 'piping'] }),
   comp({ id: 'dc-flowers', name: 'Fresh flowers', nameTl: 'Totoong bulaklak', category: 'decoration', visual: 'flowers', recipe: [], laborMinutes: 20, extraCost: 220, scales: false, keywords: ['fresh flowers', 'flowers', 'flower', 'bulaklak', 'floral', 'roses', 'baby breath'] }),
   comp({ id: 'dc-pearls', name: 'Sugar pearls border', category: 'decoration', visual: 'pearls', recipe: [r('sprinkles', 25)], laborMinutes: 15, extraCost: 0, scales: true, keywords: ['pearls', 'pearl', 'perlas', 'dragees', 'beads'] }),
+  comp({ id: 'dc-bricks', name: 'Fondant building blocks', nameTl: 'Fondant na building blocks', category: 'decoration', visual: 'bricks', recipe: [r('fondant', 120), r('gel-color', 3)], laborMinutes: 35, extraCost: 0, scales: false, keywords: ['building blocks', 'toy blocks', 'fondant blocks', 'blocks', 'bricks', 'brick'] }),
+  comp({ id: 'dc-print', name: 'Edible print', nameTl: 'Edible print', category: 'decoration', visual: 'print', recipe: [], laborMinutes: 10, extraCost: 150, scales: false, keywords: ['edible print', 'edible image', 'edible photo', 'printed image', 'photo print', 'photo cake', 'picture cake', 'logo', 'print'] }),
   comp({ id: 'dc-fruits', name: 'Fresh fruits', nameTl: 'Prutas', category: 'decoration', visual: 'fruits', recipe: [], laborMinutes: 15, extraCost: 180, scales: false, keywords: ['fruits', 'fruit', 'prutas', 'strawberries', 'strawberry', 'berries', 'mango', 'mangga'] }),
 
   // Toppers
@@ -213,7 +215,7 @@ export function defaultPartIds(components: Array<{ id: string; category: string 
 }
 
 /** Parts added after launch. Saved bakeries from older versions get them on first load. */
-const ADDED_LATER = ['tp-theme', 'ds-gold', 'ds-wood'];
+const ADDED_LATER = ['tp-theme', 'ds-gold', 'ds-wood', 'dc-bricks', 'dc-print'];
 
 /**
  * Bring a saved bakery up to date with parts added in later versions. A real baker gets them

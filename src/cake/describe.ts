@@ -25,6 +25,8 @@ export function describeCake(v: CakeVisual, lang: 'tl' | 'en', colorNames: strin
     extras.push(tl ? f[1] : f[0]);
   }
   if (v.pearls) extras.push(tl ? 'pearls' : 'sugar pearls');
+  if (v.bricks) extras.push(tl ? 'fondant na building blocks' : 'fondant building blocks');
+  if (v.print) extras.push(tl ? 'edible print sa gilid' : 'an edible print on the side');
   if (v.fruits) extras.push(tl ? 'prutas' : 'fresh fruit');
   if (v.gold) extras.push(tl ? 'gold leaf' : 'gold leaf');
   if (v.figure) extras.push(tl ? 'figure sa ibabaw' : 'a figure on top');

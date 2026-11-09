@@ -13,6 +13,24 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.10.0',
+    date: '2026-11-09',
+    en: [
+      'Building-blocks cakes: "lego" (and Ninjago, Duplo) now becomes a generic building-blocks theme with fondant toy blocks on top and on the sides, plus the blocks topper. No brand names or logos are drawn.',
+      'New priced part: edible print, shown as a framed picture on the front of the cake (the baker prints the customer\'s own image).',
+      'Rosettes are now full piped swirls packed edge to edge, on the top edge and around the base, like a real ruffled border.',
+      'More brands map to generic themes (race cars, wizard school, space adventure, ocean shark family and others).',
+      'Smart reading of photos now picks rosette borders, edible prints and toy blocks.',
+    ],
+    tl: [
+      'Building-blocks na cake: ang "lego" (pati Ninjago, Duplo) ay generic na building-blocks theme na, may fondant na blocks sa ibabaw at gilid at blocks na topper. Walang brand o logo na iginuguhit.',
+      'Bagong part na may presyo: edible print, nakikita bilang naka-frame na larawan sa harap ng cake (ipi-print ng baker ang sariling larawan ng customer).',
+      'Buong swirl na ang rosettes, magkakadikit sa gilid ng ibabaw at sa paanan ng cake, parang totoong ruffled border.',
+      'Mas maraming brand ang nagiging generic na tema (race cars, wizard school, space adventure, ocean shark family at iba pa).',
+      'Sa smart reading ng photo, napipili na ang rosette border, edible print at toy blocks.',
+    ],
+  },
+  {
     version: '1.9.0',
     date: '2026-11-09',
     en: [

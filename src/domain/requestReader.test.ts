@@ -177,3 +177,18 @@ describe('readRequest (whole messages)', () => {
     }
   });
 });
+
+describe('building blocks theme', () => {
+  it('reads "lego" as a generic blocks theme with blocks, never the brand', () => {
+    const r = readRequest('Lego cake for my son, 15 pax', menu, TODAY);
+    expect(r.theme).toBe('building blocks');
+    expect(r.componentIds).toEqual(expect.arrayContaining(['tp-theme', 'dc-bricks']));
+    expect(r.licensedNote).toMatch(/lego/i);
+    expect(JSON.stringify(r.colors)).not.toMatch(/lego/i);
+  });
+  it('reads an edible print or a logo as the print part', () => {
+    expect(readRequest('vanilla cake with edible image of my daughter', menu, TODAY).componentIds).toContain('dc-print');
+    expect(readRequest('cake with our company logo', menu, TODAY).componentIds).toContain('dc-print');
+    expect(readRequest('cake with printed topper', menu, TODAY).componentIds).not.toContain('dc-print');
+  });
+});

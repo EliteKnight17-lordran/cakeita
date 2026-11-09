@@ -135,6 +135,18 @@ describe('saved data', () => {
     expect(cakeVisualSchema.parse({ ...v, motif: { key: 'mickey', main: '#000000', accent: '#000000' } }).motif).toBeNull();
   });
 
+  it('draws blocks and an edible print only when they are priced, and reads older links without them', () => {
+    const sel = (ids: string[]) => ({ baseCakeId: menu.baseCakes[0]!.id, componentIds: ['fl-vanilla', ...ids] });
+    const look = { colors: ['#f5d34a', '#d23a3a'], textOnCake: '', candles: 0 };
+    expect(toVisual(menu, sel([]), look)).toMatchObject({ bricks: false, print: false });
+    const v = toVisual(menu, sel(['dc-bricks', 'dc-print']), look);
+    expect(v).toMatchObject({ bricks: true, print: true });
+    const old: Partial<typeof v> = { ...v };
+    delete old.bricks;
+    delete old.print;
+    expect(cakeVisualSchema.parse(old)).toMatchObject({ bricks: false, print: false });
+  });
+
   it('adds the new part to bakeries saved before it existed (off for real bakers)', () => {
     const old = createBakeryFromStarter('home', { name: 'Old' }, TODAY);
     const stripped = { ...old, components: old.components.filter((c) => c.id !== 'tp-theme') };

@@ -124,6 +124,41 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
           ));
         })()}
 
+      {layout[0] && v.print && (() => {
+        const b = layout[0];
+        const w = Math.min(b.w * 0.42, b.h * 1.3);
+        const h = b.h * 0.62;
+        const x = W / 2 - w / 2;
+        const y = b.y + (b.h - h) / 2;
+        return (
+          <g>
+            <rect x={x} y={y} width={w} height={h} rx={3} fill={v.accent} />
+            <rect x={x + 4} y={y + 4} width={w - 8} height={h - 8} fill="#e4f0f8" />
+            <circle cx={x + w * 0.72} cy={y + h * 0.35} r={h * 0.11} fill="#f5c518" />
+            <path d={`M ${x + 4} ${y + h - 4} L ${x + w * 0.38} ${y + h * 0.42} L ${x + w * 0.6} ${y + h * 0.7} L ${x + w * 0.74} ${y + h * 0.55} L ${x + w - 4} ${y + h - 4} Z`} fill="#6fae74" />
+          </g>
+        );
+      })()}
+
+      {v.bricks && top && layout[0] && (() => {
+        const cols = ['#d62d20', '#1f5fbf', '#2e9e44', '#f5c518', '#f28c28'].filter((c) => c !== v.frosting.toLowerCase());
+        const brick = (x: number, y: number, w: number, k: number) => (
+          <g key={`${x}-${y}`}>
+            <rect x={x} y={y} width={w} height={9} rx={1.5} fill={cols[k % cols.length]} />
+            {Array.from({ length: Math.round(w / 8) }, (_, j) => (
+              <rect key={j} x={x + 2 + j * 8} y={y - 3} width={5} height={3} rx={1} fill={cols[k % cols.length]} />
+            ))}
+          </g>
+        );
+        const b = layout[0];
+        return (
+          <g>
+            {[0.18, 0.4, 0.62, 0.8].map((f, k) => brick(top.x + top.w * f - 8, top.y - 10, k % 2 ? 16 : 24, k))}
+            {[0.04, 0.84].flatMap((f, k) => [brick(b.x + b.w * f, b.y + b.h * 0.3, 16, k + 1), brick(b.x + b.w * f, b.y + b.h * 0.62, 16, k + 3)])}
+          </g>
+        );
+      })()}
+
       {top && v.fruits && (
         <g>
           {[0.25, 0.45, 0.65].map((f, k) => (

@@ -378,34 +378,34 @@ function BabysBreath({ position }: { position: [number, number, number] }) {
 }
 
 /** Piped rosettes: a spiral of icing that rises as it closes, like a real 1M tip swirl. */
-function Rosettes({ r, y, color }: { r: number; y: number; color: string }) {
-  const n = Math.max(6, Math.round(r * 10));
+/**
+ * Piped rosettes, packed edge to edge like a ruffled border. On top they sit just inside the
+ * edge; with `base` they wrap the foot of the cake on the board.
+ */
+function Rosettes({ r, y, color, base = false }: { r: number; y: number; color: string; base?: boolean }) {
+  const size = Math.max(0.055, Math.min(0.085, r * 0.11));
+  const ring = base ? r + size * 0.35 : r - size * 0.95;
+  const n = Math.max(8, Math.floor((2 * Math.PI * ring) / (size * 1.75)));
   const geo = useMemo(() => {
     const pts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 60; i++) {
-      const t = i / 60;
-      const ang = t * Math.PI * 2 * 2.3;
-      const rad = 0.058 * (1 - 0.8 * t);
-      pts.push(new THREE.Vector3(Math.cos(ang) * rad, 0.016 + 0.05 * t, Math.sin(ang) * rad));
+    for (let i = 0; i <= 70; i++) {
+      const t = i / 70;
+      const ang = t * Math.PI * 2 * 2.4;
+      const rad = size * (1 - 0.82 * t);
+      pts.push(new THREE.Vector3(Math.cos(ang) * rad, size * 0.25 + size * 0.85 * t, Math.sin(ang) * rad));
     }
-    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 90, 0.019, 8, false);
-  }, []);
-  const build = useMemo(
-    () => (i: number, o: THREE.Object3D) => {
-      const a = (i / n) * Math.PI * 2;
-      o.position.set(Math.cos(a) * (r - 0.08), y, Math.sin(a) * (r - 0.08));
-      o.rotation.set(0, a * 3, 0);
-    },
-    [n, r, y],
-  );
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 110, size * 0.36, 10, false);
+  }, [size]);
   return (
-    <instancedMesh args={[geo, undefined, n]} castShadow ref={(m) => {
+    <instancedMesh key={`${n}-${base}`} args={[geo, undefined, n]} castShadow ref={(m) => {
       if (!m) return;
       const o = new THREE.Object3D();
-      const rnd = seeded(2);
+      const rnd = seeded(base ? 5 : 2);
       for (let i = 0; i < n; i++) {
-        build(i, o);
-        o.rotation.y += rnd();
+        const a = (i / n) * Math.PI * 2;
+        o.position.set(Math.cos(a) * ring, y, Math.sin(a) * ring);
+        o.rotation.set(0, a * 3 + rnd(), 0);
+        o.scale.setScalar(0.92 + rnd() * 0.16);
         o.updateMatrix();
         m.setMatrixAt(i, o.matrix);
       }
@@ -413,6 +413,114 @@ function Rosettes({ r, y, color }: { r: number; y: number; color: string }) {
     }}>
       <meshPhysicalMaterial color={color} roughness={0.55} sheen={0.6} sheenColor={shade(color, 0.3)} />
     </instancedMesh>
+  );
+}
+
+const BRICK_COLORS = ['#d62d20', '#1f5fbf', '#2e9e44', '#f5c518', '#f28c28'];
+
+/** One toy building brick (fondant): a block with studs on top (2x2, or 2x4 when long). */
+function Brick({ color, long }: { color: string; long: boolean }) {
+  const w = long ? 0.13 : 0.068;
+  const xs = long ? [-0.048, -0.016, 0.016, 0.048] : [-0.017, 0.017];
+  return (
+    <group>
+      <mesh position={[0, 0.025, 0]} castShadow>
+        <boxGeometry args={[w, 0.05, 0.066]} />
+        <meshPhysicalMaterial color={color} roughness={0.35} clearcoat={0.4} clearcoatRoughness={0.3} />
+      </mesh>
+      {xs.flatMap((x) => [-0.016, 0.016].map((z) => (
+        <mesh key={`${x}${z}`} position={[x, 0.057, z]} castShadow>
+          <cylinderGeometry args={[0.012, 0.012, 0.014, 14]} />
+          <meshPhysicalMaterial color={color} roughness={0.35} clearcoat={0.4} />
+        </mesh>
+      )))}
+    </group>
+  );
+}
+
+/** Fondant building blocks: a few on top near the edge and a few stuck on the side of the bottom tier. */
+function Bricks({ top, topY, base, frosting }: { top: { r: number }; topY: number; base: { r: number; y: number; h: number }; frosting: string }) {
+  const colors = BRICK_COLORS.filter((c) => c.toLowerCase() !== frosting.toLowerCase());
+  // Bricks read as toys only when they are big enough next to the cake.
+  const scale = Math.max(1.1, Math.min(1.7, top.r * 2.1));
+  const items = useMemo(() => {
+    const rnd = seeded(33);
+    const onTop = Array.from({ length: 5 }, (_, i) => {
+      const a = (i / 5) * Math.PI * 2 + 0.35 + rnd() * 0.3;
+      const d = top.r * (0.48 + rnd() * 0.1);
+      return { pos: [Math.cos(a) * d, topY, Math.sin(a) * d] as [number, number, number], turn: Math.PI / 2 - a + rnd() * 0.8, tilt: 0, long: i % 2 === 0 };
+    });
+    // On the side: studs face outward, staggered heights, skipping the front where a print may go.
+    const onSide = Array.from({ length: 5 }, (_, i) => {
+      const a = Math.PI / 2 + 0.8 + (i / 4) * (Math.PI * 2 - 1.6);
+      const yy = base.y + base.h * (0.22 + ((i * 37) % 3) * 0.2);
+      return { pos: [Math.cos(a) * (base.r + 0.002), yy, Math.sin(a) * (base.r + 0.002)] as [number, number, number], turn: Math.PI / 2 - a, tilt: Math.PI / 2, long: i % 2 === 1 };
+    });
+    return [...onTop, ...onSide];
+  }, [top.r, topY, base.r, base.y, base.h]);
+  return (
+    <group>
+      {items.map((b, i) => (
+        <group key={i} position={b.pos} rotation={[0, b.turn, 0]}>
+          <group rotation={[b.tilt, 0, 0]} scale={scale}>
+            <Brick color={colors[i % colors.length]!} long={b.long} />
+          </group>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** A printed picture panel (canvas texture): a frame in the accent color around a plain "photo" sketch. */
+function usePrintTexture(accent: string): THREE.CanvasTexture | null {
+  return useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 192;
+    const g = c.getContext('2d');
+    if (!g) return null;
+    g.fillStyle = accent;
+    g.fillRect(0, 0, 256, 192);
+    g.fillStyle = '#ffffff';
+    g.fillRect(14, 14, 228, 164);
+    const sky = g.createLinearGradient(0, 22, 0, 170);
+    sky.addColorStop(0, '#cfe6f7');
+    sky.addColorStop(1, '#eef6fb');
+    g.fillStyle = sky;
+    g.fillRect(24, 24, 208, 144);
+    g.fillStyle = '#f5c518';
+    g.beginPath();
+    g.arc(184, 64, 20, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#6fae74';
+    g.beginPath();
+    g.moveTo(24, 168);
+    g.lineTo(96, 84);
+    g.lineTo(150, 140);
+    g.lineTo(184, 108);
+    g.lineTo(232, 168);
+    g.closePath();
+    g.fill();
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  }, [accent]);
+}
+
+/** Edible print on the front of the bottom tier, curved to the cake. */
+function EdiblePrint({ r, y, h, accent, low }: { r: number; y: number; h: number; accent: string; low: boolean }) {
+  const tex = usePrintTexture(accent);
+  const ph = Math.min(h * 0.62, r * 0.75);
+  const arc = Math.min(1.25, (ph * 1.33) / r);
+  const cy = low ? y + h * 0.36 : y + h * 0.5;
+  if (!tex) return null;
+  return (
+    <mesh position={[0, cy, 0]}>
+      <cylinderGeometry args={[r + 0.004, r + 0.004, ph, 40, 1, true, -arc / 2, arc]} />
+      <meshStandardMaterial map={tex} roughness={0.5} side={THREE.FrontSide} />
+    </mesh>
   );
 }
 
@@ -859,6 +967,9 @@ function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?
       {v.drip && <Drip r={top.r} y={topY} color={v.dripColor} />}
       {v.sprinkles && <Sprinkles r={top.r} y={topY + (v.drip ? 0.012 : 0)} />}
       {v.rosettes && <Rosettes r={top.r} y={topY} color={v.accent} />}
+      {v.rosettes && <Rosettes r={base.r} y={base.y} color={v.accent} base />}
+      {v.bricks && <Bricks top={top} topY={topY} base={base} frosting={v.frosting} />}
+      {v.print && <EdiblePrint r={base.r} y={base.y} h={base.h} accent={v.accent} low={v.drip && stack.length === 1} />}
       {v.fruits && <Fruits r={top.r} y={topY} />}
       {v.gold && <GoldLeaf r={top.r} y={top.y} h={top.h} />}
       {v.flowers && <Flowers v={v} top={top} topY={topY} stack={stack} />}
