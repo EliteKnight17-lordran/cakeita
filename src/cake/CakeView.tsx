@@ -140,9 +140,11 @@ interface Props {
   className?: string;
   showTools?: boolean;
   caption?: string;
+  /** Change this number to play the build animation (cake from a photo). */
+  buildKey?: number;
 }
 
-export function CakeView({ visual, description, interactive = true, className = '', showTools = true, caption = 'Concept only, final cake may look different. Made with Cakeita' }: Props) {
+export function CakeView({ visual, description, interactive = true, className = '', showTools = true, buildKey = 0, caption = 'Concept only, final cake may look different. Made with Cakeita' }: Props) {
   const prefs = usePrefs();
   const tx = useTx();
   const [spin, setSpin] = useState(0);
@@ -186,11 +188,11 @@ export function CakeView({ visual, description, interactive = true, className = 
         {use3D ? (
           <GLBoundary fallback={flat}>
             <Suspense fallback={<div className="h-full w-full animate-pulse">{flat}</div>}>
-              <Cake3D visual={visual} spin={spin} lite={lite} cut={cut} autoRotate={!cut && !lite && !touched && !idle && !reduceMotion} onReady={(c) => (canvasRef.current = c)} />
+              <Cake3D visual={visual} spin={spin} lite={lite} cut={cut} autoRotate={!cut && !lite && !touched && !idle && !reduceMotion} onReady={(c) => (canvasRef.current = c)} buildKey={reduceMotion ? 0 : buildKey} />
             </Suspense>
           </GLBoundary>
         ) : (
-          flat
+          <div key={buildKey} className={buildKey && !reduceMotion ? 'cake-build-2d h-full w-full' : 'h-full w-full'}>{flat}</div>
         )}
         <StageSparkles />
         {use3D && !touched && (

@@ -337,6 +337,7 @@ async function main() {
       return c.toDataURL('image/png').split(',')[1];
     });
     await tester.locator('#photo').setInputFiles({ name: 'inspo.png', mimeType: 'image/png', buffer: Buffer.from(inspoPng, 'base64') });
+    check('reading a photo shows the animated "building your cake" steps', await tester.locator('[data-photo-building]').waitFor({ timeout: 5000 }).then(() => true, () => false));
     const match = tester.locator('[data-photo-match]');
     check('inspo photo turns into the cake (colors read on the phone, no AI)', await match.waitFor({ timeout: 10000 }).then(() => true, () => false) && /lavender/.test(await match.innerText()) && /lavender/i.test((await tester.locator('figure [role="img"]').first().getAttribute('aria-label')) ?? ''));
     await axe(tester, 'cake from inspo photo');

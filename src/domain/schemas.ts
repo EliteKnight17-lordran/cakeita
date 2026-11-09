@@ -120,6 +120,7 @@ export const cakeVisualSchema = z.object({
   // Added in v1.10: older quote links have neither.
   bricks: z.boolean().optional().default(false).catch(false),
   print: z.boolean().optional().default(false).catch(false),
+  printText: shortText(40).optional().default('').catch(''),
   candles: z.number().int().min(0).max(10),
   text: shortText(40),
   textStyle: z.enum(['piped', 'acrylic']).nullable(),

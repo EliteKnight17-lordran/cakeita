@@ -394,8 +394,21 @@ function Rosettes({ r, y, color, base = false }: { r: number; y: number; color: 
       const rad = size * (1 - 0.82 * t);
       pts.push(new THREE.Vector3(Math.cos(ang) * rad, size * 0.25 + size * 0.85 * t, Math.sin(ang) * rad));
     }
-    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 110, size * 0.36, 10, false);
+    // Star-tip cross-section swept along the swirl: the ridges are what make piping look real.
+    const star = new THREE.Shape();
+    const points = 8;
+    for (let i = 0; i < points * 2; i++) {
+      const a = (i / (points * 2)) * Math.PI * 2;
+      const rr = size * (i % 2 ? 0.25 : 0.38);
+      if (i === 0) star.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      else star.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    star.closePath();
+    const geo = new THREE.ExtrudeGeometry(star, { extrudePath: new THREE.CatmullRomCurve3(pts), steps: 120, bevelEnabled: false });
+    geo.computeVertexNormals();
+    return geo;
   }, [size]);
+  useEffect(() => () => geo.dispose(), [geo]);
   return (
     <instancedMesh key={`${n}-${base}`} args={[geo, undefined, n]} castShadow ref={(m) => {
       if (!m) return;
@@ -439,14 +452,15 @@ function Brick({ color, long }: { color: string; long: boolean }) {
 }
 
 /** Fondant building blocks: a few on top near the edge and a few stuck on the side of the bottom tier. */
-function Bricks({ top, topY, base, frosting }: { top: { r: number }; topY: number; base: { r: number; y: number; h: number }; frosting: string }) {
+function Bricks({ top, topY, base, frosting, clearFront }: { top: { r: number }; topY: number; base: { r: number; y: number; h: number }; frosting: string; clearFront: boolean }) {
   const colors = BRICK_COLORS.filter((c) => c.toLowerCase() !== frosting.toLowerCase());
   // Bricks read as toys only when they are big enough next to the cake.
   const scale = Math.max(1.1, Math.min(1.7, top.r * 2.1));
   const items = useMemo(() => {
     const rnd = seeded(33);
+    // On top: all around, or only along the back when words are piped on the front.
     const onTop = Array.from({ length: 5 }, (_, i) => {
-      const a = (i / 5) * Math.PI * 2 + 0.35 + rnd() * 0.3;
+      const a = clearFront ? Math.PI + 0.3 + (i / 4) * (Math.PI - 0.6) + (rnd() - 0.5) * 0.15 : Math.PI / 2 + 1.0 + (i / 4) * (Math.PI * 2 - 2.0) + (rnd() - 0.5) * 0.2;
       const d = top.r * (0.48 + rnd() * 0.1);
       return { pos: [Math.cos(a) * d, topY, Math.sin(a) * d] as [number, number, number], turn: Math.PI / 2 - a + rnd() * 0.8, tilt: 0, long: i % 2 === 0 };
     });
@@ -457,7 +471,7 @@ function Bricks({ top, topY, base, frosting }: { top: { r: number }; topY: numbe
       return { pos: [Math.cos(a) * (base.r + 0.002), yy, Math.sin(a) * (base.r + 0.002)] as [number, number, number], turn: Math.PI / 2 - a, tilt: Math.PI / 2, long: i % 2 === 1 };
     });
     return [...onTop, ...onSide];
-  }, [top.r, topY, base.r, base.y, base.h]);
+  }, [top.r, topY, base.r, base.y, base.h, clearFront]);
   return (
     <group>
       {items.map((b, i) => (
@@ -471,55 +485,88 @@ function Bricks({ top, topY, base, frosting }: { top: { r: number }; topY: numbe
   );
 }
 
-/** A printed picture panel (canvas texture): a frame in the accent color around a plain "photo" sketch. */
-function usePrintTexture(accent: string): THREE.CanvasTexture | null {
+/**
+ * The edible print as a canvas texture: a frame in the accent color around the theme picture
+ * (the generic topper shape, never a brand) and the words on the cake, or a plain photo sketch
+ * when there is neither, since the baker prints the customer's own image.
+ */
+function usePrintTexture(accent: string, motif: CakeVisual['motif'], text: string): THREE.CanvasTexture | null {
   return useMemo(() => {
     if (typeof document === 'undefined') return null;
+    const W = 320;
+    const H = 240;
     const c = document.createElement('canvas');
-    c.width = 256;
-    c.height = 192;
+    c.width = W;
+    c.height = H;
     const g = c.getContext('2d');
     if (!g) return null;
     g.fillStyle = accent;
-    g.fillRect(0, 0, 256, 192);
+    g.fillRect(0, 0, W, H);
     g.fillStyle = '#ffffff';
-    g.fillRect(14, 14, 228, 164);
-    const sky = g.createLinearGradient(0, 22, 0, 170);
-    sky.addColorStop(0, '#cfe6f7');
-    sky.addColorStop(1, '#eef6fb');
-    g.fillStyle = sky;
-    g.fillRect(24, 24, 208, 144);
-    g.fillStyle = '#f5c518';
     g.beginPath();
-    g.arc(184, 64, 20, 0, Math.PI * 2);
+    g.roundRect(16, 16, W - 32, H - 32, 18);
     g.fill();
-    g.fillStyle = '#6fae74';
-    g.beginPath();
-    g.moveTo(24, 168);
-    g.lineTo(96, 84);
-    g.lineTo(150, 140);
-    g.lineTo(184, 108);
-    g.lineTo(232, 168);
-    g.closePath();
-    g.fill();
+    const words = text.trim().slice(0, 22);
+    if (motif && typeof Path2D !== 'undefined') {
+      const box = words ? 150 : 230;
+      g.save();
+      g.translate(W / 2 - box / 2, words ? 8 : (H - box) / 2);
+      g.scale(box / 100, box / 100);
+      for (const l of MOTIFS[motif.key].layers) {
+        g.fillStyle = motifFill(l.fill, motif);
+        g.fill(new Path2D(l.d));
+      }
+      g.restore();
+    } else if (!words) {
+      const sky = g.createLinearGradient(0, 30, 0, H - 30);
+      sky.addColorStop(0, '#cfe6f7');
+      sky.addColorStop(1, '#eef6fb');
+      g.fillStyle = sky;
+      g.fillRect(28, 28, W - 56, H - 56);
+      g.fillStyle = '#f5c518';
+      g.beginPath();
+      g.arc(W * 0.72, H * 0.34, 24, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#6fae74';
+      g.beginPath();
+      g.moveTo(28, H - 28);
+      g.lineTo(W * 0.38, H * 0.42);
+      g.lineTo(W * 0.58, H * 0.7);
+      g.lineTo(W * 0.72, H * 0.55);
+      g.lineTo(W - 28, H - 28);
+      g.closePath();
+      g.fill();
+    }
+    if (words) {
+      g.fillStyle = accent;
+      let fs = 46;
+      g.font = `800 ${fs}px Inter, system-ui, sans-serif`;
+      while (g.measureText(words).width > W - 64 && fs > 16) {
+        fs -= 2;
+        g.font = `800 ${fs}px Inter, system-ui, sans-serif`;
+      }
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(words, W / 2, motif ? H - 52 : H / 2);
+    }
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 4;
     return t;
-  }, [accent]);
+  }, [accent, motif, text]);
 }
 
 /** Edible print on the front of the bottom tier, curved to the cake. */
-function EdiblePrint({ r, y, h, accent, low }: { r: number; y: number; h: number; accent: string; low: boolean }) {
-  const tex = usePrintTexture(accent);
-  const ph = Math.min(h * 0.62, r * 0.75);
-  const arc = Math.min(1.25, (ph * 1.33) / r);
-  const cy = low ? y + h * 0.36 : y + h * 0.5;
+function EdiblePrint({ r, y, h, accent, low, motif, text }: { r: number; y: number; h: number; accent: string; low: boolean; motif: CakeVisual['motif']; text: string }) {
+  const tex = usePrintTexture(accent, motif, text);
+  const ph = Math.min(h * 0.7, r * 0.85);
+  const arc = Math.min(1.4, (ph * 1.33) / r);
+  const cy = low ? y + h * 0.38 : y + h * 0.5;
   if (!tex) return null;
   return (
     <mesh position={[0, cy, 0]}>
-      <cylinderGeometry args={[r + 0.004, r + 0.004, ph, 40, 1, true, -arc / 2, arc]} />
-      <meshStandardMaterial map={tex} roughness={0.5} side={THREE.FrontSide} />
+      <cylinderGeometry args={[r + 0.004, r + 0.004, ph, 48, 1, true, -arc / 2, arc]} />
+      <meshStandardMaterial map={tex} roughness={0.45} side={THREE.FrontSide} />
     </mesh>
   );
 }
@@ -882,12 +929,34 @@ function Flowers({ v, top, topY, stack }: { v: CakeVisual; top: Layer; topY: num
   );
 }
 
-function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?: boolean }) {
+/** How long the "building your cake" animation takes, in seconds. */
+const BUILD_SECONDS = 1.6;
+const easeOutBack = (t: number) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
+const easeOutBounce = (t: number) => {
+  const n = 7.5625;
+  const d = 2.75;
+  if (t < 1 / d) return n * t * t;
+  if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75;
+  if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375;
+  return n * (t -= 2.625 / d) * t + 0.984375;
+};
+
+function CakeModel({ v, spin, cut = false, buildKey = 0 }: { v: CakeVisual; spin: number; cut?: boolean; buildKey?: number }) {
   const group = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
   const target = useRef(spin);
   target.current = spin;
   const invalidate = useThree((st) => st.invalidate);
+  // Build animation: the tiers rise from the board, then the decorations drop on.
+  const deco = useRef<THREE.Group>(null);
+  const buildStart = useRef<number | null>(null);
+  useEffect(() => {
+    if (!buildKey) return;
+    buildStart.current = null; // set on the next frame, so the clock starts when drawing does
+    if (body.current) body.current.scale.y = 0.02;
+    if (deco.current) deco.current.visible = false;
+    invalidate();
+  }, [buildKey, invalidate]);
   // Clipping planes in world space that remove the wedge; they turn with the cake.
   const planes = useMemo(() => [new THREE.Plane(), new THREE.Plane()], []);
   const placePlanes = (turn: number) => {
@@ -914,6 +983,22 @@ function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?
   useFrame((state, dt) => {
     const g = group.current;
     if (!g) return;
+    if (buildKey && body.current && body.current.scale.y < 1 && buildStart.current === null) buildStart.current = state.clock.elapsedTime;
+    if (buildStart.current !== null && body.current && deco.current) {
+      const t = (state.clock.elapsedTime - buildStart.current) / BUILD_SECONDS;
+      const rise = Math.min(1, t / 0.5);
+      body.current.scale.y = Math.max(0.02, easeOutBack(rise));
+      const drop = Math.max(0, Math.min(1, (t - 0.45) / 0.55));
+      deco.current.visible = t > 0.45;
+      deco.current.position.y = (1 - easeOutBounce(drop)) * 0.6;
+      if (t >= 1) {
+        body.current.scale.y = 1;
+        deco.current.position.y = 0;
+        deco.current.visible = true;
+        buildStart.current = null;
+      }
+      state.invalidate();
+    }
     if (cut) placePlanes(g.rotation.y);
     const diff = target.current - g.rotation.y;
     if (Math.abs(diff) < 0.0005) return;
@@ -964,12 +1049,13 @@ function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?
         <Tier key={i} v={v} r={s.r} h={s.h} y={s.y} isTop={i === stack.length - 1} />
       ))}
 
+      <group ref={deco}>
       {v.drip && <Drip r={top.r} y={topY} color={v.dripColor} />}
       {v.sprinkles && <Sprinkles r={top.r} y={topY + (v.drip ? 0.012 : 0)} />}
       {v.rosettes && <Rosettes r={top.r} y={topY} color={v.accent} />}
       {v.rosettes && <Rosettes r={base.r} y={base.y} color={v.accent} base />}
-      {v.bricks && <Bricks top={top} topY={topY} base={base} frosting={v.frosting} />}
-      {v.print && <EdiblePrint r={base.r} y={base.y} h={base.h} accent={v.accent} low={v.drip && stack.length === 1} />}
+      {v.bricks && <Bricks top={top} topY={topY} base={base} frosting={v.frosting} clearFront={v.textStyle === 'piped' && !!v.text} />}
+      {v.print && <EdiblePrint r={base.r} y={base.y} h={base.h} accent={v.accent} low={v.drip && stack.length === 1} motif={v.motif} text={v.printText} />}
       {v.fruits && <Fruits r={top.r} y={topY} />}
       {v.gold && <GoldLeaf r={top.r} y={top.y} h={top.h} />}
       {v.flowers && <Flowers v={v} top={top} topY={topY} stack={stack} />}
@@ -982,6 +1068,17 @@ function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?
           position={acrylicTex ? [top.r * 0.5, topY, top.r * 0.05] : side ? [top.r * 0.42, topY, -top.r * 0.18] : [0, topY, -top.r * 0.3]}
         />
       )}
+      {/* A printed topper set comes with small picks too: they ring the sides of the top, facing out. */}
+      {v.motif &&
+        [1.2, 2.05, -2.05, -1.2].map((a, i) => (
+          <group key={`pick${i}`} rotation={[0, a, 0]}>
+            <MotifTopper
+              motif={i % 2 ? { ...v.motif!, main: v.motif!.accent, accent: v.motif!.main } : v.motif!}
+              size={Math.max(0.1, top.r * 0.32)}
+              position={[0, topY - 0.04, top.r * 0.66]}
+            />
+          </group>
+        ))}
 
       {pipedTex && (
         <mesh position={[0, topY + (v.drip ? 0.024 : 0.006), top.r * 0.15]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
@@ -1003,6 +1100,7 @@ function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?
           ))}
         </group>
       )}
+      </group>
       </group>
     </group>
   );
@@ -1052,9 +1150,11 @@ export interface Cake3DProps {
   onReady?: (canvas: HTMLCanvasElement) => void;
   /** Show the inside: a slice is cut out of the front. */
   cut?: boolean;
+  /** Change this number to play the "building your cake" animation (0 = never). */
+  buildKey?: number;
 }
 
-export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady, cut = false }: Cake3DProps) {
+export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady, cut = false, buildKey = 0 }: Cake3DProps) {
   const cakeH = visual.tiers.reduce((a, t) => a + t.h * K, 0);
   // Leave room for whatever stands on top (theme topper on its pick, acrylic words).
   const topR = (visual.tiers[visual.tiers.length - 1]!.d / 2) * K * 1.6;
@@ -1093,7 +1193,7 @@ export default function Cake3D({ visual, spin, autoRotate, lite = false, onReady
       <hemisphereLight args={['#fff6ea', '#d9c7b0', lite ? 0.7 : 0.35]} />
       <directionalLight position={[2.5, 4, 2]} intensity={1.35} castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0004} shadow-normalBias={0.02} />
       <directionalLight position={[-3, 2, -2]} intensity={0.35} color="#ffe1ec" />
-      <CakeModel v={visual} spin={spin} cut={cut} />
+      <CakeModel v={visual} spin={spin} cut={cut} buildKey={buildKey} />
       <Reframe dist={dist} lookY={lookY} />
       {!lowPower && <ContactShadows position={[0, -0.161, 0]} opacity={0.45} scale={maxR * 6} blur={2.6} far={1.2} />}
       <OrbitControls

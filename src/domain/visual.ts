@@ -19,6 +19,8 @@ export interface CakeVisual {
   bricks: boolean;
   /** Edible printed picture on the front of the bottom tier (a plain picture frame, never a logo). */
   print: boolean;
+  /** Words on the edible print, when there is no piped message part to carry them. */
+  printText: string;
   candles: number;
   text: string;
   textStyle: 'piped' | 'acrylic' | null;
@@ -89,6 +91,7 @@ export function toVisual(menu: PublicMenu, sel: Selection, look: CakeLook): Cake
     fruits: has('fruits'),
     bricks: has('bricks'),
     print: has('print'),
+    printText: has('print') && !textStyle ? look.textOnCake.trim().slice(0, 22) : '',
     candles: has('candles') ? Math.max(1, Math.min(10, look.candles || 1)) : 0,
     text: textStyle ? look.textOnCake.slice(0, 32) : '',
     textStyle: textStyle && look.textOnCake.trim() ? textStyle : null,

@@ -13,6 +13,24 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.11.0',
+    date: '2026-11-09',
+    en: [
+      'Rosettes are piped with a star tip now, with real ridges, so borders look like buttercream instead of smooth swirls.',
+      'A theme topper comes as a set: the big topper plus small picks around the top edge, like printed party toppers.',
+      'The edible print shows the theme picture and the words for the cake (when there is no piped message), framed in the accent color.',
+      'Adding an inspo photo shows a "building your cake" card with steps, then the 3D cake builds itself: the cake rises, then the decorations drop on.',
+      'Fixed: adding a photo no longer drops the decorations you typed.',
+    ],
+    tl: [
+      'Star tip na ang rosettes, may totoong guhit, kaya mukhang buttercream ang border at hindi makinis na swirl.',
+      'Set na ang theme topper: isang malaki at maliliit na pick sa gilid ng ibabaw, parang printed na party topper.',
+      'Makikita sa edible print ang larawan ng tema at ang sulat para sa cake (kapag walang piped na sulat), naka-frame sa accent na kulay.',
+      'Pag nagdagdag ng inspo photo, may "binubuo ang cake mo" na card na may mga hakbang, tapos kusang nabubuo ang 3D cake: tumataas ang cake, saka bumabagsak ang mga dekorasyon.',
+      'Naayos: hindi na nawawala ang mga dekorasyong tinype mo kapag nagdagdag ng photo.',
+    ],
+  },
+  {
     version: '1.10.0',
     date: '2026-11-09',
     en: [

@@ -106,6 +106,8 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const [customOpen, setCustomOpen] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [building, setBuilding] = useState(false);
+  const [buildKey, setBuildKey] = useState(0);
   const [errors, setErrors] = useState<Partial<Record<'date' | 'name' | 'contact' | 'consent' | 'form', string>>>({});
   const [smartAvailable, setSmartAvailable] = useState(false);
   const [notifySub, setNotifySub] = useState<string | null>(null);
@@ -180,10 +182,13 @@ function Flow({ menu }: { menu: PublicMenu }) {
    */
   const readPhoto = async (img: SmallImage) => {
     setBusy(true);
+    setBuilding(true);
     try {
+      // A short minimum so the "building your cake" steps can be seen even when reading is instant.
       const [ai, px] = await Promise.all([
         smartAvailable && !prefs.aiOff ? analyzeRequest('', menu, { image: { mimeType: img.mimeType, base64: img.base64 }, allowAi: true }).catch(() => null) : Promise.resolve(null),
         samplePhoto(img.dataUrl).catch(() => ({ center: [], border: [] })),
+        new Promise((res) => setTimeout(res, 1800)),
       ]);
       const usedAi = !!ai?.usedAi;
       const hints: PhotoHints = {
@@ -201,18 +206,22 @@ function Flow({ menu }: { menu: PublicMenu }) {
         summary: usedAi ? ai!.summary : '',
         usedAi,
       };
-      // Show the design that keeps the most of what the photo shows. With colors only, start
-      // from the plainest design so we don't add decorations the photo doesn't have.
+      // Show the design that keeps the most of what the photo (and anything typed) asks for,
+      // then the one with the fewest extras, so we don't add decorations nobody asked for.
       const next = { ...draft, photoHints: hints, selection: null, lookTouched: false };
       const c = currentCake(menu, next, today);
       // Parts a design adds that the photo doesn't show (flavor and frosting don't count).
       const extras = (ids: string[]) => ids.filter((id) => !c.wants.componentIds.includes(id) && !['flavor', 'covering'].includes(menu.components.find((x) => x.id === id)?.category ?? '')).length;
       const best = c.designs.options
-        .map((o) => ({ o, missing: usedAi ? leftOut(menu, c.wants, o.selection).parts.length : 0, extra: extras(o.selection.componentIds) }))
+        .map((o) => ({ o, missing: leftOut(menu, c.wants, o.selection).parts.length, extra: extras(o.selection.componentIds) }))
         .sort((a, b) => a.missing - b.missing || a.extra - b.extra || a.o.estimate - b.o.estimate)[0];
       update({ photoHints: hints, selection: null, lookTouched: false, ...(best ? { tier: best.o.tier } : {}) });
+      // Show the cake assembling itself.
+      setBuildKey((k) => k + 1);
+      requestAnimationFrame(() => cakeRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
     } finally {
       setBusy(false);
+      setBuilding(false);
     }
   };
 
@@ -340,7 +349,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
   // One 3D cake on the page: pinned beside the form on laptops, inside "Pick a design" on phones.
   const cakeStage = visual && (
     <div ref={cakeRef} className="scroll-mt-20">
-      <CakeView visual={visual} description={description} />
+      <CakeView visual={visual} description={description} buildKey={buildKey} />
     </div>
   );
 
@@ -415,8 +424,8 @@ function Flow({ menu }: { menu: PublicMenu }) {
               )}
             </div>
           </div>
-          {busy && photo && <p className="text-sm font-semibold text-ink-soft" aria-live="polite">{tx('Building your cake from the photo…', 'Ginagawa ang cake mula sa photo…')}</p>}
-          {draft.photoHints && !busy && (
+          {building && photo && <PhotoBuilding photo={photo.dataUrl} ai={smartAvailable && !prefs.aiOff} />}
+          {draft.photoHints && !building && (
             <PhotoMatch hints={draft.photoHints} menu={menu} hasPhoto={!!photo} onSee={() => cakeRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })} onRemove={() => { setPhoto(null); update({ photoHints: null }); }} />
           )}
           {smartAvailable && draft.description.trim() && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
@@ -1081,6 +1090,44 @@ function PhotoMatch({ hints, menu, hasPhoto, onSee, onRemove }: { hints: PhotoHi
             {tx('Stop using it', 'Huwag nang gamitin')}
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** While a photo is read: the photo with a light sweeping over it and the steps ticking along. */
+function PhotoBuilding({ photo, ai }: { photo: string; ai: boolean }) {
+  const tx = useTx();
+  const steps = [
+    tx('Reading the colors', 'Binabasa ang mga kulay'),
+    ai ? tx('Finding the decorations', 'Hinahanap ang mga dekorasyon') : tx('Matching the frosting', 'Itinutugma ang frosting'),
+    tx('Pricing the parts', 'Pinepresyuhan ang mga part'),
+    tx('Building your 3D cake', 'Binubuo ang 3D cake mo'),
+  ];
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setStep((s) => Math.min(steps.length - 1, s + 1)), ai ? 1100 : 450);
+    return () => window.clearInterval(t);
+  }, [steps.length, ai]);
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3" data-photo-building role="status" aria-live="polite">
+      <div className="photo-scan h-20 w-20 shrink-0 rounded-xl">
+        <img src={photo} alt="" className="h-full w-full object-cover" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">{tx('Building your cake from the photo…', 'Ginagawa ang cake mula sa photo…')}</p>
+        <ol className="mt-1 space-y-0.5 text-sm">
+          {steps.map((label, i) => (
+            <li key={label} className={`flex items-center gap-2 ${i > step ? 'text-ink-soft' : i === step ? 'font-semibold text-ink' : 'text-ink-soft'}`}>
+              {i < step ? (
+                <IconCheck size={14} className="shrink-0 text-ok-ink" />
+              ) : (
+                <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${i === step ? 'build-dot bg-berry' : 'bg-line'}`} aria-hidden="true" />
+              )}
+              {label}
+            </li>
+          ))}
+        </ol>
       </div>
     </div>
   );
