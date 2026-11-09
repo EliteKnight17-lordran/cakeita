@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { QR, ShareBox } from '../../components/ShareBox';
 import { Field, Notice } from '../../components/ui';
@@ -7,6 +7,12 @@ import { repo, useDb } from '../../data/store';
 import { copyText, menuLink } from '../../lib/links';
 import { useTx } from '../../lib/prefs';
 import { BakerShell } from './BakerShell';
+
+const BakeryMap = lazy(() => import('../near/BakeryMap'));
+/** Where the map opens before a baker sets a pin (Metro Manila). */
+const MANILA = { lat: 14.5995, lng: 120.9842 };
+/** Rounded to about 100 m so a home baker's exact house is never shown. */
+const round100m = (p: { lat: number; lng: number }) => ({ lat: Math.round(p.lat * 1000) / 1000, lng: Math.round(p.lng * 1000) / 1000 });
 
 export default function ShareMenu() {
   const db = useDb();
@@ -116,8 +122,7 @@ function ListOnMap() {
   const locate = () => {
     setStatus('');
     navigator.geolocation?.getCurrentPosition(
-      // Rounded to about 100 m so a home baker's exact house is never shown.
-      (p) => save({ lat: Math.round(p.coords.latitude * 1000) / 1000, lng: Math.round(p.coords.longitude * 1000) / 1000 }),
+      (p) => save(round100m({ lat: p.coords.latitude, lng: p.coords.longitude })),
       () => setStatus(tx('Location is off. Turn it on for this site, then try again.', 'Naka-off ang location. I-on para sa site na ito at subukan ulit.')),
       { timeout: 10_000 },
     );
@@ -135,8 +140,23 @@ function ListOnMap() {
       <Field id="map-km" label={tx('Delivery distance (km, 0 = pickup only)', 'Layo ng delivery (km, 0 = pickup lang)')}>
         <input id="map-km" type="number" inputMode="numeric" min={0} max={50} className="input" value={loc.deliveryKm} onChange={(e) => save({ deliveryKm: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })} />
       </Field>
+      <div data-baker-map>
+        <p className="label">{hasPin ? tx('Your pin (tap the map to move it)', 'Ang pin mo (i-tap ang mapa para ilipat)') : tx('Tap your area on the map, or use your location', 'I-tap ang area mo sa mapa, o gamitin ang location mo')}</p>
+        <Suspense fallback={<div className="cakeita-map grid place-items-center text-sm text-ink-soft">{tx('Loading map…', 'Nilo-load ang mapa…')}</div>}>
+          <BakeryMap
+            spot={{ ...(hasPin ? { lat: loc.lat, lng: loc.lng } : MANILA), label: hasPin ? b.name : tx('Tap your area', 'I-tap ang area mo') }}
+            matches={[]}
+            selected={null}
+            radiusKm={hasPin && loc.deliveryKm > 0 ? loc.deliveryKm : null}
+            onSelect={() => {}}
+            onMoveSpot={(p) => save(round100m(p))}
+            labels={{ you: b.name, tapHint: tx('Tap to place your pin', 'I-tap para ilagay ang pin'), offline: tx('Map pictures need internet. Use your location instead.', 'Kailangan ng internet ang mapa. Gamitin na lang ang location mo.') }}
+          />
+        </Suspense>
+        <p className="mt-1 text-sm text-ink-soft">{tx('Customers see your pin within about 100 m, never your exact house. The circle is your delivery distance.', 'Mga 100 m ang layo ng pin na makikita ng customer, hindi ang mismong bahay mo. Ang bilog ay ang layo ng delivery mo.')}</p>
+      </div>
       <button type="button" className="btn-ghost" onClick={locate}>
-        {hasPin ? <><IconCheck className="text-ok-ink" /> {tx('Pin set, about 100 m (update)', 'Naka-pin, mga 100 m (i-update)')}</> : <><IconPin /> {tx('Set my pin', 'I-set ang pin ko')}</>}
+        {hasPin ? <><IconCheck className="text-ok-ink" /> {tx('Pin set (use my location instead)', 'Naka-pin (gamitin ang location ko)')}</> : <><IconPin /> {tx('Use my location', 'Gamitin ang location ko')}</>}
       </button>
       <label className="flex items-center gap-3">
         <input type="checkbox" className="h-5 w-5 accent-[#8c2246]" checked={loc.listed} disabled={!hasPin} onChange={(e) => save({ listed: e.target.checked })} />

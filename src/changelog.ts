@@ -13,6 +13,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.18.0',
+    date: '2026-11-09',
+    en: [
+      'Signed-in bakers put themselves on the map: tap your area on a map (or use your location), see your delivery circle, then tick "Show my bakery on the map". Pins are rounded to about 100 m so a home address is never shown.',
+    ],
+    tl: [
+      'Ang naka-sign in na baker ang maglalagay ng sarili sa mapa: i-tap ang area mo sa mapa (o gamitin ang location mo), tingnan ang bilog ng delivery, tapos i-check ang "Ipakita ang bakery ko sa mapa". Mga 100 m ang layo ng pin kaya hindi lumalabas ang mismong bahay.',
+    ],
+  },
+  {
     version: '1.17.0',
     date: '2026-11-09',
     en: [

@@ -59,12 +59,14 @@ function PanToSelected({ selected, matches }: { selected: string | null; matches
 }
 
 /** Zoom to show your pin and the shown bakers whenever the list changes size (distance, filters). */
-function FitAll({ spot, matches }: { spot: LatLng; matches: BakeryMatch[] }) {
+function FitAll({ spot, matches, radiusKm }: { spot: LatLng; matches: BakeryMatch[]; radiusKm: number | null }) {
   const map = useMap();
-  const key = `${spot.lat},${spot.lng}|${matches.map((m) => m.slug).sort().join(',')}`;
+  const key = `${spot.lat},${spot.lng}|${radiusKm}|${matches.map((m) => m.slug).sort().join(',')}`;
   useEffect(() => {
     const pts: Array<[number, number]> = [[spot.lat, spot.lng], ...matches.map((m) => [m.lat, m.lng] as [number, number])];
-    if (pts.length < 2) map.setView([spot.lat, spot.lng], 13, { animate: false });
+    // Only your own pin (a baker placing theirs): show the whole delivery circle.
+    if (pts.length < 2 && radiusKm) map.fitBounds(L.latLng(spot.lat, spot.lng).toBounds(radiusKm * 2000), { padding: [16, 16], animate: false });
+    else if (pts.length < 2) map.setView([spot.lat, spot.lng], 13, { animate: false });
     else map.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 14, animate: false });
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
@@ -136,7 +138,7 @@ export default function BakeryMap({ spot, matches, selected, radiusKm, onSelect,
             },
           }}
         />
-        <FitAll spot={spot} matches={matches} />
+        <FitAll spot={spot} matches={matches} radiusKm={matches.length ? null : radiusKm} />
         <PanToSelected selected={selected} matches={matches} />
         <ClickToMove onMove={onMoveSpot} />
         {radiusKm != null && <Circle center={[spot.lat, spot.lng]} radius={radiusKm * 1000} pathOptions={{ color: '#8c2246', weight: 1.5, fillColor: '#f5e9ec', fillOpacity: 0.18, dashArray: '6 6' }} />}

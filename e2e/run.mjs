@@ -291,6 +291,28 @@ async function main() {
     await axe(baker, 'baker insights');
     await shot(baker, '10-insights');
 
+    // A signed-in baker places their own pin by tapping the map (cloud is off for robots, so fake the account id).
+    await baker.evaluate(() => {
+      const d = JSON.parse(localStorage.getItem('cakeita.db.v1'));
+      d.bakery.cloudUid = 'e2e-baker';
+      d.bakery.isSample = false;
+      localStorage.setItem('cakeita.db.v1', JSON.stringify(d));
+    });
+    await baker.goto(`${BASE}#/baker/share`);
+    await baker.reload();
+    const bakerMap = baker.locator('[data-baker-map] .leaflet-container');
+    await bakerMap.waitFor({ timeout: 15000 });
+    const listBox = baker.locator('section[aria-labelledby="map-h"] input[type="checkbox"]');
+    check('baker map: listing waits for a pin', await listBox.isDisabled());
+    await bakerMap.scrollIntoViewIfNeeded();
+    const mb = await bakerMap.boundingBox();
+    await baker.mouse.click(mb.x + mb.width * 0.7, mb.y + mb.height * 0.5);
+    const pinned = await waitTrue(async () => !!(await baker.evaluate(() => JSON.parse(localStorage.getItem('cakeita.db.v1')).bakery.location?.lat)));
+    check('baker map: tapping the map sets the pin (rounded to ~100 m)', pinned && (await baker.evaluate(() => { const l = JSON.parse(localStorage.getItem('cakeita.db.v1')).bakery.location; return Math.round(l.lat * 1000) === l.lat * 1000; })));
+    await listBox.check();
+    check('baker map: then they can list themselves', await listBox.isChecked());
+    await axe(baker, 'baker map listing');
+
     // ---------------- Elder ----------------
     const elder = await phone(browser, 'elder', { reducedMotion: 'reduce' });
     await elder.goto(`${BASE}#/b/sample`);
