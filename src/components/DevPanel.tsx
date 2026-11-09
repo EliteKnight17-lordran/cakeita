@@ -49,6 +49,7 @@ export function DevPanel() {
     writeDraft(menu.slug, {
       ...EMPTY_DRAFT,
       step: 'order',
+      stage: 'price',
       occasion: s.occasion,
       eventDate: addDays(new Date(), Math.max(s.inDays, bakery.leadTimeDays)),
       servings: s.servings,

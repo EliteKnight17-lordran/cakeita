@@ -397,11 +397,19 @@ body {
   transform: translate(-50%, -100%);
   white-space: nowrap;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: 12px;
+  text-align: center;
   border: 2px solid #fff;
   font: 700 13px/1.3 var(--font-sans);
   box-shadow: 0 2px 6px rgb(60 20 30 / 0.25);
   position: relative;
+}
+.pin-name {
+  display: block;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.2;
+  opacity: 0.9;
 }
 .pin::after {
   content: '';
@@ -456,7 +464,8 @@ body {
 
 /* Bigger text on a small phone: the header keeps its buttons and drops the wordmark (the logo still links home). */
 @media (max-width: 479px) {
-  html[data-big='true'] .logo-word {
+  html[data-big='true'] .logo-word,
+  html[data-big='true'] .step-other {
     display: none;
   }
 }

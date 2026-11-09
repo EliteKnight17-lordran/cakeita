@@ -36,6 +36,13 @@ export interface BakeryMapProps {
   labels: { you: string; tapHint: string; offline: string };
 }
 
+/** Short bakery name for a pin (the list below the map shows the full name and the "(sample)" label). */
+export function pinName(name: string): string {
+  const short = name.replace(/\s*\(sample\)\s*$/i, '').trim();
+  const cut = short.length > 18 ? `${short.slice(0, 17).trimEnd()}…` : short;
+  return cut.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
 function pinClass(m: BakeryMatch, selected: boolean) {
   if (selected) return 'pin pin-selected';
   if (!m.suitable) return 'pin pin-no';
@@ -95,7 +102,7 @@ export default function BakeryMap({ spot, matches, selected, radiusKm, onSelect,
           m.slug,
           L.divIcon({
             className: '',
-            html: `<span class="${pinClass(m, m.slug === selected)}">${m.estimate != null ? formatPeso(m.estimate) : '?'}</span>`,
+            html: `<span class="${pinClass(m, m.slug === selected)}"><span class="pin-name">${pinName(m.name)}</span>${m.estimate != null ? formatPeso(m.estimate) : '?'}</span>`,
             iconSize: [0, 0],
             iconAnchor: [0, 0],
           }),

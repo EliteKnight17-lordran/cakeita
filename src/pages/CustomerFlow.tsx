@@ -22,7 +22,7 @@ import { FLOWER_STYLES, TOPPER_SPOTS, type OwnItem, type PublicMenu, type Select
 import { FLOWER_LABELS, OWN_LABELS } from '../domain/placement';
 import { toVisual } from '../domain/visual';
 import { SCENARIOS } from '../data/demoScenarios';
-import { clearDraft, useDraft, type Draft } from '../data/draft';
+import { clearDraft, useDraft, type Draft, type Stage } from '../data/draft';
 import { repo } from '../data/store';
 import { photoPixels, resizeImage, samplePhoto, type SmallImage } from '../lib/image';
 import { findShowcase, showcaseByKey, showcaseHints } from '../domain/showcase';
@@ -369,6 +369,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const tooSoon = !!eventDate && eventDate < minDate;
   const booked = isFullDate(menu, eventDate);
   const over = budgetGap(estimate, wants.budget);
+  const stage = pickOnMap ? draft.stage : null;
 
   // One 3D cake on the page: pinned beside the form on laptops, inside "Pick a design" on phones.
   const cakeStage = visual && (
@@ -377,310 +378,545 @@ function Flow({ menu }: { menu: PublicMenu }) {
     </div>
   );
 
+  /** The photo is only attached here; in the step-by-step designer it is read when "Make my cake" is tapped. */
+  const onPhotoFile = async (f: File | undefined) => {
+    setPhotoError('');
+    if (!f) return;
+    try {
+      const img = await resizeImage(f);
+      setPhoto(img);
+      if (pickOnMap) update({ photoHints: null });
+      else await readPhoto(img);
+    } catch {
+      setPhotoError(tx("We couldn't open that photo. Try a screenshot of it instead.", 'Hindi mabuksan ang photo. Subukan ang screenshot nito.'));
+    }
+  };
+  const removePhoto = () => {
+    setPhoto(null);
+    update({ photoHints: null });
+  };
+
+  /** Step 1 -> 2: read the photo and words, then show the cake assembling itself. */
+  const makeCake = async () => {
+    if (photo && !draft.photoHints) await readPhoto(photo);
+    else {
+      setBuilding(true);
+      await new Promise((res) => setTimeout(res, 1300));
+      setBuilding(false);
+    }
+    update({ stage: 'cake' });
+    setBuildKey((k) => k + 1);
+    window.scrollTo({ top: 0 });
+  };
+  const goStage = (s: Stage) => {
+    update({ stage: s });
+    window.scrollTo({ top: 0 });
+  };
+
+  const descBox = (
+    <>
+      <label htmlFor="desc" className={pickOnMap ? 'label' : 'sr-only'}>
+        {pickOnMap ? tx('Describe it (Taglish OK)', 'Ilarawan ang cake (Taglish OK)') : tx('Describe your cake (Taglish OK)', 'Ilarawan ang cake (Taglish OK)')}
+      </label>
+      <textarea
+        id="desc"
+        className="input min-h-24"
+        maxLength={2000}
+        placeholder={tx('e.g. 2 tier pink ube cake, chocolate drip, flowers, 30 pax, budget 2.5k, "Happy 7th Mia"', 'hal. 2 tier pink na ube cake, chocolate drip, bulaklak, 30 pax, budget 2.5k, "Happy 7th Mia"')}
+        value={draft.description}
+        onChange={(e) => update({ description: e.target.value })}
+      />
+    </>
+  );
+
+  const photoInput = (
+    <input id="photo" type="file" accept="image/*" className="sr-only" aria-label={tx('Add an inspo photo', 'Magdagdag ng inspo photo')} onChange={(e) => onPhotoFile(e.target.files?.[0])} />
+  );
+
+  const inspoCard = (
+    <div className={`flex items-center gap-3 rounded-2xl border border-dashed p-2.5 transition ${photo ? 'border-berry/40 bg-white' : 'border-[#d9c9bb] bg-[#fbf7f2] hover:border-berry/50'}`} data-inspo>
+      {photo ? (
+        <img src={photo.dataUrl} alt={tx('Your inspo photo', 'Ang inspo photo mo')} className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+      ) : (
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-berry-soft text-berry" aria-hidden="true">
+          <IconCamera size={22} />
+        </span>
+      )}
+      <p className="min-w-0 flex-1 text-[0.95rem] font-semibold leading-snug">{photo ? tx('Inspo photo added', 'May inspo photo na') : tx('Have an inspo photo?', 'May inspo photo ka?')}</p>
+      <div className="flex shrink-0 gap-1">
+        <label className={`${photo ? 'btn-ghost' : 'btn-secondary !px-4'} cursor-pointer !min-h-11`}>
+          {photo ? tx('Change', 'Palitan') : tx('Add', 'Idagdag')}
+          {photoInput}
+        </label>
+        {photo && (
+          <button type="button" className="btn-ghost" onClick={removePhoto}>
+            {tx('Remove', 'Alisin')}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  /** Step 1's big photo area: the whole box is the upload button. */
+  const inspoBig = photo ? (
+    <div className="flex items-center gap-3 rounded-2xl border border-berry/40 bg-white p-3" data-inspo>
+      <img src={photo.dataUrl} alt={tx('Your inspo photo', 'Ang inspo photo mo')} className="h-24 w-24 shrink-0 rounded-xl object-cover" />
+      <p className="min-w-0 flex-1 font-semibold">{tx('Inspo photo added', 'May inspo photo na')}</p>
+      <div className="flex shrink-0 flex-col gap-1">
+        <label className="btn-ghost cursor-pointer !min-h-11">
+          {tx('Change', 'Palitan')}
+          {photoInput}
+        </label>
+        <button type="button" className="btn-ghost" onClick={removePhoto}>
+          {tx('Remove', 'Alisin')}
+        </button>
+      </div>
+    </div>
+  ) : (
+    <label className="flex cursor-pointer flex-col items-center gap-2 rounded-3xl border-2 border-dashed border-[#d9c9bb] bg-[#fbf7f2] px-4 py-8 text-center transition hover:border-berry/60" data-inspo>
+      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-berry-soft text-berry" aria-hidden="true">
+        <IconCamera size={28} />
+      </span>
+      <span className="font-display text-lg font-semibold">{tx('Upload an inspo photo', 'Mag-upload ng inspo photo')}</span>
+      <span className="text-sm text-ink-soft">{tx('Optional. A screenshot works too.', 'Optional. Puwede ang screenshot.')}</span>
+      {photoInput}
+    </label>
+  );
+
+  const examples = menu.isSample && !hasText && (
+    <details className="group">
+      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm font-semibold text-ink-soft">
+        {tx('No idea yet? Try an example', 'Wala pang idea? Subukan ang halimbawa')}
+        <IconChevron size={16} className="transition group-open:rotate-180" />
+      </summary>
+      <div className="mt-1 flex flex-wrap gap-2">
+        {SCENARIOS.slice(0, 4).map((s) => (
+          <button key={s.key} type="button" className="btn-ghost" onClick={() => update({ description: s.message })}>
+            {s.title}
+          </button>
+        ))}
+      </div>
+    </details>
+  );
+
+  const smartButton = smartAvailable && draft.description.trim() && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
+    <button type="button" className="btn-ghost" disabled={busy} onClick={() => smartRead(photo)}>
+      <IconSparkle /> {busy ? tx('Reading…', 'Binabasa…') : tx('Smart read', 'Smart read')}
+    </button>
+  );
+
+  const photoMatch = draft.photoHints && !building && (
+    <PhotoMatch hints={draft.photoHints} menu={menu} hasPhoto={!!photo} onSee={() => cakeRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })} onRemove={removePhoto} />
+  );
+  const photoNotRead = reading.aiNote === 'photo-not-read' && <Notice tone="info">{tx('We could not read your photo automatically. Please describe it in words, and send the photo to the baker too.', 'Hindi namin nabasa ang photo. Ilarawan mo sa salita, at i-send din ang photo sa baker.')}</Notice>;
+
+  const peopleBlock = (
+    <div>
+      <Field id="servings" label={tx('How many people?', 'Ilan ang kakain?')}>
+        <input id="servings" type="number" inputMode="numeric" min={1} max={500} className="input" placeholder={tx('e.g. 20', 'hal. 20')} value={wants.servings ?? ''} onChange={(e) => update({ servings: e.target.value ? Math.max(1, Math.min(500, Number(e.target.value))) : null })} />
+      </Field>
+      <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={tx('Quick pick: people', 'Mabilis na pili: tao')}>
+        {[10, 20, 30, 50].map((n) => (
+          <Chip key={n} pressed={wants.servings === n} onClick={() => update({ servings: n })}>
+            {n} {tx('people', 'tao')}
+          </Chip>
+        ))}
+      </div>
+    </div>
+  );
+
+  const budgetInput = (
+    <Field id="budget" label={pickOnMap ? tx('Or type an exact budget (₱)', 'O i-type ang eksaktong budget (₱)') : tx('Budget (₱)', 'Budget (₱)')}>
+      <input id="budget" type="number" inputMode="numeric" min={100} max={500000} step={50} className="input" placeholder={tx('e.g. 2500', 'hal. 2500')} disabled={draft.noBudget} value={draft.noBudget ? '' : wants.budget ?? ''} onChange={(e) => update({ budget: e.target.value ? Math.max(0, Math.min(500000, Number(e.target.value))) : null, noBudget: false })} />
+    </Field>
+  );
+
+  const budgetBlock = (
+    <div>
+      {budgetInput}
+      <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={tx('Quick pick: budget', 'Mabilis na pili: budget')}>
+        {[800, 1500, 2500, 4000].map((n) => (
+          <Chip key={n} pressed={!draft.noBudget && wants.budget === n} onClick={() => update({ budget: n, noBudget: false })}>
+            {formatPeso(n)}
+          </Chip>
+        ))}
+        <Chip pressed={draft.noBudget} onClick={() => update({ noBudget: !draft.noBudget })}>
+          {tx('Not sure', 'Hindi pa alam')}
+        </Chip>
+      </div>
+    </div>
+  );
+
+  /** Step 3: price ranges; each one sets the top of the budget. */
+  const rangeBlock = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label={tx('Price range', 'Hanay ng presyo')} data-price-range>
+        {PRICE_RANGES.map(([lo, hi]) => {
+          const label = lo === 0 ? tx(`Up to ${formatPeso(hi)}`, `Hanggang ${formatPeso(hi)}`) : `${formatPeso(lo)} – ${formatPeso(hi)}`;
+          const on = !draft.noBudget && wants.budget != null && wants.budget > lo && wants.budget <= hi;
+          return (
+            <button key={hi} type="button" className={`min-h-12 rounded-2xl border px-3 text-[0.95rem] font-semibold transition ${on ? 'border-berry bg-berry text-white' : 'border-line bg-white text-ink hover:border-berry/50'}`} aria-pressed={on} onClick={() => update({ budget: hi, noBudget: false })}>
+              {label}
+            </button>
+          );
+        })}
+        <button type="button" className={`col-span-2 min-h-12 rounded-2xl border px-3 text-[0.95rem] font-semibold transition ${draft.noBudget ? 'border-berry bg-berry text-white' : 'border-line bg-white text-ink hover:border-berry/50'}`} aria-pressed={draft.noBudget} onClick={() => update({ noBudget: !draft.noBudget })}>
+          {tx('Not sure yet, show me', 'Hindi pa alam, ipakita lang')}
+        </button>
+      </div>
+      {budgetInput}
+    </div>
+  );
+
+  const dateBlock = (
+    <div>
+      <Field id="date" label={tx('When do you need it?', 'Kailan kailangan?')} hint={pickOnMap ? tx('Most bakers need 2 to 7 days.', 'Karaniwang 2 hanggang 7 araw ang abiso.') : tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
+        <input id="date" type="date" className="input" min={minDate} max={addDays(today, 365)} value={eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" aria-invalid={!!errors.date || tooSoon || booked} />
+      </Field>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {[menu.leadTimeDays, 7, 14].map((d, i) => {
+          // Skip days the baker is fully booked.
+          let day = addDays(today, Math.max(d, menu.leadTimeDays));
+          for (let k = 0; k < 30 && isFullDate(menu, day); k++) day = addDays(day, 1);
+          return (
+            <button key={i} type="button" data-quick-date className="btn-ghost" aria-pressed={eventDate === day} onClick={() => update({ eventDate: day })}>
+              {new Date(`${day}T00:00:00`).toLocaleDateString(prefs.lang === 'tl' ? 'fil-PH' : 'en-PH', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </button>
+          );
+        })}
+      </div>
+      {booked && !errors.date && (
+        <div className="mt-2">
+          <Notice tone="warn">{tx(`${menu.name} is fully booked that day. Please pick another date.`, `Puno na ang ${menu.name} sa araw na iyon. Pumili ng ibang petsa.`)}</Notice>
+        </div>
+      )}
+      {(errors.date || tooSoon) && (
+        <div className="mt-2">
+          <Notice tone="warn">{errors.date ?? (pickOnMap ? tx('Please pick a date after today.', 'Pumili ng petsa pagkatapos ng araw na ito.') : tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.'))}</Notice>
+        </div>
+      )}
+    </div>
+  );
+
+  const occasionBlock = (
+    <div>
+      <p className="label" id="occ-label">{tx('Occasion', 'Okasyon')}</p>
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-labelledby="occ-label">
+        {OCCASIONS.map(([en, tl]) => (
+          <Chip key={en} pressed={occasion === en} onClick={() => update({ occasion: draft.occasion === en ? '' : en })}>
+            <span className="whitespace-nowrap">{tx(en, tl)}</span>
+          </Chip>
+        ))}
+      </div>
+    </div>
+  );
+
+  const designsBlock = (
+    <>
+      {designs.budgetTooLow && wants.budget != null && (
+        <Notice tone="warn" title={tx('Budget is a bit low for this many people', 'Medyo kulang ang budget sa dami ng tao')}>
+          {tx(`The simplest cake for ${wants.servings ?? 'everyone'} is about ${formatPeso(designs.lowestPrice)}.`, `Mga ${formatPeso(designs.lowestPrice)} ang pinakasimple para sa ${wants.servings ?? 'lahat'}.`)}
+        </Notice>
+      )}
+      {!pickOnMap && !wide && cakeStage}
+      <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={tx('Designs', 'Mga design')}>
+        {designs.options.map((o) => (
+          <DesignCard key={o.tier} option={o} menu={menu} look={look} selected={!isCustom && JSON.stringify(selection) === JSON.stringify(o.selection)} onPick={() => update({ tier: o.tier, selection: null })} budget={wants.budget} />
+        ))}
+      </div>
+      {missing?.maxTiers && (
+        <Notice tone="info">{tx(`${menu.name} makes cakes up to ${missing.maxTiers} tiers, so the designs use ${missing.maxTiers}.`, `Hanggang ${missing.maxTiers} tier lang ang ginagawa ng ${menu.name}, kaya ${missing.maxTiers} tier ang mga design.`)}</Notice>
+      )}
+      {!isCustom && missing && missing.parts.length > 0 && (
+        <div data-left-out>
+          <Notice tone="info" title={wants.budget != null ? tx(`Left out to fit ${formatPeso(wants.budget)}`, `Tinanggal para pumasok sa ${formatPeso(wants.budget)}`) : tx('Not in this design', 'Wala sa design na ito')}>
+            <p>{missing.parts.join(', ')}</p>
+            {fullest && fullest.n < missing.parts.length && (
+              <button type="button" className="btn-secondary mt-2" onClick={() => update({ tier: fullest.o.tier, selection: null })}>
+                {fullest.n === 0 ? tx(`Show it with everything (${formatPeso(fullest.o.estimate)})`, `Ipakita nang kumpleto (${formatPeso(fullest.o.estimate)})`) : tx(`Show the closest match (${formatPeso(fullest.o.estimate)})`, `Ipakita ang pinakamalapit (${formatPeso(fullest.o.estimate)})`)}
+              </button>
+            )}
+          </Notice>
+        </div>
+      )}
+      {isCustom && (
+        <p className="text-sm">
+          <span className="tag border border-line bg-[#faf6f1] text-ink">{tx('Your custom design', 'Sarili mong design')}</span>{' '}
+          <button type="button" className="text-berry underline" onClick={() => update({ selection: null })}>
+            {tx('Go back to the suggestions', 'Bumalik sa mga suggestion')}
+          </button>
+        </p>
+      )}
+    </>
+  );
+
+  const customizeBlock = selection && (
+    <details className="card group" open={isCustom || customOpen || undefined} onToggle={(e) => setCustomOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2">
+        <span>
+          <span className="block font-display text-lg">{tx('Customize it', 'I-customize')}</span>
+          <span className="block text-sm text-ink-soft">{tx('Size, flavor, frosting, colors, toppings, words', 'Laki, flavor, frosting, kulay, toppings, sulat')}</span>
+        </span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line transition group-open:rotate-180">
+          <IconChevron />
+        </span>
+      </summary>
+      <div className="mt-4">
+        <Customizer menu={menu} selection={selection} look={look} servings={wants.servings} onChange={(sel, l) => update({ selection: sel, look: l, lookTouched: draft.lookTouched || JSON.stringify(l) !== JSON.stringify(look) })} />
+      </div>
+    </details>
+  );
+
+  const contactBlock = (
+    <>
+      {!editMe && draft.name.trim() && draft.contact.trim() ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[#fffdfa] px-3.5 py-2" data-me-summary>
+          <p className="min-w-0 text-[0.95rem]">
+            <span className="text-ink-soft">{tx('Sending as', 'Ipapadala bilang')}</span> <strong>{draft.name}</strong> · {draft.contact}
+          </p>
+          <button type="button" className="link min-h-11 shrink-0 text-sm" onClick={() => setEditMe(true)}>
+            {tx('Change', 'Palitan')}
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field id="name" label={tx('Your name', 'Pangalan mo')}>
+            <input id="name" className="input" autoComplete="name" maxLength={80} value={draft.name} aria-invalid={!!errors.name} onChange={(e) => update({ name: e.target.value })} />
+          </Field>
+          <Field id="contact" label={tx('Messenger name or mobile number', 'Messenger name o mobile number')}>
+            <input id="contact" className="input" autoComplete="tel" maxLength={120} value={draft.contact} aria-invalid={!!errors.contact} onChange={(e) => update({ contact: e.target.value })} />
+          </Field>
+        </div>
+      )}
+      <QuoteAlertToggle show={!!menu.owner} value={notifySub} onChange={setNotifySub} />
+      {(errors.name || errors.contact || errors.form) && <Notice tone="danger">{[errors.name, errors.contact, errors.form].filter(Boolean).join(' ')}</Notice>}
+      <p className="text-sm text-ink-soft" data-consent-note>
+        {tx('Sending shares your name, contact, request and photo (if any) with the baker. Free; no payment in Cakeita; the photo is never saved.', 'Kapag ipinadala, makikita ng baker ang pangalan, contact, request at photo mo (kung meron). Libre; walang bayaran sa Cakeita; hindi sine-save ang photo.')}
+      </p>
+      {pickOnMap && (demoSeen() || prefs.dev) && (
+        <p className="text-center text-sm">
+          <button type="button" className="min-h-11 text-ink-soft underline underline-offset-4" onClick={submit} disabled={!selection} data-send-direct>
+            {tx(`Or send it straight to ${menu.name}`, `O ipadala diretso sa ${menu.name}`)}
+          </button>
+        </p>
+      )}
+    </>
+  );
+
+  const priceBar = (action: ReactNode) => (
+    <div className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#fffdfa] p-3 shadow-[0_-12px_30px_-24px_rgb(36_26_23/0.45)]">
+      <div className={`mx-auto flex max-w-3xl items-center gap-3 ${pickOnMap ? '' : 'lg:max-w-6xl'}`}>
+        <div className="min-w-0 flex-1" aria-live="polite">
+          {menu.showEstimates && estimate != null ? (
+            <>
+              <p className="eyebrow !text-ink-soft">{pickOnMap ? tx('Sample estimate', 'Sample na tantya') : tx('Estimated price', 'Tantyang presyo')}</p>
+              <p className="flex flex-wrap items-baseline gap-x-2">
+                <span key={estimate} className="price pop text-2xl" data-testid="live-price">{formatPeso(estimate)}</span>
+                {wants.budget != null && (
+                  <span className={`text-xs font-bold ${over > 0 ? 'text-amber-ink' : 'text-ok-ink'}`}>{over > 0 ? `+${formatPeso(over)} ${tx('over', 'lampas')}` : tx('Fits budget', 'Pasok sa budget')}</span>
+                )}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm font-semibold">{tx('The baker gives the price', 'Ang baker ang magbibigay ng presyo')}</p>
+          )}
+        </div>
+        {action}
+      </div>
+    </div>
+  );
+
+  // ---------------- The open designer: one step at a time ----------------
+  if (stage) {
+    return (
+      <Layout>
+        <Stepper stage={stage} canGo={hasText} onGo={goStage} />
+        {stage === 'idea' && (
+          <div className="space-y-4" data-open-designer data-stage="idea">
+            <div className="space-y-1">
+              <h1 className="text-3xl leading-tight sm:text-4xl">{tx('What cake do you want?', 'Anong cake ang gusto mo?')}</h1>
+              <p className="text-ink-soft">{tx('Add a photo, describe it, or both. We build it in 3D.', 'Mag-upload ng photo, i-describe, o pareho. Gagawin namin itong 3D.')}</p>
+            </div>
+            {building ? <PhotoBuilding photo={photo?.dataUrl ?? null} ai={!!photo && smartAvailable && !prefs.aiOff} /> : inspoBig}
+            <div className="space-y-1">{descBox}</div>
+            {photoError && <Notice tone="warn">{photoError}</Notice>}
+            {examples}
+            <button type="button" className="btn w-full" disabled={(!hasText && !photo) || building} onClick={makeCake} data-make-cake>
+              <IconSparkle /> {building ? tx('Making your cake…', 'Ginagawa ang cake mo…') : tx('Make my 3D cake', 'Gawin ang 3D cake ko')}
+            </button>
+          </div>
+        )}
+        {stage === 'cake' && (
+          <div className="space-y-4" data-open-designer data-stage="cake">
+            <div className="space-y-1">
+              <h1 className="text-3xl leading-tight sm:text-4xl">{tx('Your cake', 'Ang cake mo')}</h1>
+              <p className="text-ink-soft">{tx('Change anything below. The price updates as you go.', 'Baguhin kahit ano sa ibaba. Kusang nagbabago ang presyo.')}</p>
+            </div>
+            {cakeStage}
+            {photoMatch}
+            {photoNotRead}
+            {hasText && <ReadSummary reading={reading} menu={menu} compact />}
+            {smartButton}
+            <section className="card" aria-label={tx('Size', 'Laki')}>{peopleBlock}</section>
+            {customizeBlock}
+          </div>
+        )}
+        {stage === 'price' && (
+          <div className="space-y-5" data-open-designer data-stage="price">
+            <div className="space-y-1">
+              <h1 className="text-3xl leading-tight sm:text-4xl">{tx('What is your budget?', 'Magkano ang budget mo?')}</h1>
+              <p className="text-ink-soft">{tx('Pick a range. We show what fits, then the bakers near you.', 'Pumili ng range. Ipapakita namin ang pasok, tapos ang mga baker na malapit.')}</p>
+            </div>
+            <section className="card">{rangeBlock}</section>
+            <section className="space-y-3" aria-labelledby="sec-designs">
+              <h2 id="sec-designs" className="text-xl">{tx('Pick a design', 'Pumili ng design')}</h2>
+              {designsBlock}
+            </section>
+            <section className="card space-y-4" aria-labelledby="sec-contact">
+              <h2 id="sec-contact" className="text-xl">{tx('When, and how to reach you', 'Kailan, at paano ka makokontak')}</h2>
+              {dateBlock}
+              {contactBlock}
+            </section>
+          </div>
+        )}
+
+        {stage === 'cake' && visual && <MiniCake target={cakeRef} visual={visual} description={description} price={menu.showEstimates && estimate != null ? formatPeso(estimate) : null} />}
+        {stage === 'cake' &&
+          priceBar(
+            <button type="button" className="btn shrink-0" disabled={!selection} onClick={() => goStage('price')} data-next-price>
+              {tx('Next: price', 'Sunod: presyo')} <IconArrow />
+            </button>,
+          )}
+        {stage === 'price' &&
+          priceBar(
+            <button type="button" className="btn shrink-0" disabled={!selection} onClick={chooseBaker} data-choose-baker>
+              <IconPin /> {tx('See bakers', 'Tingnan ang baker')}
+            </button>,
+          )}
+      </Layout>
+    );
+  }
+
+  // ---------------- A baker's own link: everything on one page ----------------
   return (
     <Layout wide>
       {header}
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10">
-      {wide && (
-        <aside className="sticky top-[calc(3.75rem+1.5rem)] space-y-3" aria-label={tx('Your cake', 'Ang cake mo')}>
-          {cakeStage}
-        </aside>
-      )}
-      <div className="space-y-5">
-        <div className="space-y-1" data-open-designer={pickOnMap || undefined}>
-          {pickOnMap && <p className="eyebrow">{tx('Step 1 of 2', 'Hakbang 1 sa 2')}</p>}
-          <h1 className="text-3xl leading-tight sm:text-4xl">{tx('Design your cake', 'I-design ang cake mo')}</h1>
-          <p className="text-ink-soft">{tx('Type it like a chat. The cake and price update as you go.', 'I-type na parang chat. Kusang magbabago ang cake at presyo.')}</p>
+        {wide && (
+          <aside className="sticky top-[calc(3.75rem+1.5rem)] space-y-3" aria-label={tx('Your cake', 'Ang cake mo')}>
+            {cakeStage}
+          </aside>
+        )}
+        <div className="space-y-5">
+          <div className="space-y-1">
+            <h1 className="text-3xl leading-tight sm:text-4xl">{tx('Design your cake', 'I-design ang cake mo')}</h1>
+            <p className="text-ink-soft">{tx('Type it like a chat. The cake and price update as you go.', 'I-type na parang chat. Kusang magbabago ang cake at presyo.')}</p>
+          </div>
+
+          <section className="card space-y-3" aria-labelledby="sec-msg">
+            <SectionTitle id="sec-msg" n="01">
+              {tx('What cake do you want?', 'Anong cake ang gusto mo?')}
+            </SectionTitle>
+            {descBox}
+            {inspoCard}
+            {building && photo && <PhotoBuilding photo={photo.dataUrl} ai={smartAvailable && !prefs.aiOff} />}
+            {photoMatch}
+            {smartButton}
+            {photoError && <Notice tone="warn">{photoError}</Notice>}
+            {examples}
+            {photoNotRead}
+            {hasText && <ReadSummary reading={reading} menu={menu} compact />}
+          </section>
+
+          <section className="card space-y-4" aria-labelledby="sec-basics">
+            <SectionTitle id="sec-basics" n="02">
+              {tx('The basics', 'Ang basics')}
+            </SectionTitle>
+            {occasionBlock}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {peopleBlock}
+              {budgetBlock}
+            </div>
+            {dateBlock}
+          </section>
+
+          <section className="space-y-3" aria-labelledby="sec-designs">
+            <SectionTitle id="sec-designs" n="03">
+              {tx('Pick a design', 'Pumili ng design')}
+            </SectionTitle>
+            {designsBlock}
+            {customizeBlock}
+          </section>
+
+          <section className="card space-y-3" aria-labelledby="sec-contact">
+            <SectionTitle id="sec-contact" n="04">
+              {tx('Where can the baker reach you?', 'Saan ka makokontak ng baker?')}
+            </SectionTitle>
+            {contactBlock}
+          </section>
         </div>
-
-        {/* 1. The message */}
-        <section className="card space-y-3" aria-labelledby="sec-msg">
-          <SectionTitle id="sec-msg" n="01">
-            {tx('What cake do you want?', 'Anong cake ang gusto mo?')}
-          </SectionTitle>
-          <label htmlFor="desc" className="sr-only">
-            {tx('Describe your cake (Taglish OK)', 'Ilarawan ang cake (Taglish OK)')}
-          </label>
-          <textarea
-            id="desc"
-            className="input min-h-24"
-            maxLength={2000}
-            placeholder={tx('e.g. 2 tier pink ube cake, chocolate drip, flowers, 30 pax, budget 2.5k, "Happy 7th Mia"', 'hal. 2 tier pink na ube cake, chocolate drip, bulaklak, 30 pax, budget 2.5k, "Happy 7th Mia"')}
-            value={draft.description}
-            onChange={(e) => update({ description: e.target.value })}
-          />
-          <div className={`flex items-center gap-3 rounded-2xl border border-dashed p-2.5 transition ${photo ? 'border-berry/40 bg-white' : 'border-[#d9c9bb] bg-[#fbf7f2] hover:border-berry/50'}`} data-inspo>
-            {photo ? (
-              <img src={photo.dataUrl} alt={tx('Your inspo photo', 'Ang inspo photo mo')} className="h-14 w-14 shrink-0 rounded-xl object-cover" />
-            ) : (
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-berry-soft text-berry" aria-hidden="true">
-                <IconCamera size={22} />
-              </span>
-            )}
-            <p className="min-w-0 flex-1 text-[0.95rem] font-semibold leading-snug">{photo ? tx('Inspo photo added', 'May inspo photo na') : tx('Have an inspo photo?', 'May inspo photo ka?')}</p>
-            <div className="flex shrink-0 gap-1">
-              <label className={`${photo ? 'btn-ghost' : 'btn-secondary !px-4'} cursor-pointer !min-h-11`}>
-                {photo ? tx('Change', 'Palitan') : tx('Add', 'Idagdag')}
-                <input
-                  id="photo"
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  aria-label={tx('Add an inspo photo', 'Magdagdag ng inspo photo')}
-                  onChange={async (e) => {
-                    setPhotoError('');
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    try {
-                      const img = await resizeImage(f);
-                      setPhoto(img);
-                      await readPhoto(img);
-                    } catch {
-                      setPhotoError(tx("We couldn't open that photo. Try a screenshot of it instead.", 'Hindi mabuksan ang photo. Subukan ang screenshot nito.'));
-                    }
-                  }}
-                />
-              </label>
-              {photo && (
-                <button type="button" className="btn-ghost" onClick={() => { setPhoto(null); update({ photoHints: null }); }}>
-                  {tx('Remove', 'Alisin')}
-                </button>
-              )}
-            </div>
-          </div>
-          {building && photo && <PhotoBuilding photo={photo.dataUrl} ai={smartAvailable && !prefs.aiOff} />}
-          {draft.photoHints && !building && (
-            <PhotoMatch hints={draft.photoHints} menu={menu} hasPhoto={!!photo} onSee={() => cakeRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })} onRemove={() => { setPhoto(null); update({ photoHints: null }); }} />
-          )}
-          {smartAvailable && draft.description.trim() && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
-            <button type="button" className="btn-ghost" disabled={busy} onClick={() => smartRead(photo)}>
-              <IconSparkle /> {busy ? tx('Reading…', 'Binabasa…') : tx('Smart read', 'Smart read')}
-            </button>
-          )}
-          {photoError && <Notice tone="warn">{photoError}</Notice>}
-          {menu.isSample && !hasText && (
-            <details className="group">
-              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm font-semibold text-ink-soft">
-                {tx('No idea yet? Try an example', 'Wala pang idea? Subukan ang halimbawa')}
-                <IconChevron size={16} className="transition group-open:rotate-180" />
-              </summary>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {SCENARIOS.slice(0, 4).map((s) => (
-                  <button key={s.key} type="button" className="btn-ghost" onClick={() => update({ description: s.message })}>
-                    {s.title}
-                  </button>
-                ))}
-              </div>
-            </details>
-          )}
-          {reading.aiNote === 'photo-not-read' && <Notice tone="info">{tx('We could not read your photo automatically. Please describe it in words, and send the photo to the baker too.', 'Hindi namin nabasa ang photo. Ilarawan mo sa salita, at i-send din ang photo sa baker.')}</Notice>}
-          {hasText && <ReadSummary reading={reading} menu={menu} compact />}
-        </section>
-
-        {/* 2. The basics, all on one card */}
-        <section className="card space-y-4" aria-labelledby="sec-basics">
-          <SectionTitle id="sec-basics" n="02">
-            {tx('The basics', 'Ang basics')}
-          </SectionTitle>
-          <div>
-            <p className="label" id="occ-label">{tx('Occasion', 'Okasyon')}</p>
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-labelledby="occ-label">
-              {OCCASIONS.map(([en, tl]) => (
-                <Chip key={en} pressed={occasion === en} onClick={() => update({ occasion: draft.occasion === en ? '' : en })}>
-                  <span className="whitespace-nowrap">{tx(en, tl)}</span>
-                </Chip>
-              ))}
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Field id="servings" label={tx('How many people?', 'Ilan ang kakain?')}>
-                <input id="servings" type="number" inputMode="numeric" min={1} max={500} className="input" placeholder={tx('e.g. 20', 'hal. 20')} value={wants.servings ?? ''} onChange={(e) => update({ servings: e.target.value ? Math.max(1, Math.min(500, Number(e.target.value))) : null })} />
-              </Field>
-              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={tx('Quick pick: people', 'Mabilis na pili: tao')}>
-                {[10, 20, 30, 50].map((n) => (
-                  <Chip key={n} pressed={wants.servings === n} onClick={() => update({ servings: n })}>
-                    {n} {tx('people', 'tao')}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Field id="budget" label={tx('Budget (₱)', 'Budget (₱)')}>
-                <input id="budget" type="number" inputMode="numeric" min={100} max={500000} step={50} className="input" placeholder={tx('e.g. 2500', 'hal. 2500')} disabled={draft.noBudget} value={draft.noBudget ? '' : wants.budget ?? ''} onChange={(e) => update({ budget: e.target.value ? Math.max(0, Math.min(500000, Number(e.target.value))) : null, noBudget: false })} />
-              </Field>
-              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={tx('Quick pick: budget', 'Mabilis na pili: budget')}>
-                {[800, 1500, 2500, 4000].map((n) => (
-                  <Chip key={n} pressed={!draft.noBudget && wants.budget === n} onClick={() => update({ budget: n, noBudget: false })}>
-                    {formatPeso(n)}
-                  </Chip>
-                ))}
-                <Chip pressed={draft.noBudget} onClick={() => update({ noBudget: !draft.noBudget })}>
-                  {tx('Not sure', 'Hindi pa alam')}
-                </Chip>
-              </div>
-            </div>
-          </div>
-          <div>
-            <Field id="date" label={tx('When do you need it?', 'Kailan kailangan?')} hint={pickOnMap ? tx('Most bakers need 2 to 7 days.', 'Karaniwang 2 hanggang 7 araw ang abiso.') : tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
-              <input id="date" type="date" className="input" min={minDate} max={addDays(today, 365)} value={eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" aria-invalid={!!errors.date || tooSoon || booked} />
-            </Field>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {[menu.leadTimeDays, 7, 14].map((d, i) => {
-                // Skip days the baker is fully booked.
-                let day = addDays(today, Math.max(d, menu.leadTimeDays));
-                for (let k = 0; k < 30 && isFullDate(menu, day); k++) day = addDays(day, 1);
-                return (
-                  <button key={i} type="button" data-quick-date className="btn-ghost" aria-pressed={eventDate === day} onClick={() => update({ eventDate: day })}>
-                    {new Date(`${day}T00:00:00`).toLocaleDateString(prefs.lang === 'tl' ? 'fil-PH' : 'en-PH', { weekday: 'short', month: 'short', day: 'numeric' })}
-                  </button>
-                );
-              })}
-            </div>
-            {booked && !errors.date && (
-              <div className="mt-2">
-                <Notice tone="warn">{tx(`${menu.name} is fully booked that day. Please pick another date.`, `Puno na ang ${menu.name} sa araw na iyon. Pumili ng ibang petsa.`)}</Notice>
-              </div>
-            )}
-            {(errors.date || tooSoon) && (
-              <div className="mt-2">
-                <Notice tone="warn">{errors.date ?? (pickOnMap ? tx('Please pick a date after today.', 'Pumili ng petsa pagkatapos ng araw na ito.') : tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.'))}</Notice>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* 3. Designs, live */}
-        <section className="space-y-3" aria-labelledby="sec-designs">
-          <SectionTitle id="sec-designs" n="03">
-            {tx('Pick a design', 'Pumili ng design')}
-          </SectionTitle>
-          {designs.budgetTooLow && wants.budget != null && (
-            <Notice tone="warn" title={tx('Budget is a bit low for this many people', 'Medyo kulang ang budget sa dami ng tao')}>
-              {tx(`The simplest cake for ${wants.servings ?? 'everyone'} is about ${formatPeso(designs.lowestPrice)}.`, `Mga ${formatPeso(designs.lowestPrice)} ang pinakasimple para sa ${wants.servings ?? 'lahat'}.`)}
-            </Notice>
-          )}
-          {!wide && cakeStage}
-          <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={tx('Designs', 'Mga design')}>
-            {designs.options.map((o) => (
-              <DesignCard key={o.tier} option={o} menu={menu} look={look} selected={!isCustom && JSON.stringify(selection) === JSON.stringify(o.selection)} onPick={() => update({ tier: o.tier, selection: null })} budget={wants.budget} />
-            ))}
-          </div>
-          {missing?.maxTiers && (
-            <Notice tone="info">{tx(`${menu.name} makes cakes up to ${missing.maxTiers} tiers, so the designs use ${missing.maxTiers}.`, `Hanggang ${missing.maxTiers} tier lang ang ginagawa ng ${menu.name}, kaya ${missing.maxTiers} tier ang mga design.`)}</Notice>
-          )}
-          {!isCustom && missing && missing.parts.length > 0 && (
-            <div data-left-out>
-              <Notice tone="info" title={wants.budget != null ? tx(`Left out to fit ${formatPeso(wants.budget)}`, `Tinanggal para pumasok sa ${formatPeso(wants.budget)}`) : tx('Not in this design', 'Wala sa design na ito')}>
-                <p>{missing.parts.join(', ')}</p>
-                {fullest && fullest.n < missing.parts.length && (
-                  <button type="button" className="btn-secondary mt-2" onClick={() => update({ tier: fullest.o.tier, selection: null })}>
-                    {fullest.n === 0 ? tx(`Show it with everything (${formatPeso(fullest.o.estimate)})`, `Ipakita nang kumpleto (${formatPeso(fullest.o.estimate)})`) : tx(`Show the closest match (${formatPeso(fullest.o.estimate)})`, `Ipakita ang pinakamalapit (${formatPeso(fullest.o.estimate)})`)}
-                  </button>
-                )}
-              </Notice>
-            </div>
-          )}
-          {isCustom && (
-            <p className="text-sm">
-              <span className="tag border border-line bg-[#faf6f1] text-ink">{tx('Your custom design', 'Sarili mong design')}</span>{' '}
-              <button type="button" className="text-berry underline" onClick={() => update({ selection: null })}>
-                {tx('Go back to the suggestions', 'Bumalik sa mga suggestion')}
-              </button>
-            </p>
-          )}
-          {selection && (
-            <details className="card group" open={isCustom || customOpen || undefined} onToggle={(e) => setCustomOpen((e.currentTarget as HTMLDetailsElement).open)}>
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2">
-                <span>
-                  <span className="block font-display text-lg">{tx('Customize it', 'I-customize')}</span>
-                  <span className="block text-sm text-ink-soft">{tx('Size, flavor, frosting, colors, toppings, words', 'Laki, flavor, frosting, kulay, toppings, sulat')}</span>
-                </span>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line transition group-open:rotate-180">
-                  <IconChevron />
-                </span>
-              </summary>
-              <div className="mt-4">
-                <Customizer menu={menu} selection={selection} look={look} servings={wants.servings} onChange={(sel, l) => update({ selection: sel, look: l, lookTouched: draft.lookTouched || JSON.stringify(l) !== JSON.stringify(look) })} />
-              </div>
-            </details>
-          )}
-        </section>
-
-        {/* 4. Contact */}
-        <section className="card space-y-3" aria-labelledby="sec-contact">
-          <SectionTitle id="sec-contact" n="04">
-            {tx('Where can the baker reach you?', 'Saan ka makokontak ng baker?')}
-          </SectionTitle>
-          {!editMe && draft.name.trim() && draft.contact.trim() ? (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-[#fffdfa] px-3.5 py-2" data-me-summary>
-              <p className="min-w-0 text-[0.95rem]">
-                <span className="text-ink-soft">{tx('Sending as', 'Ipapadala bilang')}</span> <strong>{draft.name}</strong> · {draft.contact}
-              </p>
-              <button type="button" className="link min-h-11 shrink-0 text-sm" onClick={() => setEditMe(true)}>
-                {tx('Change', 'Palitan')}
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field id="name" label={tx('Your name', 'Pangalan mo')}>
-                <input id="name" className="input" autoComplete="name" maxLength={80} value={draft.name} aria-invalid={!!errors.name} onChange={(e) => update({ name: e.target.value })} />
-              </Field>
-              <Field id="contact" label={tx('Messenger name or mobile number', 'Messenger name o mobile number')}>
-                <input id="contact" className="input" autoComplete="tel" maxLength={120} value={draft.contact} aria-invalid={!!errors.contact} onChange={(e) => update({ contact: e.target.value })} />
-              </Field>
-            </div>
-          )}
-          <QuoteAlertToggle show={!!menu.owner} value={notifySub} onChange={setNotifySub} />
-          {(errors.name || errors.contact || errors.form) && (
-            <Notice tone="danger">{[errors.name, errors.contact, errors.form].filter(Boolean).join(' ')}</Notice>
-          )}
-          <p className="text-sm text-ink-soft" data-consent-note>
-            {tx('Sending shares your name, contact, request and photo (if any) with the baker. Free; no payment in Cakeita; the photo is never saved.', 'Kapag ipinadala, makikita ng baker ang pangalan, contact, request at photo mo (kung meron). Libre; walang bayaran sa Cakeita; hindi sine-save ang photo.')}
-          </p>
-          {pickOnMap && (demoSeen() || prefs.dev) && (
-            <p className="text-center text-sm">
-              <button type="button" className="min-h-11 text-ink-soft underline underline-offset-4" onClick={submit} disabled={!selection} data-send-direct>
-                {tx(`Or send it straight to ${menu.name}`, `O ipadala diretso sa ${menu.name}`)}
-              </button>
-            </p>
-          )}
-        </section>
-      </div>
       </div>
 
       {!wide && visual && <MiniCake target={cakeRef} visual={visual} description={description} price={menu.showEstimates && estimate != null ? formatPeso(estimate) : null} />}
 
-      {/* Sticky price + send */}
-      <div className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#fffdfa] p-3 shadow-[0_-12px_30px_-24px_rgb(36_26_23/0.45)]">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 lg:max-w-6xl">
-          <div className="min-w-0 flex-1" aria-live="polite">
-            {menu.showEstimates && estimate != null ? (
-              <>
-                <p className="eyebrow !text-ink-soft">{pickOnMap ? tx('Sample estimate', 'Sample na tantya') : tx('Estimated price', 'Tantyang presyo')}</p>
-                <p className="flex flex-wrap items-baseline gap-x-2">
-                  <span key={estimate} className="price pop text-2xl" data-testid="live-price">{formatPeso(estimate)}</span>
-                  {wants.budget != null && (
-                    <span className={`text-xs font-bold ${over > 0 ? 'text-amber-ink' : 'text-ok-ink'}`}>{over > 0 ? `+${formatPeso(over)} ${tx('over', 'lampas')}` : tx('Fits budget', 'Pasok sa budget')}</span>
-                  )}
-                </p>
-              </>
-            ) : (
-              <p className="text-sm font-semibold">{tx('The baker gives the price', 'Ang baker ang magbibigay ng presyo')}</p>
-            )}
-          </div>
-          {pickOnMap ? (
-            <button type="button" className="btn shrink-0" disabled={!selection} onClick={chooseBaker} data-choose-baker>
-              <IconPin /> {tx('Choose a baker', 'Pumili ng baker')}
-            </button>
-          ) : (
-            <button type="button" className="btn shrink-0" disabled={!selection} onClick={submit}>
-              {tx('Send to baker', 'Ipadala sa baker')} <IconArrow />
-            </button>
-          )}
-        </div>
-      </div>
+      {priceBar(
+        <button type="button" className="btn shrink-0" disabled={!selection} onClick={submit}>
+          {tx('Send to baker', 'Ipadala sa baker')} <IconArrow />
+        </button>,
+      )}
     </Layout>
+  );
+}
+
+/** Price ranges for step 3: [above, up to]. */
+const PRICE_RANGES: Array<[number, number]> = [
+  [0, 1000],
+  [1000, 2000],
+  [2000, 3500],
+  [3500, 6000],
+];
+
+/** 1 Idea, 2 Cake, 3 Price, 4 Bakers. Earlier steps can be revisited; later ones open once there is a cake. */
+function Stepper({ stage, canGo, onGo }: { stage: Stage; canGo: boolean; onGo: (s: Stage) => void }) {
+  const tx = useTx();
+  const steps: Array<[Stage | 'map', string]> = [
+    ['idea', tx('Idea', 'Idea')],
+    ['cake', tx('Cake', 'Cake')],
+    ['price', tx('Price', 'Presyo')],
+    ['map', tx('Bakers', 'Baker')],
+  ];
+  const at = steps.findIndex(([k]) => k === stage);
+  return (
+    <nav aria-label={tx('Steps', 'Mga hakbang')} className="mb-5">
+      <ol className="flex items-center gap-1">
+        {steps.map(([key, label], i) => {
+          const current = key === stage;
+          const reachable = key !== 'map' && !current && (i < at || canGo);
+          const dot = (
+            <>
+              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold ${current ? 'bg-berry text-white' : i < at ? 'bg-berry-soft text-berry-dark' : 'border border-line bg-white text-ink-soft'}`} aria-hidden="true">
+                {i < at ? <IconCheck size={14} /> : i + 1}
+              </span>
+              <span className={`step-label text-sm ${current ? 'font-semibold text-ink' : 'step-other text-ink-soft'}`}>{label}</span>
+            </>
+          );
+          return (
+            <li key={key} className="flex min-w-0 flex-1 items-center gap-1">
+              {reachable ? (
+                <button type="button" className="flex min-h-11 items-center gap-1.5" onClick={() => onGo(key as Stage)} data-stage-nav={key} aria-label={tx(`Step ${i + 1}: ${label}`, `Hakbang ${i + 1}: ${label}`)}>
+                  {dot}
+                </button>
+              ) : (
+                <span className="flex min-h-11 items-center gap-1.5" aria-current={current ? 'step' : undefined}>
+                  {dot}
+                </span>
+              )}
+              {i < steps.length - 1 && <span className="h-px min-w-2 flex-1 bg-line" aria-hidden="true" />}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 
@@ -1134,10 +1370,10 @@ function PhotoMatch({ hints, menu, hasPhoto, onSee, onRemove }: { hints: PhotoHi
 }
 
 /** While a photo is read: the photo with a light sweeping over it and the steps ticking along. */
-function PhotoBuilding({ photo, ai }: { photo: string; ai: boolean }) {
+function PhotoBuilding({ photo, ai }: { photo: string | null; ai: boolean }) {
   const tx = useTx();
   const steps = [
-    tx('Reading the colors', 'Binabasa ang mga kulay'),
+    photo ? tx('Reading the colors', 'Binabasa ang mga kulay') : tx('Reading your request', 'Binabasa ang request mo'),
     ai ? tx('Finding the decorations', 'Hinahanap ang mga dekorasyon') : tx('Matching the frosting', 'Itinutugma ang frosting'),
     tx('Pricing the parts', 'Pinepresyuhan ang mga part'),
     tx('Building your 3D cake', 'Binubuo ang 3D cake mo'),
@@ -1149,11 +1385,11 @@ function PhotoBuilding({ photo, ai }: { photo: string; ai: boolean }) {
   }, [steps.length, ai]);
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3" data-photo-building role="status" aria-live="polite">
-      <div className="photo-scan h-20 w-20 shrink-0 rounded-xl">
-        <img src={photo} alt="" className="h-full w-full object-cover" />
+      <div className="photo-scan grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-berry-soft text-berry">
+        {photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> : <IconSparkle size={30} />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-semibold">{tx('Building your cake from the photo…', 'Ginagawa ang cake mula sa photo…')}</p>
+        <p className="font-semibold">{photo ? tx('Building your cake from the photo…', 'Ginagawa ang cake mula sa photo…') : tx('Building your cake…', 'Ginagawa ang cake mo…')}</p>
         <ol className="mt-1 space-y-0.5 text-sm">
           {steps.map((label, i) => (
             <li key={label} className={`flex items-center gap-2 ${i > step ? 'text-ink-soft' : i === step ? 'font-semibold text-ink' : 'text-ink-soft'}`}>

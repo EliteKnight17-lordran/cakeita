@@ -13,8 +13,13 @@ import type { CakeLook, DesignTier, Selection } from '../domain/types';
 export const STEPS = ['order', 'done'] as const;
 export type Step = (typeof STEPS)[number];
 
+/** The open designer goes one step at a time: idea (photo + words), the 3D cake, then the price. */
+export const STAGES = ['idea', 'cake', 'price'] as const;
+export type Stage = (typeof STAGES)[number];
+
 export interface Draft {
   step: Step;
+  stage: Stage;
   occasion: string;
   eventDate: string;
   servings: number | null;
@@ -43,6 +48,7 @@ export interface Draft {
 
 export const EMPTY_DRAFT: Draft = {
   step: 'order',
+  stage: 'idea',
   occasion: '',
   eventDate: '',
   servings: null,
@@ -77,6 +83,7 @@ function load(slug: string): Draft {
     if (raw) d = { ...EMPTY_DRAFT, ...(JSON.parse(raw) as Partial<Draft>) };
     // Drafts saved by the old step-by-step form: anything not sent is the one-page form now.
     if (!(STEPS as readonly string[]).includes(d.step)) d = { ...d, step: 'order' };
+    if (!(STAGES as readonly string[]).includes(d.stage)) d = { ...d, stage: 'idea' };
   } catch {
     /* ignore */
   }

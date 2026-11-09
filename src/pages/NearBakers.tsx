@@ -210,7 +210,7 @@ export default function NearBakers() {
         <div className="space-y-1">
           {ready ? (
             <>
-              <p className="eyebrow">{tx('Step 2 of 2', 'Hakbang 2 sa 2')}</p>
+              <p className="eyebrow">{tx('Step 4 of 4', 'Hakbang 4 sa 4')}</p>
               <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{tx('Choose who bakes your cake', 'Piliin kung sino ang magbe-bake ng cake mo')}</h1>
               <p className="text-ink-soft" data-choose-intro>
                 {tx('Best match first. Send to one baker; if they say no, pick another.', 'Nauuna ang pinakaangkop. Ipadala sa isa; kung tumanggi, pumili ng iba.')}
@@ -229,7 +229,7 @@ export default function NearBakers() {
           {visual && <Cake2D visual={visual} title={cakeText} className="h-20 w-24 shrink-0" />}
           <div className="min-w-0 flex-1">
             <p className="font-bold">{hasCake ? tx('Your cake', 'Ang cake mo') : tx('Example cake', 'Halimbawang cake')}</p>
-            <p className="text-sm">{cakeText}</p>
+            <p className="line-clamp-2 text-sm">{cakeText}</p>
             <p className="text-sm text-ink-soft">
               {[cake.wants.servings ? `${cake.wants.servings} ${tx('people', 'tao')}` : '', cake.wants.budget != null ? `budget ${formatPeso(cake.wants.budget)}` : '', cake.eventDate].filter(Boolean).join(' · ')}
             </p>

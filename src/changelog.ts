@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.15.0',
+    date: '2026-11-09',
+    en: [
+      'Ordering is now one step at a time: 1 add an inspo photo and/or describe the cake, 2 see it built in 3D and customize it, 3 pick a price range and a design, 4 choose a baker on the map.',
+      'Map pins show the bakery name above the price.',
+      "A baker's own Cakeita link still opens the one-page form.",
+    ],
+    tl: [
+      'Isang hakbang na lang bawat screen: 1 mag-upload ng inspo photo at/o i-describe ang cake, 2 tingnan itong mabuo sa 3D at i-customize, 3 pumili ng range ng presyo at design, 4 pumili ng baker sa mapa.',
+      'Makikita na sa mapa ang pangalan ng bakery sa itaas ng presyo.',
+      'Isang page pa rin ang form kapag galing sa sariling Cakeita link ng baker.',
+    ],
+  },
+  {
     version: '1.14.0',
     date: '2026-11-09',
     en: [

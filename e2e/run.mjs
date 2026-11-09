@@ -122,28 +122,25 @@ async function main() {
     check('phone menu opens with main links', await customer.getByRole('link', { name: 'Mga cake ko' }).waitFor({ timeout: 10000 }).then(() => true, () => false));
 
     await customer.goto(`${BASE}#/b/sample`);
-    // One page: no Next buttons. Designs are there before anything is typed.
-    check('order form is one page (no Next button)', (await customer.getByRole('button', { name: 'Sunod' }).count()) === 0);
-    const designGroup = customer.getByRole('radiogroup', { name: 'Mga design' });
-    const cards = designGroup.getByRole('radio');
-    check('designs show before typing anything', await cards.first().waitFor({ timeout: 20000 }).then(() => true, () => false));
-    await customer.getByLabel(/Ilarawan ang cake/).fill('2 tier pink ube cake with chocolate drip and fresh flowers, "Happy 7th Mia"');
-    await customer.getByRole('button', { name: /Birthday/ }).click();
-    await customer.getByRole('button', { name: '30 tao' }).click();
-    await customer.getByRole('button', { name: '₱2,500' }).click();
-    await customer.locator('[data-quick-date]').first().click();
-    check('customer sees 2-3 designs', (await cards.count()) >= 2, `${await cards.count()} designs`);
-    check('designs show budget fit labels', (await customer.getByText('Pasok sa budget').count()) >= 1);
-    check('unofficial understanding shown live', await customer.getByText('Ang naintindihan namin').isVisible());
-    check('sticky price shows while filling in', await customer.getByTestId('live-price').isVisible());
-    check('says what the budget design leaves out', await customer.locator('[data-left-out]').getByText(/Chocolate drip/).isVisible());
+    // Step by step: 1 photo and words only, 2 the 3D cake to customize, 3 price, 4 bakers.
+    await customer.locator('[data-stage="idea"]').waitFor({ timeout: 20000 });
+    check('step 1 shows only the inspo photo and the description', (await customer.locator('[data-inspo]').isVisible()) && (await customer.getByRole('radiogroup', { name: 'Mga design' }).count()) === 0 && (await customer.getByTestId('live-price').count()) === 0);
+    check('"make my cake" waits for a photo or words', await customer.locator('[data-make-cake]').isDisabled());
+    await axe(customer, 'step 1: idea');
+    await customer.getByLabel(/Ilarawan ang cake/).fill('2 tier pink ube cake with chocolate drip and fresh flowers for a birthday, 30 pax, "Happy 7th Mia"');
+    await customer.locator('[data-make-cake]').click();
+    check('making the cake shows the building steps', await customer.locator('[data-photo-building]').waitFor({ timeout: 3000 }).then(() => true, () => false));
+    await customer.locator('[data-stage="cake"]').waitFor({ timeout: 10000 });
+    check('step 2 shows the 3D cake', await customer.locator('figure [role="img"]').first().isVisible());
+    check('unofficial understanding shown', await customer.getByText('Ang naintindihan namin').isVisible());
+    check('sticky price shows on the cake step', await customer.getByTestId('live-price').isVisible());
     const inside = customer.locator('[data-see-inside]').first();
     await inside.click();
     check('"See inside" cuts the cake open', (await inside.getAttribute('aria-pressed')) === 'true' && /Hiniwa/.test((await customer.locator('figure [role="img"]').first().getAttribute('aria-label')) ?? ''));
     await inside.click();
     await customer.waitForTimeout(1200);
-    await axe(customer, 'customer one-page form');
-    await shot(customer, '02-designs');
+    await axe(customer, 'step 2: cake');
+    await shot(customer, '02-cake');
 
     await customer.getByText('I-customize').first().click();
     const priceBefore = await customer.getByTestId('live-price').innerText();
@@ -166,6 +163,22 @@ async function main() {
     const cakeTop = await customer.getByRole('img', { name: /cake/i }).first().evaluate((el) => el.getBoundingClientRect().top);
     check('"See it in 3D" jumps back to the big cake', cakeTop >= 0 && cakeTop < 400, `top ${Math.round(cakeTop)}`);
 
+    // Step 3: price range, then the designs that fit.
+    await customer.locator('[data-next-price]').click();
+    await customer.locator('[data-stage="price"]').waitFor();
+    const designGroup = customer.getByRole('radiogroup', { name: 'Mga design' });
+    const cards = designGroup.getByRole('radio');
+    await customer.getByRole('button', { name: '₱2,000 – ₱3,500' }).click();
+    check('a price range sets the budget', (await customer.locator('#budget').inputValue()) === '3500');
+    await customer.locator('#budget').fill('2500');
+    await customer.locator('[data-quick-date]').first().click();
+    check('customer sees 2-3 designs', (await cards.count()) >= 2, `${await cards.count()} designs`);
+    check('designs show budget fit labels', (await customer.getByText('Pasok sa budget').count()) >= 1);
+    check('says what the budget design leaves out', await customer.locator('[data-left-out]').getByText(/Chocolate drip/).isVisible());
+    await customer.waitForTimeout(800);
+    await axe(customer, 'step 3: price');
+    await shot(customer, '02-designs');
+
     // Nearby bakers map: same cake, each baker's own price.
     await customer.goto(`${BASE}#/near?from=sample`);
     await customer.getByRole('heading', { name: /Mga baker na malapit/ }).waitFor();
@@ -173,7 +186,7 @@ async function main() {
     const requestButtons = customer.getByRole('button', { name: /^Mag-request kay/ });
     check('map lists bakers who can make it', (await requestButtons.count()) >= 1, `${await requestButtons.count()} bakers`);
     const pinPrices = await customer.locator('.leaflet-marker-icon .pin').allInnerTexts();
-    check('pins show peso estimates', pinPrices.every((t) => /^₱[\d,]+$/.test(t.trim())), pinPrices.join(' '));
+    check('pins show the bakery name and a peso estimate', pinPrices.every((t) => /^\S.*\n₱[\d,]+$/.test(t.trim())), pinPrices.join(' | '));
     await customer.locator('[data-filters] summary').click();
     await customer.getByRole('button', { name: 'Kahit gaano kalayo' }).click();
     await customer.getByLabel('Yung kaya lang gawin').uncheck();
@@ -183,7 +196,7 @@ async function main() {
     await shot(customer, '13-near-map');
     await customer.goBack();
     await designGroup.waitFor();
-    check('cake survives the trip to the map and back', (await customer.getByLabel(/Ilarawan ang cake/).inputValue()).includes('Happy 7th Mia'));
+    check('cake survives the trip to the map and back (same step)', await customer.evaluate(() => JSON.parse(sessionStorage.getItem('cakeita.draft.sample') || '{}').description?.includes('Happy 7th Mia')));
 
     await customer.locator('[data-choose-baker]').click();
     check('choosing a baker first asks for name and contact', await customer.getByText(/Pakilagay ang pangalan/).isVisible());
@@ -308,7 +321,10 @@ async function main() {
 
     // Customization: placement presets, cake stands and things the customer brings.
     await tester.goto(`${BASE}#/b/sample`);
+    await tester.locator('[data-stage-nav="idea"]').click().catch(() => {});
     await tester.getByLabel(/Ilarawan ang cake/).fill('2 tier wedding cake, fresh flowers, 40 pax, budget 6k');
+    await tester.locator('[data-make-cake]').click();
+    await tester.locator('[data-stage="cake"]').waitFor();
     await tester.getByText('I-customize').first().click();
     const place = tester.locator('[data-placement]');
     check('flower placement shows only when flowers are on the cake', await place.waitFor({ timeout: 10000 }).then(() => true, () => false));
@@ -326,8 +342,9 @@ async function main() {
     const ownPrice = (await tester.getByTestId('live-price').innerText()).trim();
     const ownNote = (await tester.locator('[data-own-note]').isVisible()) ? 1 : 0;
     check('own stand is free, replaces the priced one, and Customize stays open', ownPrice === before && ownNote === 1, `${ownPrice}, note ${ownNote}`);
+    await tester.locator('[data-stage-nav="idea"]').click();
     await tester.locator('[data-inspo]').waitFor();
-    check('inspo photo is a clear card under the request box', await tester.locator('[data-inspo]').getByText('May inspo photo ka?').isVisible());
+    check('step 1 has a big inspo photo upload', await tester.locator('[data-inspo]').getByText('Mag-upload ng inspo photo').isVisible());
     // Inspo photo becomes the 3D cake: with no AI key, the phone still reads its colors.
     const inspoPng = await tester.evaluate(() => {
       const c = document.createElement('canvas'); c.width = 400; c.height = 400; const g = c.getContext('2d');
@@ -337,6 +354,7 @@ async function main() {
       return c.toDataURL('image/png').split(',')[1];
     });
     await tester.locator('#photo').setInputFiles({ name: 'inspo.png', mimeType: 'image/png', buffer: Buffer.from(inspoPng, 'base64') });
+    await tester.locator('[data-make-cake]').click();
     check('reading a photo shows the animated "building your cake" steps', await tester.locator('[data-photo-building]').waitFor({ timeout: 5000 }).then(() => true, () => false));
     const match = tester.locator('[data-photo-match]');
     check('inspo photo turns into the cake (colors read on the phone, no AI)', await match.waitFor({ timeout: 10000 }).then(() => true, () => false) && /lavender/.test(await match.innerText()) && /lavender/i.test((await tester.locator('figure [role="img"]').first().getAttribute('aria-label')) ?? ''));
@@ -347,6 +365,7 @@ async function main() {
     const gamer = await phone(browser, 'gamer');
     await gamer.goto(`${BASE}#/b/sample`);
     await gamer.getByLabel(/Ilarawan ang cake/).fill("Roblox cake for Migo's 7th birthday, sky blue fondant, brick wall, name banner, number topper, 12 pax");
+    await gamer.locator('[data-make-cake]').click();
     await gamer.getByTestId('live-price').waitFor();
     const gameCake = gamer.locator('figure [role="img"]').first();
     await waitTrue(async () => /MIGO/.test((await gameCake.getAttribute('aria-label')) ?? ''));
@@ -413,6 +432,8 @@ async function main() {
     await picker.getByRole('link', { name: /Mag-order bilang customer/ }).waitFor();
     await picker.goto(`${BASE}#/b/sample`);
     await picker.getByLabel(/Ilarawan ang cake/).fill('Ube birthday cake with drip and sprinkles, 20 pax, budget 1200');
+    await picker.locator('[data-make-cake]').click();
+    await picker.locator('[data-next-price]').click();
     await picker.locator('[data-quick-date]').nth(2).click();
     await picker.getByLabel('Pangalan mo').fill('Carla Test');
     await picker.getByLabel(/Messenger name o mobile/).fill('0917 222 3333');
