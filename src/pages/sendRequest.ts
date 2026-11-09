@@ -38,6 +38,8 @@ export interface RequestParts {
   photo: SmallImage | null;
   notifySub: string | null;
   lang: 'tl' | 'en';
+  /** What the customer can't eat, as typed ('' = none). */
+  allergies: string;
 }
 
 export type SendResult = { ok: false } | { ok: true; id: string; link: string; message: string; cloud: boolean; auto: boolean };
@@ -68,6 +70,7 @@ export async function sendCakeRequest(p: RequestParts, tx: Tx): Promise<SendResu
     estimate: menu.showEstimates ? p.estimate : null,
     hasInspoPhoto: !!p.photo,
     lang: p.lang,
+    allergies: p.allergies.trim().slice(0, 120),
   };
   if (!cakeRequestSchema.safeParse(req).success) return { ok: false };
   const link = await requestLink(req);
@@ -90,6 +93,7 @@ export async function sendCakeRequest(p: RequestParts, tx: Tx): Promise<SendResu
     tx(`Hi ${menu.name}! Cake request from ${req.customer.name}:`, `Hi ${menu.name}! Cake request po mula kay ${req.customer.name}:`),
     `• ${req.occasion}, ${req.eventDate}, ${tx('for', 'para sa')} ${req.servings} ${tx('people', 'tao')}`,
     `• ${p.summary}`,
+    req.allergies ? `• ${tx('ALLERGY', 'ALLERGY')}: ${req.allergies}` : '',
     req.budget != null ? `• Budget: ${formatPeso(req.budget)}` : '',
     req.estimate != null ? `• ${tx('Estimate in the app', 'Tantya sa app')}: ${formatPeso(req.estimate)}` : '',
     req.look.own?.length ? `• ${ownText(req.look.own, p.lang)}` : '',

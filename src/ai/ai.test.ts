@@ -144,7 +144,7 @@ describe('share link codec', () => {
       id: 'r1', bakerySlug: 'sample', createdAt: new Date().toISOString(), customer: { name: 'Ana', contact: '0917 000 0000' },
       occasion: 'Birthday', eventDate: '2026-12-12', servings: 30, budget: 2500, description: 'pink 2 tier', tier: 'classic' as const,
       selection: { baseCakeId: 't2-6-8', componentIds: ['fl-ube', 'cv-buttercream'] }, look: { colors: ['#f4a7c0'], textOnCake: 'Hi', candles: 7 },
-      theme: '', licensedNote: '', unavailable: [], estimate: 2500, hasInspoPhoto: false, lang: 'tl' as const,
+      theme: '', licensedNote: '', unavailable: [], estimate: 2500, hasInspoPhoto: false, lang: 'tl' as const, allergies: '',
     };
     const code = await encodePayload(req);
     expect(code.length).toBeLessThan(1200);

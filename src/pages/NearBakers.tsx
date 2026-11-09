@@ -185,6 +185,7 @@ export default function NearBakers() {
           photo: carriedPhoto(),
           notifySub: null,
           lang: prefs.lang,
+          allergies: cake.allergyText,
         },
         tx,
       );

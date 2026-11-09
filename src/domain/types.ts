@@ -192,6 +192,8 @@ export interface PublicMenu {
     scale: number;
     /** Price contribution in pesos. */
     p: number;
+    /** Allergen tags from the sponge recipe (see allergens.ts). */
+    a?: string[];
   }>;
   components: Array<{
     id: string;
@@ -204,6 +206,8 @@ export interface PublicMenu {
     color?: string;
     /** Price contribution in pesos before size scaling. */
     p: number;
+    /** Allergen tags from the recipe's ingredient names and the part's words (see allergens.ts). */
+    a?: string[];
   }>;
   /** Parts this baker does not offer, so the reader can say "hindi namin ginagawa". */
   notOffered: Array<{ name: string; keywords: string[] }>;
@@ -251,6 +255,8 @@ export interface CakeRequest {
   estimate: number | null;
   hasInspoPhoto: boolean;
   lang: 'tl' | 'en';
+  /** What the customer can't eat, as they typed it ('' = none said). */
+  allergies?: string;
 }
 
 export interface ApprovedQuote {

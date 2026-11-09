@@ -13,6 +13,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.17.0',
+    date: '2026-11-09',
+    en: [
+      'Allergy warnings: customers can type what they can\'t eat (or just say "allergic to nuts" in the description). Parts that match turn up in a red warning with a Remove button, and the suggested designs leave them out.',
+      'Parts are matched by their ingredient names, so the warning always says to confirm with the baker. The baker sees the allergy at the top of the request and in the Messenger message.',
+    ],
+    tl: [
+      'Babala sa allergy: puwedeng i-type ng customer ang bawal sa kanila (o sabihin lang sa description, hal. "allergic sa mani"). Lalabas sa pulang babala ang mga parte na tugma, may Tanggalin na button, at hindi na ito isasama sa mga suggested design.',
+      'Batay ito sa pangalan ng mga sangkap, kaya laging sinasabi na kumpirmahin sa baker. Makikita ng baker ang allergy sa itaas ng request at sa Messenger message.',
+    ],
+  },
+  {
     version: '1.16.0',
     date: '2026-11-09',
     en: [

@@ -163,6 +163,22 @@ async function main() {
     const cakeTop = await customer.getByRole('img', { name: /cake/i }).first().evaluate((el) => el.getBoundingClientRect().top);
     check('"See it in 3D" jumps back to the big cake', cakeTop >= 0 && cakeTop < 400, `top ${Math.round(cakeTop)}`);
 
+    // Allergies: the sponge itself, designs that skip a part, and a part added back by hand.
+    const allergy = customer.locator('#allergies');
+    await allergy.scrollIntoViewIfNeeded();
+    await allergy.fill('itlog');
+    check('allergy to egg warns about the sponge itself', await customer.locator('[data-allergy="warn"]').getByText(/Ang mismong cake/).waitFor({ timeout: 5000 }).then(() => true, () => false));
+    await allergy.fill('chocolate');
+    check('allergy to chocolate: the suggested cake leaves the drip out', await customer.locator('[data-allergy="clear"]').waitFor({ timeout: 5000 }).then(() => true, () => false));
+    await customer.getByRole('button', { name: /Chocolate drip/ }).first().click();
+    check('adding it back by hand shows a red warning', await customer.locator('[data-allergy-hit="dc-drip"]').waitFor({ timeout: 5000 }).then(() => true, () => false));
+    await axe(customer, 'allergy warning');
+    await shot(customer, '03c-allergy');
+    await customer.locator('[data-allergy-remove="dc-drip"]').click();
+    check('"Remove" takes the part off the cake', await customer.locator('[data-allergy-hit="dc-drip"]').waitFor({ state: 'detached', timeout: 5000 }).then(() => true, () => false));
+    await allergy.fill('blueberries');
+    await customer.waitForTimeout(300);
+
     // Step 3: price range, then the designs that fit.
     await customer.locator('[data-next-price]').click();
     await customer.locator('[data-stage="price"]').waitFor();
@@ -219,6 +235,7 @@ async function main() {
     await baker.goto(requestUrl);
     await baker.getByRole('heading', { name: 'Ana Test' }).waitFor();
     check('baker sees breakdown', await baker.getByRole('heading', { name: 'Breakdown ng presyo' }).isVisible());
+    check('baker sees the customer allergy', await baker.locator('[data-allergy]').getByText(/Allergy ng customer: blueberries/).isVisible());
     check('baker sees "accept at the app price" button', await baker.getByRole('button', { name: /Tanggapin sa ₱/ }).isVisible());
     await baker.getByLabel(/Presyong ipapadala/).fill('500');
     check('red warning for a losing price', await baker.getByText('Lugi ka rito').isVisible());

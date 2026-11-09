@@ -59,6 +59,7 @@ export const publicMenuSchema = z.object({
         servings: z.number().int().min(1).max(500),
         scale: z.number().min(0).max(10),
         p: money,
+        a: z.array(shortText(20)).max(12).optional(),
       }),
     )
     .min(1)
@@ -75,6 +76,7 @@ export const publicMenuSchema = z.object({
         keywords: z.array(shortText(40)).max(20),
         color: hex.optional(),
         p: money,
+        a: z.array(shortText(20)).max(12).optional(),
       }),
     )
     .max(60),
@@ -104,6 +106,8 @@ export const cakeRequestSchema = z.object({
   estimate: money.nullable(),
   hasInspoPhoto: z.boolean(),
   lang: z.enum(['tl', 'en']),
+  /** What the customer can't eat, as they typed it. Older links have none. */
+  allergies: shortText(120).default(''),
 });
 
 export const cakeVisualSchema = z.object({

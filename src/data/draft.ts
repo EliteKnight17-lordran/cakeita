@@ -44,6 +44,8 @@ export interface Draft {
   sentMessage: string | null;
   /** What the inspo photo showed (not the photo itself). */
   photoHints: PhotoHints | null;
+  /** What they can't eat, as typed. null = not typed yet (we use what the description says). */
+  allergies: string | null;
 }
 
 export const EMPTY_DRAFT: Draft = {
@@ -69,6 +71,7 @@ export const EMPTY_DRAFT: Draft = {
   sentLink: null,
   sentMessage: null,
   photoHints: null,
+  allergies: null,
 };
 
 const key = (slug: string) => `cakeita.draft.${slug}`;

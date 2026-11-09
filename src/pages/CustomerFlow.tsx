@@ -8,6 +8,7 @@ import { describeCake } from '../cake/describe';
 import { CakeView } from '../cake/CakeView';
 import { Cake2D } from '../cake/Cake2D';
 import { MotifIcon } from '../cake/MotifIcon';
+import { AllergyNotice } from '../components/AllergyNotice';
 import { Layout } from '../components/Layout';
 import { IconArrow, IconCamera, IconCheck, IconChevron, IconPin, IconSparkle } from '../components/icons';
 import { ShareBox } from '../components/ShareBox';
@@ -291,6 +292,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
     photo,
     notifySub,
     lang: prefs.lang,
+    allergies: cake.allergyText,
   });
 
   /** Main path from the open designer: see who can bake it, ranked, and send it to one of them. */
@@ -525,6 +527,15 @@ function Flow({ menu }: { menu: PublicMenu }) {
     </div>
   );
 
+  const allergyBlock = (
+    <Field id="allergies" label={tx('Any food allergies? (optional)', 'May allergy sa pagkain? (optional)')}>
+      <input id="allergies" className="input" maxLength={120} autoComplete="off" placeholder={tx('e.g. peanuts, blueberries', 'hal. mani, blueberry')} value={cake.allergyText} onChange={(e) => update({ allergies: e.target.value })} data-allergy-input />
+    </Field>
+  );
+  const allergyWarn = selection && cake.allergies.said.length > 0 && (
+    <AllergyNotice menu={menu} selection={selection} text={cake.allergyText} who="customer" onRemove={(id) => update({ selection: { ...selection, componentIds: selection.componentIds.filter((x) => x !== id) } })} />
+  );
+
   const budgetInput = (
     <Field id="budget" label={pickOnMap ? tx('Or type an exact budget (₱)', 'O i-type ang eksaktong budget (₱)') : tx('Budget (₱)', 'Budget (₱)')}>
       <input id="budget" type="number" inputMode="numeric" min={100} max={500000} step={50} className="input" placeholder={tx('e.g. 2500', 'hal. 2500')} disabled={draft.noBudget} value={draft.noBudget ? '' : wants.budget ?? ''} onChange={(e) => update({ budget: e.target.value ? Math.max(0, Math.min(500000, Number(e.target.value))) : null, noBudget: false })} />
@@ -619,6 +630,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
         </Notice>
       )}
       {!pickOnMap && !wide && cakeStage}
+      {allergyWarn}
       <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={tx('Designs', 'Mga design')}>
         {designs.options.map((o) => (
           <DesignCard key={o.tier} option={o} menu={menu} look={look} selected={!isCustom && JSON.stringify(selection) === JSON.stringify(o.selection)} onPick={() => update({ tier: o.tier, selection: null })} budget={wants.budget} />
@@ -757,7 +769,11 @@ function Flow({ menu }: { menu: PublicMenu }) {
             {photoNotRead}
             {hasText && <ReadSummary reading={reading} menu={menu} compact />}
             {smartButton}
-            <section className="card" aria-label={tx('Size', 'Laki')}>{peopleBlock}</section>
+            <section className="card space-y-4" aria-label={tx('Size and allergies', 'Laki at allergy')}>
+              {peopleBlock}
+              {allergyBlock}
+              {allergyWarn}
+            </section>
             {customizeBlock}
           </div>
         )}
@@ -838,6 +854,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
               {budgetBlock}
             </div>
             {dateBlock}
+            {allergyBlock}
           </section>
 
           <section className="space-y-3" aria-labelledby="sec-designs">

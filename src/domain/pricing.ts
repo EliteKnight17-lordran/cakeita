@@ -1,3 +1,4 @@
+import { itemAllergens } from './allergens';
 import { round2, roundUpTo50 } from './money';
 import type { BaseCake, Bakery, CakeComponent, Ingredient, PublicMenu, RecipeLine, Selection } from './types';
 
@@ -223,6 +224,7 @@ export function toPublicMenu(bakery: Bakery, now = new Date()): PublicMenu {
         servings: b.servings,
         scale: b.scale,
         p: priceContribution(cost(b), bakery.targetMarginPct),
+        a: itemAllergens(bakery, { recipe: b.recipe, name: 'sponge' }),
       })),
     components: bakery.components
       .filter((c) => c.canMake)
@@ -236,6 +238,7 @@ export function toPublicMenu(bakery: Bakery, now = new Date()): PublicMenu {
         keywords: c.keywords,
         color: c.color,
         p: priceContribution(cost(c), bakery.targetMarginPct),
+        a: itemAllergens(bakery, c),
       })),
     notOffered: bakery.components
       .filter((c) => !c.canMake)

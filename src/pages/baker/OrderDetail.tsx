@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { describeCake } from '../../cake/describe';
 import { CakeView } from '../../cake/CakeView';
+import { AllergyNotice } from '../../components/AllergyNotice';
 import { ShareBox } from '../../components/ShareBox';
 import { Chip, Field, Notice } from '../../components/ui';
 import { IconCheck, IconPen, IconPrint } from '../../components/icons';
@@ -176,6 +177,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
           {order.description}
         </blockquote>
       )}
+      {order.allergies && <AllergyNotice menu={menu} selection={selection} text={order.allergies} who="baker" />}
       {order.unavailable.length > 0 && (
         <Notice tone="warn" title={tx('You do not make:', 'Hindi mo ito ginagawa:')}>
           {order.unavailable.join(', ')}. {tx('The design uses your closest options. Tell the customer.', 'Ginamit ang pinakamalapit mong option. Sabihan ang customer.')}

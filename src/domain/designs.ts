@@ -1,3 +1,4 @@
+import { withoutAllergens, type Allergies } from './allergens';
 import { estimateFromMenu } from './pricing';
 import type { DesignTier, PublicMenu, Selection } from './types';
 
@@ -18,6 +19,8 @@ export interface Wants {
   coveringId: string | null;
   componentIds: string[];
   textOnCake: string;
+  /** What the customer can't eat: auto designs leave those parts out. */
+  avoid?: Allergies;
 }
 
 export interface DesignOption {
@@ -59,7 +62,7 @@ function uniq(ids: Array<string | null | undefined>): string[] {
 }
 
 export function buildDesigns(menu: PublicMenu, wants: Wants): DesignResult {
-  const parts = allowedParts(menu);
+  const parts = withoutAllergens(allowedParts(menu), wants.avoid);
   const partById = new Map(parts.map((p) => [p.id, p]));
   const bases = [...menu.baseCakes].filter((b) => b.tiers.length <= menu.maxTiers).sort((a, b) => a.p - b.p);
   if (!bases.length) return { options: [], budgetTooLow: false, lowestPrice: 0 };
