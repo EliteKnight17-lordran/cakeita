@@ -356,6 +356,8 @@ async function main() {
     check('block-game cake draws in 3D', await gamer.locator('figure canvas').first().waitFor({ timeout: 10000 }).then(() => true, () => false));
     await gamer.waitForTimeout(1500);
     await axe(gamer, 'block-game cake');
+    // Stop drawing the 3D cake so the next checks get the whole (slow CI) CPU.
+    await gamer.context().close();
 
     // Pilot survey: tap-only part 1, try the app, reminder to come back, part 2 (saved on the phone when offline).
     await tester.goto(`${BASE}#/survey?role=customer`);
@@ -369,7 +371,7 @@ async function main() {
     await tester.locator('[data-next]').click();
     await pick('Kinabukasan o mas matagal');
     await pick('Oo');
-    check('survey part 1 takes only taps and leads to trying the app', await tester.locator('[data-try-link]').waitFor({ timeout: 8000 }).then(() => true, () => false));
+    check('survey part 1 takes only taps and leads to trying the app', await tester.locator('[data-try-link]').waitFor({ timeout: 15000 }).then(() => true, () => false));
     check('survey answers wait on the phone when offline', await tester.getByText(/Naka-save sa phone na ito/).isVisible());
     await tester.locator('[data-try-link]').click();
     await tester.getByTestId('live-price').waitFor();
