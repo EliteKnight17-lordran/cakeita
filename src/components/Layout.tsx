@@ -1,10 +1,10 @@
+import { SurveyStrip } from './SurveyFinish';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAccount } from '../cloud/account';
 import { IconMenu, IconUser } from './icons';
 import { setPrefs, usePrefs, useTx } from '../lib/prefs';
 import { DevPanel } from './DevPanel';
-import { readSurvey } from '../pages/surveyState';
 
 export function Logo() {
   return (
@@ -122,8 +122,8 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
           </nav>
         )}
         {nav && <nav className="mx-auto max-w-3xl px-2 pb-2">{nav}</nav>}
+        <SurveyStrip />
       </header>
-      <SurveyNudge />
       <main id="main" className={`page-in mx-auto ${w} px-4 pb-28 pt-7 sm:pt-9`}>
         {children}
       </main>
@@ -171,26 +171,3 @@ export function TabNav({ tabs }: { tabs: Array<{ to: string; label: string; badg
 }
 
 /** After part 1 of the pilot survey, a small reminder to come back for part 2. */
-function SurveyNudge() {
-  const tx = useTx();
-  const loc = useLocation();
-  const [s, setS] = useState(() => readSurvey());
-  useEffect(() => {
-    const on = () => setS(readSurvey());
-    window.addEventListener('cakeita-survey', on);
-    window.addEventListener('storage', on);
-    return () => {
-      window.removeEventListener('cakeita-survey', on);
-      window.removeEventListener('storage', on);
-    };
-  }, []);
-  useEffect(() => setS(readSurvey()), [loc.pathname]);
-  if (!s || !s.done1 || s.done2 || loc.pathname.startsWith('/survey')) return null;
-  return (
-    <div className="no-print mx-auto flex max-w-3xl justify-center px-4 pt-3" data-survey-nudge>
-      <Link to="/survey?step=2" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white">
-        {tx('Done trying? Finish the survey (1 min)', 'Tapos na? Tapusin ang survey (1 min)')}
-      </Link>
-    </div>
-  );
-}

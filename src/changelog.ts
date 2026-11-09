@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.13.0',
+    date: '2026-11-09',
+    en: [
+      'Survey part 2 is harder to miss: after part 1, a red "finish the survey" bar stays at the top of the screen while you try the app (it used to scroll away).',
+      'A "last step" card appears at the natural end of trying: when a quote arrives, when a request is sent, and when a baker sends a quote.',
+      'The survey now says the reminder is at the top of the screen (it wrongly said the bottom).',
+    ],
+    tl: [
+      'Mas mahirap nang makaligtaan ang survey part 2: pagkatapos ng part 1, nakadikit sa taas ng screen ang pulang "tapusin ang survey" habang sinusubukan mo ang app (dati nawawala pag nag-scroll).',
+      'May "huling hakbang" na card sa dulo ng pagsubok: pagdating ng quote, pagkapadala ng request, at pagkapadala ng quote ng baker.',
+      'Sinasabi na ng survey na nasa taas ng screen ang paalala (mali dati, sabi nasa baba).',
+    ],
+  },
+  {
     version: '1.12.0',
     date: '2026-11-09',
     en: [

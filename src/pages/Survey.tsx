@@ -218,7 +218,7 @@ function TryIt({ role, note, onDone }: { role: Role; note: string; onDone: () =>
             <li>{tx('Pick one of the 3 designs and spin it in 3D.', 'Pumili sa 3 design at paikutin sa 3D.')}</li>
           </>
         )}
-        <li>{tx('Come back here for a few more taps. We will remind you at the bottom of the screen.', 'Bumalik dito para sa ilang tap pa. Ipapaalala namin sa baba ng screen.')}</li>
+        <li>{tx('Come back here for a few more taps. A red bar at the top of the screen brings you back.', 'Bumalik dito para sa ilang tap pa. May pulang bar sa taas ng screen na magbabalik sa iyo.')}</li>
       </ol>
       <Link to={TRY_LINK[role]} className="btn w-full" data-try-link>
         {role === 'baker' ? tx('Try the baker side (2 min)', 'Subukan ang baker side (2 min)') : tx('Order a sample cake (2 min)', 'Umorder ng sample cake (2 min)')}

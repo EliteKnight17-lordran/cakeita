@@ -1,3 +1,4 @@
+import { SurveyFinishCard } from '../components/SurveyFinish';
 import { useAccount } from '../cloud/account';
 import { demoSeen, readMe, saveMe } from '../lib/me';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -333,6 +334,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
               `I-tap ang Ipadala at piliin ang Messenger. Titingnan ito ng ${menu.name} at ipapadala ang final na presyo. Hindi pa ito order.`,
             )}
           </Bubble>
+          <SurveyFinishCard />
           {repo.get().myRequests.find((r) => r.id === draft.sentId)?.cloud && (
             <Notice tone="ok" title={tx('Delivered to the baker’s inbox', 'Nasa inbox na ng baker')}>
               {tx('They got it in Cakeita already. Their quote will show up under My cakes the moment they approve it. Sending it on Messenger too helps them reply faster.', 'Natanggap na nila sa Cakeita. Lalabas ang quote nila sa "Mga cake ko" pag in-approve nila. Mas mabilis ang sagot kung ipapadala mo rin sa Messenger.')}

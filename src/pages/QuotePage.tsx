@@ -1,3 +1,4 @@
+import { SurveyFinishCard } from '../components/SurveyFinish';
 import { celebrate } from '../lib/celebrate';
 import { cloudEnabled } from '../cloud/config';
 import { useEffect, useState } from 'react';
@@ -387,6 +388,7 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
             </div>
           </div>
         )}
+        <SurveyFinishCard />
         {quote.bakery.isSample && (
           <p className="text-center">
             <Link to={`/b/${quote.bakery.slug}`} className="text-berry underline">

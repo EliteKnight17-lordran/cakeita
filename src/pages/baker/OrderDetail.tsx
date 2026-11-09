@@ -1,3 +1,4 @@
+import { SurveyFinishCard } from '../../components/SurveyFinish';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { describeCake } from '../../cake/describe';
@@ -372,6 +373,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
                 >
                   {tx('Customer said yes in chat: mark confirmed', 'Pumayag na sa chat: i-mark na confirmed')}
                 </button>
+                <SurveyFinishCard />
               </>
             )}
           </section>

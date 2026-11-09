@@ -360,7 +360,14 @@ async function main() {
     await tester.locator('[data-try-link]').click();
     await tester.getByTestId('live-price').waitFor();
     check('reminder to finish the survey shows while trying', await tester.locator('[data-survey-nudge]').isVisible());
-    await tester.locator('[data-survey-nudge] a').click();
+    await tester.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await tester.waitForTimeout(400);
+    check('the survey reminder stays on screen while scrolling', await tester.locator('[data-survey-nudge]').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= 200; }));
+    await tester.goto(quoteUrl);
+    await tester.getByRole('heading', { name: /ito ang quote mo/ }).waitFor();
+    check('a "finish the survey" card shows when a quote arrives', await tester.locator('[data-survey-finish]').isVisible());
+    await axe(tester, 'quote with survey finish card');
+    await tester.locator('[data-survey-finish] a').click();
     await pick('Oo, malaki');
     await pick('Kaunti');
     await pick('Oo');
