@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.19.0',
+    date: '2026-11-09',
+    en: [
+      'Star reviews: after confirming an order, a signed-in customer can rate the baker (1 to 5 stars and a few words), once per bakery. The database only accepts it for an order the baker quoted and the customer confirmed, and never from the baker.',
+      'Real bakers on the map show their rating; tap a card to read the latest reviews, each marked "Confirmed order". Reviews show a first name and last initial only. Sample shops have no reviews.',
+      'Bakers see their reviews on Insights and cannot delete them.',
+    ],
+    tl: [
+      'Star review: pagkatapos mag-confirm ng order, puwedeng i-rate ng naka-sign in na customer ang baker (1 hanggang 5 bituin at ilang salita), isang beses bawat bakery. Tinatanggap lang ito para sa order na na-quote ng baker at na-confirm ng customer, at hindi kailanman mula sa baker mismo.',
+      'Makikita ang rating ng totoong baker sa mapa; i-tap ang card para mabasa ang pinakabagong review, may "Confirmed na order" na label. Unang pangalan at initial lang ang lumalabas. Walang review ang sample shops.',
+      'Makikita ng baker ang mga review sa Insights at hindi nila ito mabubura.',
+    ],
+  },
+  {
     version: '1.18.0',
     date: '2026-11-09',
     en: [

@@ -1,4 +1,8 @@
+import { useEffect, useState } from 'react';
+import { RatingLine } from '../../components/ReviewCard';
 import { Notice } from '../../components/ui';
+import { cloudEnabled } from '../../cloud/config';
+import { summarize, type RatingSummary } from '../../domain/reviews';
 import { computeInsights } from '../../domain/insights';
 import { formatPeso } from '../../domain/money';
 import { useDb } from '../../data/store';
@@ -41,6 +45,7 @@ export default function Insights() {
           <Stat label={tx('Requests with a budget', 'Requests na may budget')} value={i.withBudgetPct == null ? '–' : `${i.withBudgetPct}%`} />
           <Stat label={tx('Confirmed sales', 'Confirmed na benta')} value={formatPeso(i.revenueConfirmed)} sub={`${i.unpaidConfirmed} ${tx('not marked paid', 'hindi pa bayad')}`} />
         </div>
+        {db.bakery.cloudUid && !db.bakery.isSample && <MyReviews slug={db.bakery.slug} />}
         <section className="card space-y-3" aria-labelledby="mix-h">
           <h2 id="mix-h" className="font-display text-xl font-semibold">
             {tx('Which design customers pick', 'Aling design ang pinipili')}
@@ -59,5 +64,43 @@ export default function Insights() {
         </section>
       </div>
     </BakerShell>
+  );
+}
+
+/** What customers said, from confirmed orders only. Bakers can read but not remove them. */
+function MyReviews({ slug }: { slug: string }) {
+  const tx = useTx();
+  const [r, setR] = useState<RatingSummary | null | undefined>(undefined);
+  useEffect(() => {
+    if (!cloudEnabled()) return;
+    let alive = true;
+    import('../../cloud/data')
+      .then((m) => m.fetchReviews([slug]))
+      .then((list) => alive && setR(summarize(list)))
+      .catch(() => alive && setR(null));
+    return () => {
+      alive = false;
+    };
+  }, [slug]);
+  if (r === undefined) return null;
+  return (
+    <section className="card space-y-2" aria-labelledby="rev-h" data-my-reviews>
+      <h2 id="rev-h" className="font-display text-xl font-semibold">{tx('Your reviews', 'Mga review mo')}</h2>
+      {!r ? (
+        <p className="text-ink-soft">{tx('No reviews yet. Customers can rate you after they confirm an order.', 'Wala pang review. Puwedeng mag-rate ang customer pagkatapos nilang mag-confirm ng order.')}</p>
+      ) : (
+        <>
+          <RatingLine avg={r.avg} count={r.count} />
+          <ul className="space-y-2 text-sm">
+            {r.latest.map((x) => (
+              <li key={`${x.name}-${x.createdAt}`}>
+                <span className="font-semibold">{x.stars}/5 · {x.name}</span>
+                {x.text && <p className="text-ink-soft">“{x.text}”</p>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }

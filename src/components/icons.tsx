@@ -40,3 +40,7 @@ export const IconTurnLeft = (p: P) => <Svg {...p}><path d="M4 5v5h5" /><path d="
 export const IconTurnRight = (p: P) => <Svg {...p}><path d="M20 5v5h-5" /><path d="M19 14a7.5 7.5 0 11-1.8-7.6L20 10" /></Svg>;
 export const IconSlice = (p: P) => <Svg {...p}><path d="M3 15l17-7v8l-17 3z" /><path d="M3 15v4M3 15l17-7M20 12l-17 4" /><path d="M14 6.5c0-1.2.8-2 2-2" /></Svg>;
 export const IconDownload = (p: P) => <Svg {...p}><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" /></Svg>;
+export const IconStar = (p: P & { filled?: boolean }) => {
+  const { filled, ...rest } = p;
+  return <Svg {...rest} fill={filled ? 'currentColor' : 'none'}><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8L12 3.5z" /></Svg>;
+};

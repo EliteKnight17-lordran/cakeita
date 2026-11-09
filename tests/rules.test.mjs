@@ -86,6 +86,34 @@ await t('notify function can read them by id', assertSucceeds(getDoc(doc(anon, '
 await t('nobody can list alert phones', assertFails(getDocs(collection(anon, 'push'))));
 await t('cannot set someone else\'s alert phones', assertFails(setDoc(doc(ben, 'push/anaUid0000001'), { subs: '[]', updatedAt: now })));
 await t('alert list size limited', assertFails(setDoc(doc(ana, 'push/anaUid0000001'), { subs: 'x'.repeat(8001), updatedAt: now })));
+// Reviews: a private ticket proves a quoted + confirmed order; the public review never shows the order id.
+const cara = env.authenticatedContext('caraUid000001').firestore();
+const tk = (uid, extra = {}) => ({ orderId: 'rq-abc123def456', bakerUid: 'anaUid0000001', slug: 'ana-bakes', uid, createdAt: now, ...extra });
+const T1 = 'tkCara0000000000000001';
+await t('customer gets a review ticket for a confirmed order', assertSucceeds(setDoc(doc(cara, `reviewTickets/${T1}`), tk('caraUid000001'))));
+await t('nobody can read tickets (order id stays private)', assertFails(getDoc(doc(cara, `reviewTickets/${T1}`))));
+await t('ticket needs a confirmation', assertFails(setDoc(doc(ben, 'reviewTickets/tkBen00000000000000001'), tk('benUid0000001', { orderId: 'rq-photo1' }))));
+await t('ticket needs a real quote', assertFails(setDoc(doc(ben, 'reviewTickets/tkBen00000000000000002'), tk('benUid0000001', { orderId: 'rq-none' }))));
+await t('ticket must name the quote baker', assertFails(setDoc(doc(ben, 'reviewTickets/tkBen00000000000000003'), tk('benUid0000001', { bakerUid: 'benUid0000001' }))));
+await t('ticket is for yourself only', assertFails(setDoc(doc(ben, 'reviewTickets/tkBen00000000000000004'), tk('caraUid000001'))));
+await t('baker cannot get a ticket for their own bakery', assertFails(setDoc(doc(ana, 'reviewTickets/tkAna00000000000000001'), tk('anaUid0000001'))));
+await t('ticket needs an account', assertFails(setDoc(doc(anon, 'reviewTickets/tkAnon0000000000000001'), tk('x'))));
+const rev = (extra = {}) => ({ bakerUid: 'anaUid0000001', slug: 'ana-bakes', ticket: T1, stars: 5, text: 'Ang sarap!', name: 'Cara D.', createdAt: now, ...extra });
+await t('customer posts a review with their ticket', assertSucceeds(setDoc(doc(cara, 'reviews/caraUid000001_ana-bakes'), rev())));
+await t('anyone reads reviews for a bakery', assertSucceeds(getDocs(query(collection(anon, 'reviews'), where('slug', 'in', ['ana-bakes'])))));
+await t('one review per customer per bakery', assertFails(setDoc(doc(cara, 'reviews/caraUid000001_ana-bakes'), rev({ stars: 1 }))));
+await t('someone else cannot use your ticket', assertFails(setDoc(doc(ben, 'reviews/benUid0000001_ana-bakes'), rev())));
+await t('review needs a ticket', assertFails(setDoc(doc(ben, 'reviews/benUid0000001_ana-bakes'), rev({ ticket: 'tkMissing000000000000001' }))));
+await t('review id must be the reviewer', assertFails(setDoc(doc(ben, 'reviews/caraUid000001_x'), rev({ slug: 'x' }))));
+await t('review cannot carry the order id', assertFails(setDoc(doc(cara, 'reviews/caraUid000001_ana-bakes2'), rev({ slug: 'ana-bakes2', orderId: 'rq-abc123def456' }))));
+const T2 = 'tkCara0000000000000002';
+await setDoc(doc(cara, `reviewTickets/${T2}`), tk('caraUid000001'));
+await t('ticket and review must be the same bakery', assertFails(setDoc(doc(cara, 'reviews/caraUid000001_ben-bakes'), rev({ ticket: T2, slug: 'ben-bakes' }))));
+await t('stars are 1 to 5 whole numbers', assertFails(setDoc(doc(cara, 'reviews/caraUid000001_ana-bakes'), rev({ ticket: T2, stars: 6 }))));
+await t('baker cannot delete a review', assertFails(deleteDoc(doc(ana, 'reviews/caraUid000001_ana-bakes'))));
+await t('nobody can edit a review', assertFails(setDoc(doc(cara, 'reviews/caraUid000001_ana-bakes'), rev({ stars: 1 }), { merge: true })));
+await t('reviewer can delete their own review (account deletion)', assertSucceeds(deleteDoc(doc(cara, 'reviews/caraUid000001_ana-bakes'))));
+
 await t('baker deletes own menu', assertSucceeds(deleteDoc(doc(ana, 'menus/ana-bakes'))));
 
 

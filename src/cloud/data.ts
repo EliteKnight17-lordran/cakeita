@@ -1,6 +1,7 @@
 import type { ListedBakery } from '../domain/matching';
 import { toPublicMenu } from '../domain/pricing';
 import { cakeRequestSchema, confirmLinkSchema, offerLinkSchema, publicMenuSchema, quoteLinkSchema, type ConfirmLink, type OfferLink, type QuoteLink } from '../domain/schemas';
+import { reviewId, reviewSchema, type Review } from '../domain/reviews';
 import type { Bakery, CakeRequest, PublicMenu } from '../domain/types';
 import type { MyRequest } from '../data/store';
 import { loadCloud } from './fb';
@@ -14,6 +15,8 @@ import { loadCloud } from './fb';
  *   confirmations/{id}  customer -> baker. Anyone creates for an existing quote; only the baker reads.
  *   offers/{id}         customer -> baker: one counter-offer per quote. Same rules as confirmations.
  *   users/{uid}         a customer's own list of requests, so "My cakes" follows them to a new phone.
+ *   reviewTickets/{id}  private proof (order quoted + confirmed) behind a review. Nobody reads it.
+ *   reviews/{uid_slug}  public star review, one per customer per bakery, never edited.
  * Payloads are stored as JSON text and checked with the same zod schemas as share links,
  * so cloud data is never trusted more than a link.
  */
@@ -228,6 +231,63 @@ export async function listenOffers(uid: string, onOffer: (o: OfferLink) => void)
   );
 }
 
+/**
+ * Post a star review. First a private ticket proves the order (the baker quoted it and this
+ * customer confirmed it); the public review points to the ticket, so the order id, which
+ * opens the quote, never becomes public. Rules: signed in, not the baker, one per bakery.
+ */
+export async function postReview(uid: string, r: { orderId: string; slug: string; stars: number; text: string; name: string }): Promise<void> {
+  const c = await loadCloud();
+  const { doc, setDoc } = c.m.fs;
+  const bakerUid = await quoteOwner(r.orderId);
+  if (!bakerUid) throw new Error('no-quote');
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const ticket = `tk${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`;
+  // Rating right after confirming: the confirmation may still be on its way, so try a few times.
+  for (let tries = 0; ; tries++) {
+    try {
+      await setDoc(doc(c.db, 'reviewTickets', ticket), { orderId: r.orderId, bakerUid, slug: r.slug, uid, createdAt: now() });
+      break;
+    } catch (e) {
+      if (tries >= 3) throw e;
+      await new Promise((ok) => setTimeout(ok, 1500));
+    }
+  }
+  await setDoc(doc(c.db, 'reviews', reviewId(uid, r.slug)), {
+    bakerUid,
+    slug: r.slug,
+    ticket,
+    stars: Math.round(r.stars),
+    text: r.text.trim().slice(0, 300),
+    name: r.name.slice(0, 40),
+    createdAt: now(),
+  });
+}
+
+/** Has this customer already reviewed this bakery? */
+export async function myReview(uid: string, slug: string): Promise<Review | null> {
+  const c = await loadCloud();
+  const snap = await c.m.fs.getDoc(c.m.fs.doc(c.db, 'reviews', reviewId(uid, slug)));
+  const p = snap.exists() ? reviewSchema.safeParse(snap.data()) : null;
+  return p?.success ? p.data : null;
+}
+
+/** Reviews for these bakeries (real accounts only; sample shops have none). */
+export async function fetchReviews(slugs: string[]): Promise<Review[]> {
+  const c = await loadCloud();
+  const { collection, getDocs, query, where, limit } = c.m.fs;
+  const out: Review[] = [];
+  const unique = [...new Set(slugs)].filter((s) => /^[a-z0-9-]{1,40}$/.test(s));
+  for (let i = 0; i < unique.length; i += 30) {
+    const snap = await getDocs(query(collection(c.db, 'reviews'), where('slug', 'in', unique.slice(i, i + 30)), limit(500)));
+    snap.forEach((d) => {
+      const p = reviewSchema.safeParse(d.data());
+      if (p.success) out.push(p.data);
+    });
+  }
+  return out;
+}
+
 export async function saveMyRequests(uid: string, list: MyRequest[]): Promise<void> {
   const c = await loadCloud();
   await c.m.fs.setDoc(c.m.fs.doc(c.db, 'users', uid), { myRequests: JSON.stringify(list.slice(0, 50)), updatedAt: now() });
@@ -273,6 +333,10 @@ export async function deleteCloudData(uid: string, slug: string | null, quoteIds
     const m = await getDoc(doc(c.db, 'menus', slug));
     if (m.exists() && m.data().ownerUid === uid) jobs.push(deleteDoc(m.ref));
   }
+  // Reviews this person wrote (ids start with their account id). Older rules refuse; skip then.
+  const { documentId } = c.m.fs;
+  const mine = await getDocs(query(collection(c.db, 'reviews'), where(documentId(), '>=', `${uid}_`), where(documentId(), '<', `${uid}_\uf8ff`))).catch(() => null);
+  mine?.forEach((d) => jobs.push(deleteDoc(d.ref).catch(() => undefined)));
   jobs.push(deleteDoc(doc(c.db, 'bakeries', uid)), deleteDoc(doc(c.db, 'users', uid)), deleteDoc(doc(c.db, 'push', uid)));
   await Promise.all(jobs);
 }

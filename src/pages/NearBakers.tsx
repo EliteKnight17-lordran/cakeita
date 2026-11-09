@@ -13,6 +13,8 @@ import { toPublicMenu } from '../domain/pricing';
 import { createSampleBakery, SAMPLE_BASE_CAKES, SAMPLE_COMPONENTS } from '../domain/starterMenus';
 import { toVisual } from '../domain/visual';
 import { listedBakeries } from '../data/directory';
+import { RatingLine } from '../components/ReviewCard';
+import { bySlug, type RatingSummary } from '../domain/reviews';
 import { useDraft, writeDraft } from '../data/draft';
 import { localBakeryFor, useDb, type MyRequest } from '../data/store';
 import { celebrate } from '../lib/celebrate';
@@ -90,6 +92,19 @@ export default function NearBakers() {
       alive = false;
     };
   }, []);
+  // Star reviews for real bakers (only from confirmed orders; sample shops have none).
+  const [ratings, setRatings] = useState<Map<string, RatingSummary>>(new Map());
+  useEffect(() => {
+    if (!real.length) return;
+    let alive = true;
+    import('../cloud/data')
+      .then((m) => m.fetchReviews(real.map((r) => r.menu.slug)))
+      .then((list) => alive && setRatings(bySlug(list)))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [real]);
   // The demo baker running on this phone shows up too, so one laptop can play customer and baker.
   const demoBaker = db.bakery?.isSample && db.bakery.slug === 'sample' ? db.bakery : null;
   const listed = useMemo(() => {
@@ -330,6 +345,7 @@ export default function NearBakers() {
                   onSend={ready ? () => sendTo(m) : null}
                   sending={sending === m.slug}
                   asked={asked.get(m.slug) ?? null}
+                  rating={ratings.get(m.slug) ?? null}
                 />
               </li>
             ))}
@@ -352,7 +368,7 @@ export default function NearBakers() {
   );
 }
 
-function BakerCard({ m, best, selected, onSelect, onOrder, onSend, sending, asked }: { m: BakeryMatch; best: boolean; selected: boolean; onSelect: () => void; onOrder: () => void; onSend: (() => void) | null; sending: boolean; asked: MyRequest | null }) {
+function BakerCard({ m, best, selected, onSelect, onOrder, onSend, sending, asked, rating }: { m: BakeryMatch; best: boolean; selected: boolean; onSelect: () => void; onOrder: () => void; onSend: (() => void) | null; sending: boolean; asked: MyRequest | null; rating: RatingSummary | null }) {
   const tx = useTx();
   const short = m.name.replace(' (sample)', '').replace(' (demo data)', '');
   const askedLabel = asked
@@ -373,6 +389,7 @@ function BakerCard({ m, best, selected, onSelect, onOrder, onSend, sending, aske
           <p className="text-sm text-ink-soft">
             {m.area} · {formatKm(m.distanceKm)}
           </p>
+          {rating && <RatingLine avg={rating.avg} count={rating.count} />}
         </div>
         <div className="shrink-0 text-right">
           <p className="text-xs text-ink-soft">{tx('About', 'Mga')}</p>
@@ -382,6 +399,16 @@ function BakerCard({ m, best, selected, onSelect, onOrder, onSend, sending, aske
           )}
         </div>
       </div>
+      {selected && rating && rating.latest.length > 0 && (
+        <ul className="space-y-2 border-t border-line pt-3 text-sm" aria-label={tx('Reviews', 'Mga review')} data-reviews>
+          {rating.latest.slice(0, 2).map((r) => (
+            <li key={`${r.name}-${r.createdAt}`}>
+              <span className="font-semibold">{r.stars}/5 · {r.name}</span> <span className="tag bg-ok-bg text-ok-ink">{tx('Confirmed order', 'Confirmed na order')}</span>
+              {r.text && <p className="text-ink-soft">“{r.text}”</p>}
+            </li>
+          ))}
+        </ul>
+      )}
       <ul className="space-y-1.5 border-t border-line pt-3 text-sm">
         {m.canMakeAll && m.leadOk && !m.booked && m.servesOk ? (
           <Fact ok>{tx('Can make it all, in time for your date', 'Kaya lahat, abot sa petsa mo')}</Fact>

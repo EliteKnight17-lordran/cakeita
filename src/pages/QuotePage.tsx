@@ -1,4 +1,5 @@
 import { SurveyFinishCard } from '../components/SurveyFinish';
+import { ReviewCard } from '../components/ReviewCard';
 import { celebrate } from '../lib/celebrate';
 import { cloudEnabled } from '../cloud/config';
 import { useEffect, useState } from 'react';
@@ -151,6 +152,7 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
   const [offerErr, setOfferErr] = useState('');
   const [sentOffer, setSentOffer] = useState<MyRequest['offer'] | null>(null);
   const [offerUrl, setOfferUrl] = useState<string | null>(null);
+  const [cloudConfirm, setCloudConfirm] = useState<'idle' | 'sending' | 'done' | 'none'>('idle');
   const expired = isQuoteExpired(quote.validUntil);
   const local = db.orders.find((o) => o.id === quote.orderId);
   const auto = !!mine?.auto;
@@ -184,13 +186,17 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
     }
     setLink(await confirmLink(c));
     // Tell the baker right away if they have a cloud inbox (the Messenger link still works too).
+    // The rating card waits for this: signing in before it lands would hold the write back.
     if (cloudEnabled()) {
+      setCloudConfirm('sending');
       import('../cloud/data')
         .then(async ({ quoteOwner, sendConfirmation }) => {
           const owner = await quoteOwner(c.orderId);
-          if (owner) await sendConfirmation(c, owner);
+          if (!owner) return setCloudConfirm('none');
+          await sendConfirmation(c, owner);
+          setCloudConfirm('done');
         })
-        .catch(() => {});
+        .catch(() => setCloudConfirm('none'));
     }
     // Demo on one device: apply immediately.
     const res = applyConfirmation(repo.get().orders.find((o) => o.id === quote.orderId), c);
@@ -387,6 +393,9 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
               </Link>
             </div>
           </div>
+        )}
+        {(cloudConfirm === 'done' || (cloudConfirm === 'idle' && (confirmedHere || mine?.status === 'confirmed'))) && !auto && !quote.bakery.isSample && cloudEnabled() && (
+          <ReviewCard orderId={quote.orderId} slug={quote.bakery.slug} bakeryName={quote.bakery.name} customerName={quote.customerName} />
         )}
         <SurveyFinishCard />
         {quote.bakery.isSample && (
