@@ -120,6 +120,7 @@ export async function sendCakeRequest(p: RequestParts, tx: Tx): Promise<SendResu
     status: 'sent',
     cloud,
     auto,
+    ...(cloud && menu.owner ? { bakerUid: menu.owner } : {}),
     fromSlug: p.fromSlug,
     eventDate: req.eventDate,
     contact: menu.contact,

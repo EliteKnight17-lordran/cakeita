@@ -624,6 +624,15 @@ async function main() {
     await shot(picker, '15-offer-answered');
     await picker.getByRole('button', { name: /Ito ang gusto ko/ }).click();
     check('confirming a sample bakery says no real order was made', await picker.getByText(/walang totoong order/).isVisible());
+    // ---------------- In-app chat (sample bakery answers by itself) ----------------
+    await picker.locator('[data-chat="auto"] [data-quick-reply]').filter({ hasText: /i-deliver/ }).click();
+    check('customer chat message shows at once', await picker.locator('[data-chat-msg="customer"]').getByText(/i-deliver/).isVisible());
+    check('sample baker answers in the chat', await picker.locator('[data-chat-msg="baker"]').getByText(/delivery fee/).waitFor({ timeout: 6000 }).then(() => true, () => false));
+    await picker.locator('[data-chat-input]').fill('Salamat po!');
+    await picker.locator('[data-chat-input]').press('Enter');
+    check('typing and Enter sends a message', await waitTrue(async () => (await picker.locator('[data-chat-msg="customer"]').count()) === 2));
+    await axe(picker, 'order chat');
+    await shot(picker, '15b-chat');
     await picker.goto(`${BASE}#/near?from=sample`);
     check(
       'the chosen baker shows as already asked',

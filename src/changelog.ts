@@ -13,6 +13,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.26.0',
+    date: '2026-11-10',
+    en: [
+      'In-app chat on every request: customer and baker talk inside Cakeita, before and after the quote, with one-tap quick replies. Messenger or the Facebook page is still one tap away.',
+      'Sample bakeries answer the chat by themselves for the demo (and say they are samples).',
+    ],
+    tl: [
+      'Chat sa loob ng app sa bawat request: mag-uusap ang customer at baker sa Cakeita, bago at pagkatapos ng quote, may quick replies na isang tap lang. Isang tap pa rin ang Messenger o Facebook page.',
+      'Kusang sumasagot sa chat ang sample bakeries para sa demo (at sinasabi nilang sample sila).',
+    ],
+  },
+  {
     version: '1.25.0',
     date: '2026-11-10',
     en: [

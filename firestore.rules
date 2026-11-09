@@ -101,6 +101,27 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.bakerUid == request.auth.uid;
     }
 
+    // Customer <-> baker chat on one request. The order id is the secret (like quotes), so anyone
+    // holding it reads and writes as the customer; only the signed-in baker of that request writes as the baker.
+    match /chats/{orderId}/messages/{mid} {
+      function ownerOf() {
+        return exists(quoteDoc(orderId)) ? get(quoteDoc(orderId)).data.bakerUid
+          : (exists(/databases/$(database)/documents/requests/$(orderId)) ? get(/databases/$(database)/documents/requests/$(orderId)).data.bakerUid : null);
+      }
+      allow read: if true;
+      allow create: if mid.matches('^[A-Za-z0-9]{6,64}$')
+        && request.resource.data.keys().hasOnly(['from', 'text', 'at', 'bakerUid'])
+        && text(request.resource.data.text, 500)
+        && request.resource.data.text.size() > 0
+        && stamp(request.resource.data.at)
+        && request.resource.data.bakerUid != null
+        && request.resource.data.bakerUid == ownerOf()
+        && (request.resource.data.from == 'customer'
+          || (request.resource.data.from == 'baker' && isUid(request.resource.data.bakerUid)));
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.bakerUid == request.auth.uid;
+    }
+
     // Customer -> baker: "Yes, I'll take it." Only for a quote that exists, only once.
     match /confirmations/{id} {
       allow create: if exists(quoteDoc(id))

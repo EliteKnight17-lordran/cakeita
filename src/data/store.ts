@@ -33,6 +33,8 @@ export interface MyRequest {
   contact?: string;
   /** The customer's one counter-offer on the quote. */
   offer?: { price: number; note: string; at: string };
+  /** The baker's account (cloud requests), for the in-app chat. */
+  bakerUid?: string;
 }
 
 export interface DbState {

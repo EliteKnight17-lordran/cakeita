@@ -16,6 +16,8 @@ import { loadCloud } from './fb';
  *   offers/{id}         customer -> baker: one counter-offer per quote. Same rules as confirmations.
  *   users/{uid}         a customer's own list of requests, so "My cakes" follows them to a new phone.
  *   reviewTickets/{id}  private proof (order quoted + confirmed) behind a review. Nobody reads it.
+ *   ready/{orderId}     baker -> customer: photo of the finished cake. Read by id, like quotes.
+ *   chats/{orderId}/messages/{id}  customer <-> baker chat on one request. Anyone with the order id reads.
  *   reviews/{uid_slug}  public star review, one per customer per bakery, never edited.
  * Payloads are stored as JSON text and checked with the same zod schemas as share links,
  * so cloud data is never trusted more than a link.
@@ -167,6 +169,29 @@ export async function loadReadyPhoto(orderId: string): Promise<string | null> {
   const snap = await c.m.fs.getDoc(c.m.fs.doc(c.db, 'ready', orderId));
   const p = snap.exists() ? snap.data().photo : null;
   return typeof p === 'string' && p.startsWith('data:image/jpeg;base64,') ? p : null;
+}
+
+/** Chat on one request, oldest first (both sides). */
+export async function listenChat(orderId: string, onMsgs: (m: import('../chat/chat').ChatMsg[]) => void, onError: () => void): Promise<() => void> {
+  const c = await loadCloud();
+  const { collection, onSnapshot, query, orderBy, limit } = c.m.fs;
+  return onSnapshot(
+    query(collection(c.db, 'chats', orderId, 'messages'), orderBy('at'), limit(200)),
+    (snap) => {
+      const list: import('../chat/chat').ChatMsg[] = [];
+      snap.forEach((d) => {
+        const x = d.data();
+        if ((x.from === 'customer' || x.from === 'baker') && typeof x.text === 'string' && typeof x.at === 'string') list.push({ id: d.id, from: x.from, text: x.text.slice(0, 500), at: x.at });
+      });
+      onMsgs(list);
+    },
+    onError,
+  );
+}
+
+export async function sendChat(orderId: string, bakerUid: string, m: import('../chat/chat').ChatMsg): Promise<void> {
+  const c = await loadCloud();
+  await c.m.fs.setDoc(c.m.fs.doc(c.db, 'chats', orderId, 'messages', m.id), { from: m.from, text: m.text, at: m.at, bakerUid });
 }
 
 /** Watch for the baker's quote on a request (customer side). */
@@ -340,6 +365,11 @@ export async function deleteCloudData(uid: string, slug: string | null, quoteIds
     jobs.push(
       getDoc(doc(c.db, 'quotes', id))
         .then((s) => (s.exists() && s.data().bakerUid === uid ? deleteDoc(s.ref) : undefined))
+        .catch(() => undefined),
+    );
+    jobs.push(
+      getDocs(collection(c.db, 'chats', id, 'messages'))
+        .then((snap) => Promise.all(snap.docs.filter((d) => d.data().bakerUid === uid).map((d) => deleteDoc(d.ref))))
         .catch(() => undefined),
     );
     jobs.push(

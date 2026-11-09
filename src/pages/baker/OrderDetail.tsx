@@ -6,6 +6,7 @@ import { CakeView } from '../../cake/CakeView';
 import { AllergyNotice } from '../../components/AllergyNotice';
 import { ShareBox } from '../../components/ShareBox';
 import { ReadySender } from '../../components/CakeReady';
+import { OrderChat } from '../../components/OrderChat';
 import { Chip, Field, Notice } from '../../components/ui';
 import { IconCheck, IconPen, IconPrint } from '../../components/icons';
 import { normalizeSelection } from '../../domain/designs';
@@ -17,7 +18,7 @@ import { formatQty, shoppingForOrder } from '../../domain/shopping';
 import type { Bakery, CakeLook, Order, Selection } from '../../domain/types';
 import { toVisual } from '../../domain/visual';
 import { repo, useDb } from '../../data/store';
-import { copyText, quoteLink } from '../../lib/links';
+import { copyText, messengerUrl, quoteLink } from '../../lib/links';
 import { usePrefs, useTx } from '../../lib/prefs';
 import { handoffText, niceDate } from '../../lib/dates';
 import { Customizer } from '../CustomerFlow';
@@ -175,7 +176,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
 
       {order.handoff && (
         <p className={`rounded-2xl border p-3 text-[0.95rem] ${order.handoff === 'delivery' ? 'border-berry bg-berry-soft' : 'border-line bg-white'}`} data-order-handoff={order.handoff}>
-          <strong>{order.handoff === 'delivery' ? tx('Delivery', 'Delivery') : tx('Pickup', 'Pickup')}:</strong> {handoffText(order, tx, 'baker')}
+          <strong>{tx('Pickup or delivery', 'Pickup o delivery')}:</strong> {handoffText(order, tx, 'baker')}
         </p>
       )}
 
@@ -421,6 +422,22 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
           </button>
         </section>
       )}
+
+      <OrderChat
+        orderId={order.id}
+        me="baker"
+        mode={order.source === 'cloud' && cloudEnabled() && currentUid() ? 'cloud' : order.source === 'same-device' ? 'local' : null}
+        bakerUid={currentUid()}
+        otherName={order.customer.name.split(' ')[0] ?? order.customer.name}
+        quick={[
+          tx('Thanks! Looking at it now.', 'Salamat po! Titingnan ko na.'),
+          tx('Your date is available.', 'Available po ang date mo.'),
+          tx('Sending your quote now.', 'Ipapadala ko na po ang quote.'),
+          tx('Can you book the rider? You pay the delivery fee.', 'Kayo po ba ang magbo-book ng rider? Kayo po sa delivery fee.'),
+          tx('Your cake is ready!', 'Handa na po ang cake mo!'),
+        ]}
+        messengerHref={messengerUrl(order.customer.contact)}
+      />
 
       {confirmed && <ReadySender order={order} link={link} cloud={order.source === 'cloud' && cloudEnabled() && !!currentUid()} />}
 

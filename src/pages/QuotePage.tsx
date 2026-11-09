@@ -9,6 +9,7 @@ import { CakeView } from '../cake/CakeView';
 import { Layout } from '../components/Layout';
 import { ShareBox } from '../components/ShareBox';
 import { ReadyCard } from '../components/CakeReady';
+import { OrderChat } from '../components/OrderChat';
 import { Field, Notice, SampleBadge } from '../components/ui';
 import { IconChevron, IconHeart } from '../components/icons';
 import { formatPeso } from '../domain/money';
@@ -17,7 +18,7 @@ import { quoteLinkSchema, type OfferLink, type QuoteLink } from '../domain/schem
 import { confirmSample } from '../data/sampleBakers';
 import { repo, useDb, type MyRequest } from '../data/store';
 import { decodePayload, linkErrorText } from '../lib/codec';
-import { confirmLink, offerLink, quoteCodeFrom } from '../lib/links';
+import { confirmLink, messengerUrl, offerLink, quoteCodeFrom } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
 import { handoffText, niceDate } from '../lib/dates';
 
@@ -120,6 +121,7 @@ export default function QuotePage() {
               ) : (
                 <ShareBox url={mine.requestLink} contact={mine.contact} message={tx('Hi! Here is my cake request again:', 'Hi po! Ito ulit ang cake request ko:')} title="Cake request" qrLabel="QR" />
               ))}
+              <CustomerChat orderId={mine.id} mine={mine} bakeryName={mine.bakeryName} contact={mine.contact ?? ''} />
               {mine.fromSlug && (
                 <Link to={`/near?from=${encodeURIComponent(mine.fromSlug)}`} className="btn-ghost">
                   {tx('Back to the bakers', 'Bumalik sa mga baker')}
@@ -296,7 +298,7 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
             </li>
             {quote.handoff && (
               <li data-quote-handoff={quote.handoff}>
-                <strong>{quote.handoff === 'delivery' ? 'Delivery' : 'Pickup'}:</strong> {handoffText(quote, tx, 'you')}
+                <strong>{tx('Pickup or delivery', 'Pickup o delivery')}:</strong> {handoffText(quote, tx, 'you')}
               </li>
             )}
             <li>
@@ -403,6 +405,7 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
             </div>
           </div>
         )}
+        <CustomerChat orderId={quote.orderId} mine={mine} bakeryName={quote.bakery.name.replace(' (sample)', '')} contact={quote.bakery.contact} />
         {(cloudConfirm === 'done' || (cloudConfirm === 'idle' && (confirmedHere || mine?.status === 'confirmed'))) && !auto && !quote.bakery.isSample && cloudEnabled() && (
           <ReviewCard orderId={quote.orderId} slug={quote.bakery.slug} bakeryName={quote.bakery.name} customerName={quote.customerName} />
         )}
@@ -417,4 +420,31 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
       </div>
     </Layout>
   );
+}
+
+/** The customer's chat with the baker: live through the cloud, on this device for the one-laptop demo, or a sample bakery's auto answers. */
+function CustomerChat({ orderId, mine, bakeryName, contact }: { orderId: string; mine: MyRequest | null; bakeryName: string; contact: string }) {
+  const tx = useTx();
+  const db = useDb();
+  const sameDevice = db.orders.some((o) => o.id === orderId);
+  const auto = !!mine?.auto;
+  const [owner, setOwner] = useState<string | null>(mine?.bakerUid ?? null);
+  useEffect(() => {
+    if (owner || auto || sameDevice || !cloudEnabled()) return;
+    let alive = true;
+    import('../cloud/data')
+      .then((m) => m.quoteOwner(orderId))
+      .then((u) => alive && u && setOwner(u), () => {});
+    return () => {
+      alive = false;
+    };
+  }, [owner, auto, sameDevice, orderId]);
+  const mode = auto ? 'auto' : sameDevice ? 'local' : owner && cloudEnabled() ? 'cloud' : null;
+  const quick = [
+    tx('Can it be a different color?', 'Puwede po bang ibang kulay?'),
+    tx('What time can I pick it up?', 'Anong oras po puwedeng kunin?'),
+    tx('Can you deliver? I will pay the rider.', 'Puwede po bang i-deliver? Ako na sa rider.'),
+    tx('Thank you!', 'Salamat po!'),
+  ];
+  return <OrderChat orderId={orderId} me="customer" mode={mode} bakerUid={owner} otherName={bakeryName} quick={quick} messengerHref={messengerUrl(contact)} />;
 }
