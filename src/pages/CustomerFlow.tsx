@@ -22,7 +22,6 @@ import { COLOR_WORDS } from '../domain/requestReader';
 import { FLOWER_STYLES, TOPPER_SPOTS, type DesignTier, type OwnItem, type PublicMenu, type Selection } from '../domain/types';
 import { FLOWER_LABELS, OWN_LABELS } from '../domain/placement';
 import { toVisual } from '../domain/visual';
-import { SCENARIOS } from '../data/demoScenarios';
 import { clearDraft, useDraft, type Draft, type Stage } from '../data/draft';
 import { repo } from '../data/store';
 import { photoPixels, resizeImage, samplePhoto, type SmallImage } from '../lib/image';
@@ -38,6 +37,7 @@ import { useMedia } from '../lib/useMedia';
 import { MiniCake } from './MiniCake';
 import { currentCake, offlineReading } from './customerCake';
 import { useMenu } from './useMenu';
+import { ReadyDesigns, type ReadyDesign } from './ReadyDesigns';
 import { carryPhoto, sendCakeRequest, type RequestParts } from './sendRequest';
 
 const OCCASIONS: Array<[string, string]> = [
@@ -438,6 +438,12 @@ function Flow({ menu }: { menu: PublicMenu }) {
     setBuildKey((k) => k + 1);
     window.scrollTo({ top: 0 });
   };
+  /** A ready design: open it priced on the cake step, ready to change. */
+  const pickReady = (d: ReadyDesign, text: string) => {
+    update({ description: text, servings: d.servings, occasion: d.occasion === 'Other' ? draft.occasion : d.occasion, tier: 'classic', selection: null, handPicked: null, lookTouched: false, stage: 'cake' });
+    setBuildKey((k) => k + 1);
+    window.scrollTo({ top: 0 });
+  };
   const goStage = (s: Stage) => {
     update({ stage: s });
     window.scrollTo({ top: 0 });
@@ -511,22 +517,6 @@ function Flow({ menu }: { menu: PublicMenu }) {
       <span className="text-sm text-ink-soft">{tx('Optional. A screenshot works too.', 'Optional. Puwede ang screenshot.')}</span>
       {photoInput}
     </label>
-  );
-
-  const examples = menu.isSample && !hasText && (
-    <details className="group">
-      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm font-semibold text-ink-soft">
-        {tx('No idea yet? Try an example', 'Wala pang idea? Subukan ang halimbawa')}
-        <IconChevron size={16} className="transition group-open:rotate-180" />
-      </summary>
-      <div className="mt-1 flex flex-wrap gap-2">
-        {SCENARIOS.slice(0, 4).map((s) => (
-          <button key={s.key} type="button" className="btn-ghost" onClick={() => update({ description: s.message })}>
-            {s.title}
-          </button>
-        ))}
-      </div>
-    </details>
   );
 
   const smartButton = smartAvailable && draft.description.trim() && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
@@ -836,12 +826,17 @@ function Flow({ menu }: { menu: PublicMenu }) {
           <div className="space-y-4" data-open-designer data-stage="idea">
             <div className="space-y-1">
               <h1 className="text-3xl leading-tight sm:text-4xl">{tx('What cake do you want?', 'Anong cake ang gusto mo?')}</h1>
-              <p className="text-ink-soft">{tx('Add a photo, describe it, or both. We build it in 3D.', 'Mag-upload ng photo, i-describe, o pareho. Gagawin namin itong 3D.')}</p>
+              <p className="text-ink-soft">{tx('Pick a ready design, or add a photo or describe your own. We build it in 3D.', 'Pumili ng ready design, o mag-upload ng photo o i-describe ang sarili mo. Gagawin namin itong 3D.')}</p>
             </div>
+            {!hasText && !photo && !building && (
+              <>
+                <ReadyDesigns menu={menu} onPick={pickReady} />
+                <p className="text-center text-sm font-semibold text-ink-soft" data-or-own>{tx('or make your own', 'o gumawa ng sarili mo')}</p>
+              </>
+            )}
             {building ? <PhotoBuilding photo={photo?.dataUrl ?? null} ai={!!photo && smartAvailable && !prefs.aiOff} /> : inspoBig}
             <div className="space-y-1">{descBox}</div>
             {photoError && <Notice tone="warn">{photoError}</Notice>}
-            {examples}
             <button type="button" className="btn w-full" disabled={(!hasText && !photo) || building} onClick={makeCake} data-make-cake>
               <IconSparkle /> {building ? tx('Making your cake…', 'Ginagawa ang cake mo…') : tx('Make my 3D cake', 'Gawin ang 3D cake ko')}
             </button>
@@ -942,7 +937,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
             {photoMatch}
             {smartButton}
             {photoError && <Notice tone="warn">{photoError}</Notice>}
-            {examples}
+            {!hasText && !photo && !building && <ReadyDesigns menu={menu} onPick={pickReady} />}
             {photoNotRead}
             {hasText && <ReadSummary reading={reading} menu={menu} compact />}
           </section>

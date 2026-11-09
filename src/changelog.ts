@@ -13,6 +13,12 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.27.0',
+    date: '2026-11-10',
+    en: ['Step 1 now offers "Pick a ready design": six popular cakes priced from the baker\'s own menu. Tap one to open it in 3D and change anything. Describing your cake or uploading a photo still works.'],
+    tl: ['May "Pumili ng ready design" na sa unang hakbang: anim na sikat na cake na may presyo mula sa sariling menu ng baker. I-tap para makita sa 3D at baguhin kahit ano. Puwede pa ring i-describe o mag-upload ng photo.'],
+  },
+  {
     version: '1.26.0',
     date: '2026-11-10',
     en: [

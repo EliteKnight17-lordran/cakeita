@@ -128,6 +128,18 @@ async function main() {
     check('step 1 shows only the inspo photo and the description', (await customer.locator('[data-inspo]').isVisible()) && (await customer.getByRole('radiogroup', { name: 'Mga design' }).count()) === 0 && (await customer.getByTestId('live-price').count()) === 0);
     check('"make my cake" waits for a photo or words', await customer.locator('[data-make-cake]').isDisabled());
     await axe(customer, 'step 1: idea');
+    // Way 1 of 3: pick a ready design (priced from the menu), open it on the cake step.
+    const shopper = await phone(browser, 'shopper');
+    await shopper.goto(`${BASE}#/b/sample`);
+    await shopper.locator('[data-ready-designs]').waitFor({ timeout: 20000 });
+    const readyCards = shopper.locator('[data-ready-design]');
+    check('step 1 offers ready designs with prices', (await readyCards.count()) >= 4 && /₱[\d,]+/.test(await readyCards.first().innerText()), `${await readyCards.count()} designs`);
+    const readyPrice = ((await shopper.locator('[data-ready-design="ube-bday"]').innerText()).match(/₱[\d,]+/) ?? [''])[0];
+    await shopper.locator('[data-ready-design="ube-bday"]').click();
+    await shopper.locator('[data-stage="cake"]').waitFor({ timeout: 10000 });
+    const livePrice = await shopper.getByTestId('live-price').innerText();
+    check('a ready design opens on the cake step at the same price', !!readyPrice && livePrice.includes(readyPrice), `${readyPrice} vs ${livePrice.replace(/\n/g, ' ')}`);
+    check('the ready design can be changed like any cake', await shopper.locator('[data-pinned-cake]').isVisible());
     await customer.getByLabel(/Ilarawan ang cake/).fill('2 tier pink ube cake with chocolate drip and fresh flowers for a birthday, 30 pax, "Happy 7th Mia"');
     await customer.locator('[data-make-cake]').click();
     check('making the cake shows the building steps', await customer.locator('[data-photo-building]').waitFor({ timeout: 3000 }).then(() => true, () => false));
@@ -687,7 +699,7 @@ async function main() {
     await picker.goto(q3);
     check('customer sees the accepted offer at their price', await picker.getByText('Pumayag sila sa alok mo').waitFor({ timeout: 8000 }).then(() => true, () => false) && Number((await picker.locator('[data-quote-price]').innerText()).replace(/[^\d]/g, '')) === est2);
 
-    for (const p of [customer, baker, elder, tester, picker, gamer]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+    for (const p of [customer, baker, elder, tester, picker, gamer, shopper]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
     await browser.close();
   } finally {
     server.kill();
