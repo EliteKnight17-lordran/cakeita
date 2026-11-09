@@ -304,6 +304,30 @@ async function main() {
     await tester.goto(`${BASE}#/o/fake?q=zzzz`);
     check('tampered quote link shows a friendly error', await waitTrue(() => tester.getByText('Hindi mabuksan ang quote').isVisible()));
 
+    // Customization: placement presets, cake stands and things the customer brings.
+    await tester.goto(`${BASE}#/b/sample`);
+    await tester.getByLabel(/Ilarawan ang cake/).fill('2 tier wedding cake, fresh flowers, 40 pax, budget 6k');
+    await tester.getByText('I-customize').first().click();
+    const place = tester.locator('[data-placement]');
+    check('flower placement shows only when flowers are on the cake', await place.waitFor({ timeout: 10000 }).then(() => true, () => false));
+    const first = (await tester.getByTestId('live-price').innerText()).trim();
+    await place.getByRole('button', { name: 'Pababa sa gilid', exact: true }).click();
+    await tester.waitForTimeout(300);
+    const before = (await tester.getByTestId('live-price').innerText()).trim();
+    check('placement changes the picture, not the price', /pababa/i.test((await tester.locator('figure [role="img"]').first().getAttribute('aria-label')) ?? '') && before === first, `${first} → ${before}`);
+    await tester.locator('[data-stand]').getByRole('button', { name: /Gold na pedestal/ }).click();
+    await tester.waitForTimeout(300);
+    const withStand = (await tester.getByTestId('live-price').innerText()).trim();
+    check('a priced cake stand adds to the price', withStand !== before, `${before} → ${withStand}`);
+    await tester.locator('[data-stand]').getByRole('button', { name: /Sariling cake stand/ }).click();
+    await tester.waitForTimeout(300);
+    const ownPrice = (await tester.getByTestId('live-price').innerText()).trim();
+    const ownNote = (await tester.locator('[data-own-note]').isVisible()) ? 1 : 0;
+    check('own stand is free, replaces the priced one, and Customize stays open', ownPrice === before && ownNote === 1, `${ownPrice}, note ${ownNote}`);
+    await tester.locator('[data-inspo]').waitFor();
+    check('inspo photo is a clear card under the request box', await tester.locator('[data-inspo]').getByText('May picture ka ng cake na gusto mo?').isVisible());
+    await axe(tester, 'customize with placement and stands');
+
     // Pilot survey: tap-only part 1, try the app, reminder to come back, part 2 (saved on the phone when offline).
     await tester.goto(`${BASE}#/survey?role=customer`);
     await tester.locator('[data-survey]').waitFor();

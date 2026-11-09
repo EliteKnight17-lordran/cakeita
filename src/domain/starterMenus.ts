@@ -98,6 +98,10 @@ export const SAMPLE_COMPONENTS: CakeComponent[] = [
 
   // Finishes
   comp({ id: 'fn-gold', name: 'Gold leaf accents', category: 'finish', visual: 'gold', recipe: [r('gold-leaf', 2)], laborMinutes: 15, extraCost: 0, scales: false, keywords: ['gold leaf', 'gold accents', 'gold flakes', 'gold details', 'edible gold'] }),
+
+  // Display: what the cake stands on (weddings, debuts). Rental share of a stand the baker owns.
+  comp({ id: 'ds-gold', name: 'Gold pedestal stand', nameTl: 'Gold na pedestal stand', category: 'display', visual: 'stand-gold', recipe: [], laborMinutes: 5, extraCost: 150, scales: false, keywords: ['gold stand', 'pedestal', 'cake stand', 'wedding stand', 'gold pedestal'] }),
+  comp({ id: 'ds-wood', name: 'Wooden slab stand', nameTl: 'Kahoy na stand', category: 'display', visual: 'stand-wood', recipe: [], laborMinutes: 5, extraCost: 120, scales: false, keywords: ['wood stand', 'wooden', 'rustic stand', 'wood slab', 'kahoy'] }),
 ];
 
 export type StarterKey = 'home' | 'pinoy' | 'premium';
@@ -209,7 +213,7 @@ export function defaultPartIds(components: Array<{ id: string; category: string 
 }
 
 /** Parts added after launch. Saved bakeries from older versions get them on first load. */
-const ADDED_LATER = ['tp-theme'];
+const ADDED_LATER = ['tp-theme', 'ds-gold', 'ds-wood'];
 
 /**
  * Bring a saved bakery up to date with parts added in later versions. A real baker gets them

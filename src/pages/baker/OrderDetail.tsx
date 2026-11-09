@@ -21,6 +21,7 @@ import { celebrate } from '../../lib/celebrate';
 import { currentUid } from '../../cloud/account';
 import { cloudEnabled } from '../../cloud/config';
 import { BakerShell } from './BakerShell';
+import { ownText } from '../../domain/placement';
 import { StatusTag } from './Inbox';
 
 export default function OrderDetail() {
@@ -159,6 +160,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
         </Notice>
       )}
       {order.licensedNote && <Notice tone="warn" title={tx('Character request', 'May character')}>{order.licensedNote}</Notice>}
+      {order.look.own?.length ? <Notice tone="info" title={tx('Customer brings their own', 'May dadalhin ang customer')}><span data-own-baker>{ownText(order.look.own, prefs.lang)} {tx('Not included in your price. Ask for its size before the bake.', 'Hindi kasama sa presyo mo. Itanong ang laki bago mag-bake.')}</span></Notice> : null}
       {tooSoon && <Notice tone="warn">{tx(`Event is sooner than your ${bakery.leadTimeDays}-day notice.`, `Mas maaga sa ${bakery.leadTimeDays} araw na abiso mo ang event.`)}</Notice>}
       {order.hasInspoPhoto && <InspoPhoto order={order} />}
       {order.customerNote && <Notice tone="ok" title={tx('Customer note', 'Note ng customer')}>{order.customerNote}</Notice>}

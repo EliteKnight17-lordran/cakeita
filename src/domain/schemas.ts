@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MOTIF_KEYS } from './motifs.js';
+import { FLOWER_STYLES, OWN_ITEMS, TOPPER_SPOTS } from './types.js';
 
 /**
  * Validation for everything that crosses a trust boundary:
@@ -14,9 +15,9 @@ const money = z.number().finite().min(0).max(1_000_000);
 
 export const visualEnum = z.enum([
   'sponge', 'buttercream', 'whipped', 'fondant', 'ganache', 'naked', 'drip', 'sprinkles', 'flowers', 'rosettes',
-  'pearls', 'fruits', 'candles', 'text', 'acrylic', 'figure', 'motif', 'gold',
+  'pearls', 'fruits', 'candles', 'text', 'acrylic', 'figure', 'motif', 'gold', 'stand-gold', 'stand-wood',
 ]);
-export const categoryEnum = z.enum(['flavor', 'covering', 'decoration', 'topper', 'finish']);
+export const categoryEnum = z.enum(['flavor', 'covering', 'decoration', 'topper', 'finish', 'display']);
 
 export const selectionSchema = z.object({
   baseCakeId: id,
@@ -28,6 +29,10 @@ export const lookSchema = z.object({
   textOnCake: shortText(40),
   candles: z.number().int().min(0).max(99),
   motif: z.enum(MOTIF_KEYS).optional().catch(undefined),
+  // Newer fields: older links have none; unknown values are dropped rather than breaking the link.
+  flowerStyle: z.enum(FLOWER_STYLES).optional().catch(undefined),
+  topperSpot: z.enum(TOPPER_SPOTS).optional().catch(undefined),
+  own: z.array(z.enum(OWN_ITEMS)).max(3).optional().catch(undefined),
 });
 
 export const publicMenuSchema = z.object({
@@ -119,6 +124,9 @@ export const cakeVisualSchema = z.object({
   // Older quote links have no topper; an unknown shape is dropped rather than breaking the link.
   motif: z.object({ key: z.enum(MOTIF_KEYS), main: hex, accent: hex }).nullable().optional().default(null).catch(null),
   gold: z.boolean(),
+  stand: z.enum(['porcelain', 'gold', 'wood']).optional().default('porcelain').catch('porcelain'),
+  flowerStyle: z.enum(FLOWER_STYLES).optional().default('side').catch('side'),
+  topperSpot: z.enum(TOPPER_SPOTS).optional().default('center').catch('center'),
 });
 
 /** Baker -> customer: the approved quote. */

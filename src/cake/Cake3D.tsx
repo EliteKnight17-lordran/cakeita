@@ -490,9 +490,9 @@ function Fruits({ r, y }: { r: number; y: number }) {
   );
 }
 
-function Figure({ y, r, color }: { y: number; r: number; color: string }) {
+function Figure({ y, color, x, z }: { y: number; color: string; x: number; z: number }) {
   return (
-    <group position={[-r * 0.45, y, r * 0.15]}>
+    <group position={[x, y, z]}>
       <mesh position={[0, 0.07, 0]} castShadow>
         <capsuleGeometry args={[0.04, 0.06, 6, 12]} />
         <meshStandardMaterial color={color} roughness={0.55} />
@@ -573,8 +573,70 @@ function GoldLeaf({ r, y, h }: { r: number; y: number; h: number }) {
   );
 }
 
+/** What the cake stands on. */
+function CakeStand({ r, kind }: { r: number; kind: CakeVisual['stand'] }) {
+  if (kind === 'gold') return <GoldPedestal r={r} />;
+  if (kind === 'wood') return <WoodSlab r={r} />;
+  return <PorcelainStand r={r} />;
+}
+
+/** Gold pedestal stand (weddings, debuts): wide plate on a tall fluted stem. */
+function GoldPedestal({ r }: { r: number }) {
+  const geo = useMemo(() => {
+    const R = r * 1.32;
+    const F = Math.max(0.14, R * 0.55);
+    const pts = [
+      [0.0001, -0.16], [F, -0.16], [F + 0.008, -0.15], [F * 0.8, -0.135], [0.05, -0.115], [0.03, -0.08], [0.045, -0.06], [0.026, -0.03], [0.03, -0.005], [0.08, 0.014],
+      [R * 0.92, 0.028], [R, 0.034], [R + 0.006, 0.046], [R - 0.004, 0.052], [R * 0.95, 0.048], [0.0001, 0.048],
+    ].map(([x, y]) => new THREE.Vector2(x, y));
+    return new THREE.LatheGeometry(pts, 96);
+  }, [r]);
+  return (
+    <mesh geometry={geo} castShadow receiveShadow>
+      <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.28} emissive="#3a2a00" emissiveIntensity={0.25} />
+    </mesh>
+  );
+}
+
+/** Rustic wooden slab: a thick round of wood with bark on the side and rings on top. */
+function WoodSlab({ r }: { r: number }) {
+  const R = r * 1.38;
+  const top = useMemo(() => {
+    if (typeof document === 'undefined') return null;
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d');
+    if (!g) return null;
+    g.fillStyle = '#c99a63';
+    g.fillRect(0, 0, 256, 256);
+    const rnd = seeded(3);
+    for (let i = 26; i > 0; i--) {
+      g.strokeStyle = i % 2 ? 'rgba(120,78,40,0.35)' : 'rgba(235,200,150,0.35)';
+      g.lineWidth = 1.5 + rnd() * 2;
+      g.beginPath();
+      g.ellipse(128 + rnd() * 3, 128 + rnd() * 3, i * 4.8, i * 4.6, rnd(), 0, Math.PI * 2);
+      g.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+  return (
+    <group>
+      <mesh position={[0, -0.055, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[R * 0.98, R * 1.02, 0.2, 48, 1, true]} />
+        <meshStandardMaterial color="#5b3a22" roughness={0.95} />
+      </mesh>
+      <mesh position={[0, 0.046, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[R * 0.98, 64]} />
+        <meshStandardMaterial map={top} roughness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
 /** White porcelain cake stand: plate with a lip, stem and foot. */
-function CakeStand({ r }: { r: number }) {
+function PorcelainStand({ r }: { r: number }) {
   const geo = useMemo(() => {
     const R = r * 1.3;
     const F = Math.max(0.12, R * 0.5);
@@ -655,6 +717,63 @@ function CutFace({ v, r, h, y, a }: { v: CakeVisual; r: number; h: number; y: nu
   );
 }
 
+type Layer = { r: number; h: number; y: number };
+/** Fresh roses arranged the way the customer picked: side cluster, cascade, crown or scattered. */
+function Flowers({ v, top, topY, stack }: { v: CakeVisual; top: Layer; topY: number; stack: Layer[] }) {
+  const colors = [v.accent, '#fff6ef', shade(v.accent, 0.35)];
+  const base = stack[0]!;
+  const roses: Array<{ p: [number, number, number]; s: number }> = [];
+  const breath: Array<[number, number, number]> = [];
+  const onEdge = (l: Layer, a: number, f: number, k = 0.92): [number, number, number] => [Math.cos(a) * l.r * k, l.y + l.h * f, Math.sin(a) * l.r * k];
+  if (v.flowerStyle === 'crown') {
+    for (let i = 0; i < 7; i++) roses.push({ p: [Math.cos((i / 7) * Math.PI * 2) * top.r * 0.8, topY + 0.004, Math.sin((i / 7) * Math.PI * 2) * top.r * 0.8], s: 0.85 });
+    for (let i = 0; i < 7; i++) breath.push([Math.cos(((i + 0.5) / 7) * Math.PI * 2) * top.r * 0.84, topY + 0.01, Math.sin(((i + 0.5) / 7) * Math.PI * 2) * top.r * 0.84]);
+  } else if (v.flowerStyle === 'cascade') {
+    // From the top edge, spiralling down the front-right of every tier to the board.
+    roses.push({ p: [top.r * 0.55, topY + 0.006, top.r * 0.3], s: 1.2 });
+    roses.push({ p: [top.r * 0.78, topY + 0.004, -top.r * 0.05], s: 0.95 });
+    const tiers = [...stack].reverse();
+    let a = 0.35;
+    tiers.forEach((l) => {
+      for (const f of [0.75, 0.4, 0.08]) {
+        roses.push({ p: onEdge(l, a, f, 0.96), s: 0.9 });
+        a += 0.32;
+      }
+      breath.push(onEdge(l, a - 0.5, 0.55, 1.0));
+    });
+    roses.push({ p: [Math.cos(a) * (base.r + 0.04), 0.07, Math.sin(a) * (base.r + 0.04)], s: 1.0 });
+  } else if (v.flowerStyle === 'scatter') {
+    const rnd = seeded(11);
+    for (let i = 0; i < 6; i++) {
+      const a = rnd() * Math.PI * 2;
+      const d = 0.25 + rnd() * 0.55;
+      roses.push({ p: [Math.cos(a) * top.r * d, topY + 0.004, Math.sin(a) * top.r * d], s: 0.6 });
+    }
+    stack.forEach((l, i) => {
+      for (let k = 0; k < 4; k++) roses.push({ p: onEdge(l, (k / 4) * Math.PI * 2 + i, 0.5, 0.99), s: 0.55 });
+    });
+  } else {
+    roses.push({ p: [top.r * 0.5, topY + 0.006, top.r * 0.35], s: 1.25 });
+    roses.push({ p: [top.r * 0.78, topY + 0.004, -top.r * 0.12], s: 1.05 });
+    roses.push({ p: [top.r * 0.22, topY + 0.004, top.r * 0.72], s: 0.95 });
+    breath.push([top.r * 0.62, topY + 0.01, top.r * 0.62]);
+    if (stack.length > 1) {
+      roses.push({ p: [base.r * 0.92, base.y + base.h * 0.98, base.r * 0.3], s: 1.1 });
+      breath.push([base.r * 0.86, base.y + base.h, base.r * 0.48]);
+    }
+  }
+  return (
+    <group>
+      {roses.map((r, i) => (
+        <Rose key={i} position={r.p} color={colors[i % 3]!} size={r.s} turn={i * 0.9} />
+      ))}
+      {breath.map((p, i) => (
+        <BabysBreath key={`b${i}`} position={p} />
+      ))}
+    </group>
+  );
+}
+
 function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?: boolean }) {
   const group = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
@@ -712,10 +831,13 @@ function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?
   const textColor = isLight(topColor) ? (isLight(v.accent) ? '#6b2e1f' : v.accent) : '#fff8f0';
   const pipedTex = useTextTexture(v.textStyle === 'piped' ? v.text : '', textColor, 'piped');
   const acrylicTex = useTextTexture(v.textStyle === 'acrylic' ? v.text : '', v.accent, 'acrylic');
+  // Topper placement: in the middle, or to one side (the figure goes opposite a topper).
+  const side = v.topperSpot === 'side';
+  const figureX = v.motif || acrylicTex ? -top.r * 0.45 : side ? -top.r * 0.42 : 0;
 
   return (
     <group ref={group}>
-      <CakeStand r={base.r} />
+      <CakeStand r={base.r} kind={v.stand} />
       {/* cake board under the bottom tier */}
       <mesh position={[0, 0.054, 0]} receiveShadow>
         <cylinderGeometry args={[base.r + 0.03, base.r + 0.03, 0.012, 96]} />
@@ -739,27 +861,14 @@ function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?
       {v.rosettes && <Rosettes r={top.r} y={topY} color={v.accent} />}
       {v.fruits && <Fruits r={top.r} y={topY} />}
       {v.gold && <GoldLeaf r={top.r} y={top.y} h={top.h} />}
-      {v.flowers && (
-        <group>
-          <Rose position={[top.r * 0.5, topY + 0.006, top.r * 0.35]} color={v.accent} size={1.25} turn={0.3} />
-          <Rose position={[top.r * 0.78, topY + 0.004, -top.r * 0.12]} color="#fff6ef" size={1.05} turn={1.4} />
-          <Rose position={[top.r * 0.22, topY + 0.004, top.r * 0.72]} color={shade(v.accent, 0.35)} size={0.95} turn={2.2} />
-          <BabysBreath position={[top.r * 0.62, topY + 0.01, top.r * 0.62]} />
-          {stack.length > 1 && (
-            <>
-              <Rose position={[base.r * 0.92, base.y + base.h * 0.98, base.r * 0.3]} color={v.accent} size={1.1} turn={0.9} />
-              <BabysBreath position={[base.r * 0.86, base.y + base.h, base.r * 0.48]} />
-            </>
-          )}
-        </group>
-      )}
+      {v.flowers && <Flowers v={v} top={top} topY={topY} stack={stack} />}
       {v.candles > 0 && <Candles n={v.candles} r={top.r} y={topY} color={v.accent} back={!!v.text || !!v.motif || v.figure} />}
-      {v.figure && <Figure y={topY} r={top.r} color={v.accent} />}
+      {v.figure && <Figure y={topY} color={v.accent} x={figureX} z={v.motif || acrylicTex || side ? top.r * 0.15 : 0} />}
       {v.motif && (
         <MotifTopper
           motif={v.motif}
-          size={Math.max(0.2, top.r * (acrylicTex ? 0.62 : 0.85))}
-          position={acrylicTex ? [top.r * 0.5, topY, top.r * 0.05] : [0, topY, -top.r * 0.3]}
+          size={Math.max(0.2, top.r * (acrylicTex || side ? 0.62 : 0.85))}
+          position={acrylicTex ? [top.r * 0.5, topY, top.r * 0.05] : side ? [top.r * 0.42, topY, -top.r * 0.18] : [0, topY, -top.r * 0.3]}
         />
       )}
 
@@ -770,7 +879,7 @@ function CakeModel({ v, spin, cut = false }: { v: CakeVisual; spin: number; cut?
         </mesh>
       )}
       {acrylicTex && (
-        <group position={[0, topY, -top.r * 0.2]}>
+        <group position={[side && !v.motif ? top.r * 0.3 : 0, topY, -top.r * 0.2]}>
           <mesh position={[0, 0.2, 0]}>
             <planeGeometry args={[Math.max(0.35, top.r * 1.4), Math.max(0.09, top.r * 0.35)]} />
             <meshBasicMaterial map={acrylicTex} transparent side={THREE.DoubleSide} depthWrite={false} />

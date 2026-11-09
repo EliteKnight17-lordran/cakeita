@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.6.0',
+    date: '2026-11-09',
+    en: [
+      'Inspo photo is now a clear card right under the request box.',
+      'Placement: flowers on one side, cascading down, as a crown, or scattered; topper in the middle or to one side. The 3D cake follows.',
+      'Cake stands: bakers can offer a gold pedestal or a wooden slab stand (priced like any part). Customers can also bring their own topper, figurine or stand for free; the baker sees it on the request.',
+    ],
+    tl: [
+      'Mas kita na ang inspo photo: malinaw na card sa ilalim ng request box.',
+      'Pagkakaayos: bulaklak sa gilid, pababa, korona o nakakalat; topper sa gitna o sa gilid. Sumusunod ang 3D na cake.',
+      'Cake stands: puwedeng mag-alok ang baker ng gold pedestal o kahoy na stand (may presyo gaya ng ibang parts). Puwede ring magdala ang customer ng sariling topper, figurine o stand nang libre; makikita ito ng baker sa request.',
+    ],
+  },
+  {
     version: '1.5.0',
     date: '2026-11-09',
     en: [

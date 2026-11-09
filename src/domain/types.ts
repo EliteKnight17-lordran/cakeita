@@ -23,7 +23,8 @@ export interface RecipeLine {
   qty: number;
 }
 
-export type ComponentCategory = 'flavor' | 'covering' | 'decoration' | 'topper' | 'finish';
+/** display = what the cake stands on (a stand for weddings and debuts). Never added to auto designs. */
+export type ComponentCategory = 'flavor' | 'covering' | 'decoration' | 'topper' | 'finish' | 'display';
 
 /** How a part is drawn on the 3D cake. */
 export type Visual =
@@ -44,7 +45,9 @@ export type Visual =
   | 'acrylic'
   | 'figure'
   | 'motif'
-  | 'gold';
+  | 'gold'
+  | 'stand-gold'
+  | 'stand-wood';
 
 export interface CakeComponent {
   id: string;
@@ -138,7 +141,20 @@ export interface CakeLook {
   candles: number;
   /** Shape of the theme topper (see motifs.ts). Only drawn when a 'motif' part is picked. */
   motif?: string;
+  /** Where the flowers go (only matters when flowers are picked). */
+  flowerStyle?: FlowerStyle;
+  /** Topper in the middle or to one side (only matters when there is a topper). */
+  topperSpot?: TopperSpot;
+  /** Things the customer brings themselves (free; the baker places them). */
+  own?: OwnItem[];
 }
+
+export const FLOWER_STYLES = ['side', 'cascade', 'crown', 'scatter'] as const;
+export type FlowerStyle = (typeof FLOWER_STYLES)[number];
+export const TOPPER_SPOTS = ['center', 'side'] as const;
+export type TopperSpot = (typeof TOPPER_SPOTS)[number];
+export const OWN_ITEMS = ['topper', 'figurine', 'stand'] as const;
+export type OwnItem = (typeof OWN_ITEMS)[number];
 
 /**
  * A menu that is safe to give to customers: names, IDs and per-item price

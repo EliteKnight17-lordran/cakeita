@@ -49,9 +49,15 @@ export const Cake2D = forwardRef<SVGSVGElement, Props>(function Cake2D({ visual:
       <title>{title}</title>
       <ellipse cx={W / 2} cy={groundY + 6} rx={(layout[0]?.w ?? 120) * 0.7} ry={8} fill="#000" opacity={0.08} />
       {/* stand */}
-      <rect x={W / 2 - 12} y={groundY - standH + 6} width={24} height={standH - 4} fill="#e9dccb" />
-      <rect x={(W - (layout[0]?.w ?? 100) * 1.2) / 2} y={groundY - standH} width={(layout[0]?.w ?? 100) * 1.2} height={7} rx={3} fill="#f1e6d6" stroke="#d9c7ae" />
-      <rect x={W / 2 - 40} y={groundY - 2} width={80} height={6} rx={3} fill="#e9dccb" />
+      {v.stand === 'wood' ? (
+        <rect x={(W - (layout[0]?.w ?? 100) * 1.3) / 2} y={groundY - standH} width={(layout[0]?.w ?? 100) * 1.3} height={standH + 4} rx={4} fill="#b88552" stroke="#5b3a22" strokeWidth={3} />
+      ) : (
+        <>
+          <rect x={W / 2 - 12} y={groundY - standH + 6} width={24} height={standH - 4} fill={v.stand === 'gold' ? '#c9a227' : '#e9dccb'} />
+          <rect x={(W - (layout[0]?.w ?? 100) * 1.2) / 2} y={groundY - standH} width={(layout[0]?.w ?? 100) * 1.2} height={7} rx={3} fill={v.stand === 'gold' ? '#d4af37' : '#f1e6d6'} stroke={v.stand === 'gold' ? '#a8841c' : '#d9c7ae'} />
+          <rect x={W / 2 - 40} y={groundY - 2} width={80} height={6} rx={3} fill={v.stand === 'gold' ? '#c9a227' : '#e9dccb'} />
+        </>
+      )}
 
       {layout.map((l, i) => (
         <g key={i}>

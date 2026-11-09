@@ -1,5 +1,5 @@
 import { isMotifKey, type MotifKey } from './motifs';
-import type { CakeLook, PublicMenu, Selection, Visual } from './types';
+import type { CakeLook, FlowerStyle, PublicMenu, Selection, TopperSpot, Visual } from './types';
 
 /** Everything the 3D (or 2D fallback) cake needs. Built from the SAME parts that are priced. */
 export interface CakeVisual {
@@ -22,6 +22,10 @@ export interface CakeVisual {
   /** Theme topper shape and its two colors, or null when no theme topper is picked. */
   motif: { key: MotifKey; main: string; accent: string } | null;
   gold: boolean;
+  /** What the cake stands on: the baker's priced stand, or a plain porcelain one (also used for the customer's own stand). */
+  stand: 'porcelain' | 'gold' | 'wood';
+  flowerStyle: FlowerStyle;
+  topperSpot: TopperSpot;
 }
 
 const COVERING_DEFAULT: Partial<Record<Visual, string>> = {
@@ -91,5 +95,8 @@ export function toVisual(menu: PublicMenu, sel: Selection, look: CakeLook): Cake
         }
       : null,
     gold: has('gold'),
+    stand: has('stand-gold') ? 'gold' : has('stand-wood') ? 'wood' : 'porcelain',
+    flowerStyle: look.flowerStyle ?? 'side',
+    topperSpot: look.topperSpot ?? 'center',
   };
 }

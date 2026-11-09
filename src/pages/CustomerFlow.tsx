@@ -17,7 +17,8 @@ import { requestToOrder } from '../domain/orders';
 import { estimateFromMenu, isFullDate } from '../domain/pricing';
 import { COLOR_WORDS } from '../domain/requestReader';
 import { cakeRequestSchema } from '../domain/schemas';
-import type { CakeRequest, PublicMenu, Selection } from '../domain/types';
+import { FLOWER_STYLES, TOPPER_SPOTS, type CakeRequest, type OwnItem, type PublicMenu, type Selection } from '../domain/types';
+import { FLOWER_LABELS, OWN_LABELS, ownText } from '../domain/placement';
 import { toVisual } from '../domain/visual';
 import { SCENARIOS } from '../data/demoScenarios';
 import { clearDraft, useDraft, type Draft } from '../data/draft';
@@ -102,6 +103,8 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const prefs = usePrefs();
   const [draft, update] = useDraft(menu.slug);
   const [photo, setPhoto] = useState<SmallImage | null>(null);
+  // Once the customer opens Customize, keep it open even when their picks match a suggestion again.
+  const [customOpen, setCustomOpen] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<'date' | 'name' | 'contact' | 'consent' | 'form', string>>>({});
@@ -232,6 +235,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
       `• ${description}`,
       req.budget != null ? `• Budget: ${formatPeso(req.budget)}` : '',
       req.estimate != null ? `• ${tx('Estimate in the app', 'Tantya sa app')}: ${formatPeso(req.estimate)}` : '',
+      req.look.own?.length ? `• ${ownText(req.look.own, prefs.lang)}` : '',
       photo ? (photoSent ? tx('• My inspo photo is with the request in Cakeita.', '• Kasama sa request sa Cakeita ang inspo photo ko.') : tx('• I will send my inspo photo here too.', '• Ise-send ko rin dito ang inspo photo ko.')) : '',
       tx('Open my request:', 'Buksan ang request ko:'),
     ].filter(Boolean);
@@ -341,21 +345,20 @@ function Flow({ menu }: { menu: PublicMenu }) {
             value={draft.description}
             onChange={(e) => update({ description: e.target.value })}
           />
-          {menu.isSample && !hasText && (
-            <div>
-              <p className="hint mb-2">{tx('Or tap a sample:', 'O pumili ng sample:')}</p>
-              <div className="flex flex-wrap gap-2">
-                {SCENARIOS.slice(0, 4).map((s) => (
-                  <button key={s.key} type="button" className="btn-ghost" onClick={() => update({ description: s.message })}>
-                    {s.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="btn-ghost cursor-pointer">
-              <IconCamera /> {photo ? tx('Change inspo photo', 'Palitan ang inspo photo') : tx('Add inspo photo', 'Magdagdag ng inspo photo')}
+          <div className={`flex items-center gap-3 rounded-2xl border-2 border-dashed p-3 transition ${photo ? 'border-berry/40 bg-white' : 'border-[#d9c9bb] bg-[#fbf7f2] hover:border-berry/50'}`} data-inspo>
+            {photo ? (
+              <img src={photo.dataUrl} alt={tx('Your inspo photo', 'Ang inspo photo mo')} className="h-20 w-20 shrink-0 rounded-xl object-cover" />
+            ) : (
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-berry-soft text-berry" aria-hidden="true">
+                <IconCamera size={26} />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold leading-snug">{photo ? tx('Inspo photo added', 'May inspo photo na') : tx('Have a photo of a cake you like?', 'May picture ka ng cake na gusto mo?')}</p>
+              <p className="text-sm text-ink-soft">{photo ? tx('It goes with your request to the baker.', 'Kasama ito sa request mo sa baker.') : tx('A screenshot from FB, IG or Pinterest helps the baker get it right.', 'Ang screenshot mula FB, IG o Pinterest ay tumutulong sa baker.')}</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+            <label className={`${photo ? 'btn-ghost' : 'btn-secondary'} cursor-pointer !min-h-11`}>
+              {photo ? tx('Change', 'Palitan') : <><IconCamera /> {tx('Add photo', 'Magdagdag ng photo')}</>}
               <input
                 id="photo"
                 type="file"
@@ -375,21 +378,32 @@ function Flow({ menu }: { menu: PublicMenu }) {
                 }}
               />
             </label>
-            {smartAvailable && hasText && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
-              <button type="button" className="btn-ghost" disabled={busy} onClick={() => smartRead(photo)}>
-                <IconSparkle /> {busy ? tx('Reading…', 'Binabasa…') : tx('Smart read', 'Smart read')}
-              </button>
-            )}
-            {photo && (
-              <span className="inline-flex items-center gap-2">
-                <img src={photo.dataUrl} alt={tx('Your inspo photo', 'Ang inspo photo mo')} className="h-11 w-11 rounded-xl object-cover" />
-                <button type="button" className="btn-ghost" onClick={() => setPhoto(null)}>
-                  {tx('Remove', 'Alisin')}
-                </button>
-              </span>
-            )}
+                {photo && (
+                  <button type="button" className="btn-ghost" onClick={() => setPhoto(null)}>
+                    {tx('Remove', 'Alisin')}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
+          {smartAvailable && hasText && !(draft.reading?.usedAi && draft.readingFor === draft.description) && (
+            <button type="button" className="btn-ghost" disabled={busy} onClick={() => smartRead(photo)}>
+              <IconSparkle /> {busy ? tx('Reading…', 'Binabasa…') : tx('Smart read', 'Smart read')}
+            </button>
+          )}
           {photoError && <Notice tone="warn">{photoError}</Notice>}
+          {menu.isSample && !hasText && (
+            <div>
+              <p className="hint mb-2">{tx('Or tap a sample:', 'O pumili ng sample:')}</p>
+              <div className="flex flex-wrap gap-2">
+                {SCENARIOS.slice(0, 4).map((s) => (
+                  <button key={s.key} type="button" className="btn-ghost" onClick={() => update({ description: s.message })}>
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {reading.aiNote === 'photo-not-read' && <Notice tone="info">{tx('We could not read your photo automatically. Please describe it in words, and send the photo to the baker too.', 'Hindi namin nabasa ang photo. Ilarawan mo sa salita, at i-send din ang photo sa baker.')}</Notice>}
           {hasText && <ReadSummary reading={reading} menu={menu} compact />}
         </section>
@@ -512,7 +526,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
             </p>
           )}
           {selection && (
-            <details className="card group" open={isCustom || undefined}>
+            <details className="card group" open={isCustom || customOpen || undefined} onToggle={(e) => setCustomOpen((e.currentTarget as HTMLDetailsElement).open)}>
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2">
                 <span>
                   <span className="block font-display text-lg">{tx('Customize it', 'I-customize')}</span>
@@ -788,6 +802,7 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
           ))}
         </div>
       </section>
+      <Placement menu={menu} selection={selection} look={look} onChange={onChange} />
       {motifPart && motifLook && (
         <section>
           <h2 className="label" id="motif-label">
@@ -885,6 +900,97 @@ export function Customizer({ menu, selection, look, servings, onChange, showPric
           </div>
         </section>
       )}
+      <StandAndOwn menu={menu} selection={selection} look={look} onChange={onChange} prices={prices} delta={delta} />
     </div>
   );
 }
+
+/** One-tap placement presets: shown only for parts that are on the cake. */
+function Placement({ menu, selection, look, onChange }: { menu: PublicMenu; selection: Selection; look: Draft['look']; onChange: (s: Selection, l: Draft['look']) => void }) {
+  const tx = useTx();
+  const visuals = selection.componentIds.map((id) => menu.components.find((c) => c.id === id)?.visual);
+  const flowers = visuals.includes('flowers');
+  const topper = visuals.includes('motif') || visuals.includes('figure') || visuals.includes('acrylic');
+  if (!flowers && !topper) return null;
+  return (
+    <section className="space-y-3" aria-labelledby="place-h" data-placement>
+      <h2 className="label" id="place-h">{tx('Placement', 'Pagkakaayos')}</h2>
+      {flowers && (
+        <div role="group" aria-label={tx('Flowers', 'Bulaklak')}>
+          <p className="hint mb-2">{tx('Flowers', 'Bulaklak')}</p>
+          <div className="flex flex-wrap gap-2">
+            {FLOWER_STYLES.map((f) => (
+              <Chip key={f} pressed={(look.flowerStyle ?? 'side') === f} onClick={() => onChange(selection, { ...look, flowerStyle: f })}>
+                {tx(FLOWER_LABELS[f][0], FLOWER_LABELS[f][1])}
+              </Chip>
+            ))}
+          </div>
+        </div>
+      )}
+      {topper && (
+        <div role="group" aria-label={tx('Topper', 'Topper')}>
+          <p className="hint mb-2">{tx('Topper', 'Topper')}</p>
+          <div className="flex flex-wrap gap-2">
+            {TOPPER_SPOTS.map((t) => (
+              <Chip key={t} pressed={(look.topperSpot ?? 'center') === t} onClick={() => onChange(selection, { ...look, topperSpot: t })}>
+                {t === 'center' ? tx('In the middle', 'Sa gitna') : tx('To one side', 'Sa gilid')}
+              </Chip>
+            ))}
+          </div>
+        </div>
+      )}
+      <p className="text-sm text-ink-soft">{tx('The baker follows this as a guide; exact spots may differ a little.', 'Gabay ito sa baker; puwedeng bahagyang mag-iba ang eksaktong puwesto.')}</p>
+    </section>
+  );
+}
+
+/** Cake stand (priced by the baker, or the customer's own) and other things the customer brings. */
+function StandAndOwn({ menu, selection, look, onChange, prices, delta }: { menu: PublicMenu; selection: Selection; look: Draft['look']; onChange: (s: Selection, l: Draft['look']) => void; prices: boolean; delta: (id: string) => number }) {
+  const tx = useTx();
+  const stands = menu.components.filter((c) => c.category === 'display');
+  const own = look.own ?? [];
+  const noStands = selection.componentIds.filter((id) => menu.components.find((c) => c.id === id)?.category !== 'display');
+  const pickedStand = selection.componentIds.find((id) => stands.some((s) => s.id === id));
+  const ownStand = own.includes('stand');
+  const setOwn = (item: OwnItem, on: boolean) => {
+    const next = on ? [...own.filter((x) => x !== item), item] : own.filter((x) => x !== item);
+    return { ...look, own: next.length ? next : undefined };
+  };
+  return (
+    <>
+      <section aria-labelledby="stand-h" data-stand>
+        <h2 className="label" id="stand-h">{tx('Cake stand', 'Cake stand')}</h2>
+        <div className="flex flex-wrap gap-2">
+          <Chip pressed={!pickedStand && !ownStand} onClick={() => onChange({ ...selection, componentIds: noStands }, setOwn('stand', false))}>
+            {tx('Standard stand', 'Karaniwang stand')}
+          </Chip>
+          {stands.map((c) => (
+            <Chip key={c.id} pressed={pickedStand === c.id} onClick={() => onChange({ ...selection, componentIds: [...noStands, c.id] }, setOwn('stand', false))}>
+              {tx(c.name, c.nameTl ?? c.name)}
+              {prices && <span className="text-sm text-ink-soft">+{formatPeso(delta(c.id))}</span>}
+            </Chip>
+          ))}
+          <Chip pressed={ownStand} onClick={() => onChange({ ...selection, componentIds: noStands }, setOwn('stand', !ownStand))}>
+            {tx(OWN_LABELS.stand[0], OWN_LABELS.stand[1])} <span className="text-sm text-ink-soft">₱0</span>
+          </Chip>
+        </div>
+      </section>
+      <section aria-labelledby="own-h" data-own>
+        <h2 className="label" id="own-h">{tx('Bringing your own?', 'May dadalhin kang sarili?')}</h2>
+        <div className="flex flex-wrap gap-2">
+          {(['topper', 'figurine'] as const).map((k) => (
+            <Chip key={k} pressed={own.includes(k)} onClick={() => onChange(selection, setOwn(k, !own.includes(k)))}>
+              {tx(OWN_LABELS[k][0], OWN_LABELS[k][1])} <span className="text-sm text-ink-soft">₱0</span>
+            </Chip>
+          ))}
+        </div>
+        {own.length > 0 && (
+          <p className="mt-2 text-sm text-ink-soft" data-own-note>
+            {tx('Free: the baker places what you bring. Add a photo of it in the inspo photo box at the top, so the baker knows its size.', 'Libre: ilalagay ng baker ang dadalhin mo. Idagdag ang picture nito sa inspo photo sa itaas para alam ng baker ang laki.')}
+          </p>
+        )}
+      </section>
+    </>
+  );
+}
+
