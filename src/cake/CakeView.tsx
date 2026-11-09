@@ -3,6 +3,7 @@ import type { CakeVisual } from '../domain/visual';
 import { usePrefs, useTx } from '../lib/prefs';
 import { StageSparkles } from '../components/Decor';
 import { Cake2D } from './Cake2D';
+import { IconDownload, IconSlice, IconTurnLeft, IconTurnRight } from '../components/icons';
 
 const Cake3D = lazy(() => import('./Cake3D'));
 
@@ -199,27 +200,31 @@ export function CakeView({ visual, description, interactive = true, className = 
         )}
       </div>
       <figcaption className="sr-only">{description}</figcaption>
-      {showTools && (
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-          {use3D && (
-            <>
-              <button type="button" className="btn-ghost" onClick={() => { setTouched(true); setSpin((s) => s - Math.PI / 4); }} aria-label={tx('Turn left', 'Ikot pakaliwa')}>
-                ↺
-              </button>
-              <button type="button" className="btn-ghost" onClick={() => { setTouched(true); setSpin((s) => s + Math.PI / 4); }} aria-label={tx('Turn right', 'Ikot pakanan')}>
-                ↻
-              </button>
-              <button type="button" className="btn-ghost" aria-pressed={cut} data-see-inside onClick={() => { setTouched(true); setCut((c) => !c); }}>
-                {cut ? tx('Close the slice', 'Isara ang hiwa') : tx('See inside', 'Tingnan ang loob')}
-              </button>
-            </>
-          )}
-          <button type="button" className="btn-ghost" onClick={save}>
-            {tx('Save picture', 'I-save ang picture')}
-          </button>
+      {showTools ? (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="min-w-[8.5rem] flex-1 text-xs leading-snug text-ink-soft">{tx('Concept only. The real cake may differ a little.', 'Concept lang. Puwedeng mag-iba nang kaunti.')}</p>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {use3D && (
+              <>
+                <button type="button" className="tool-btn" title={tx('Turn left', 'Ikot pakaliwa')} onClick={() => { setTouched(true); setSpin((s) => s - Math.PI / 4); }} aria-label={tx('Turn left', 'Ikot pakaliwa')}>
+                  <IconTurnLeft />
+                </button>
+                <button type="button" className="tool-btn" title={tx('Turn right', 'Ikot pakanan')} onClick={() => { setTouched(true); setSpin((s) => s + Math.PI / 4); }} aria-label={tx('Turn right', 'Ikot pakanan')}>
+                  <IconTurnRight />
+                </button>
+                <button type="button" className="tool-btn" title={cut ? tx('Close the slice', 'Isara ang hiwa') : tx('See inside', 'Tingnan ang loob')} aria-label={tx('See inside', 'Tingnan ang loob')} aria-pressed={cut} data-see-inside onClick={() => { setTouched(true); setCut((c) => !c); }}>
+                  <IconSlice />
+                </button>
+              </>
+            )}
+            <button type="button" className="tool-btn" title={tx('Save picture', 'I-save ang picture')} aria-label={tx('Save picture', 'I-save ang picture')} onClick={save}>
+              <IconDownload />
+            </button>
+          </div>
         </div>
+      ) : (
+        <p className="mt-1 text-center text-xs text-ink-soft">{tx('Concept only. The real cake may differ a little.', 'Concept lang. Puwedeng mag-iba nang kaunti.')}</p>
       )}
-      <p className="mt-1 text-center text-sm text-ink-soft">{tx('Concept only. The final cake may look different.', 'Concept lang ito. Puwedeng mag-iba nang kaunti ang totoong cake.')}</p>
     </figure>
   );
 }

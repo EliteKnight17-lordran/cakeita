@@ -7,7 +7,7 @@ import { CakeView } from '../cake/CakeView';
 import { Layout } from '../components/Layout';
 import { ShareBox } from '../components/ShareBox';
 import { Field, Notice, SampleBadge } from '../components/ui';
-import { IconHeart } from '../components/icons';
+import { IconChevron, IconHeart } from '../components/icons';
 import { formatPeso } from '../domain/money';
 import { applyConfirmation, applyOffer, isQuoteExpired, quoteLinkPayload } from '../domain/orders';
 import { quoteLinkSchema, type OfferLink, type QuoteLink } from '../domain/schemas';
@@ -305,9 +305,6 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
             </Notice>
           </div>
         )}
-        <Notice tone="info" title={tx('About payment', 'Tungkol sa bayad')}>
-          {tx('Cakeita never asks for or handles payment. Pay only the baker you are talking to, the way you both agree.', 'Hindi humihingi o humahawak ng bayad ang Cakeita. Sa baker ka lang mismo magbayad, sa paraang napag-usapan ninyo.')}
-        </Notice>
 
         {confirmedHere ? (
           <Notice tone="ok" title={tx('Confirmed!', 'Confirmed na!')}>
@@ -347,14 +344,19 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
           </div>
         ) : (
           <div className="card space-y-3">
-            <Field id="cnote" label={tx('Note for the baker (optional)', 'Note para sa baker (optional)')}>
-              <textarea id="cnote" className="input min-h-20" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
-            </Field>
+            <details className="group" open={note ? true : undefined}>
+              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm font-semibold text-ink-soft">
+                {tx('Add a note for the baker', 'Magdagdag ng note sa baker')}
+                <IconChevron size={16} className="transition group-open:rotate-180" />
+              </summary>
+              <Field id="cnote" label={tx('Note for the baker (optional)', 'Note para sa baker (optional)')}>
+                <textarea id="cnote" className="input min-h-20" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} />
+              </Field>
+            </details>
             <button type="button" className="btn w-full text-lg" onClick={confirm}>
               <IconHeart /> {tx('This is the one I want', 'Ito ang gusto ko')}
             </button>
-            {canOffer &&
-              (offerOpen ? (
+            {canOffer && offerOpen && (
                 <div className="space-y-3 rounded-2xl border border-line p-3" data-offer-form>
                   <Field id="offer" label={tx('Your price (₱)', 'Presyo mo (₱)')} hint={tx('You can do this once. They accept it or keep their price.', 'Isang beses lang ito. Tatanggapin nila o hindi babaguhin ang presyo.')}>
                     <input id="offer" type="number" inputMode="numeric" min={1} max={Math.max(1, quote.price - 1)} step={50} className="input text-xl font-bold" value={offerText} onChange={(e) => setOfferText(e.target.value)} aria-describedby="offer-hint" aria-invalid={!!offerErr} />
@@ -372,15 +374,17 @@ function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }
                     </button>
                   </div>
                 </div>
-              ) : (
-                <button type="button" className="btn-secondary w-full" onClick={() => setOfferOpen(true)} data-offer-open>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-x-5 text-sm">
+              {canOffer && !offerOpen && (
+                <button type="button" className="link min-h-11" onClick={() => setOfferOpen(true)} data-offer-open>
                   {tx('Offer a different price', 'Mag-alok ng ibang presyo')}
                 </button>
-              ))}
-            <Link to={other} className="btn-ghost w-full" data-choose-another>
-              {tx('Choose another baker', 'Pumili ng ibang baker')}
-            </Link>
-            {!auto && <p className="hint text-center">{tx('Not ready? Just reply to the baker in Messenger.', 'Hindi pa sigurado? Mag-reply lang sa baker sa Messenger.')}</p>}
+              )}
+              <Link to={other} className="link inline-flex min-h-11 items-center" data-choose-another>
+                {tx('Choose another baker', 'Pumili ng ibang baker')}
+              </Link>
+            </div>
           </div>
         )}
         {quote.bakery.isSample && (

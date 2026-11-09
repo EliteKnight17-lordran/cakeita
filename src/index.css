@@ -97,6 +97,15 @@ body {
   .btn-ghost {
     @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-[#cdbdb0] hover:bg-[#fffdfa];
   }
+  .tool-btn {
+    @apply inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white text-ink transition hover:border-[#cdbdb0] hover:bg-[#fffdfa];
+  }
+  .tool-btn[aria-pressed='true'] {
+    @apply border-ink bg-ink text-white;
+  }
+  .link {
+    @apply font-semibold text-berry underline decoration-berry/40 underline-offset-4 hover:decoration-berry;
+  }
   .btn-danger {
     @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-danger-ink bg-white px-4 py-2 text-sm font-semibold text-danger-ink hover:bg-danger-bg;
   }
@@ -443,4 +452,11 @@ body {
   border-radius: 999px;
   border: 1px solid #c9aea2;
   vertical-align: -1px;
+}
+
+/* Bigger text on a small phone: the header keeps its buttons and drops the wordmark (the logo still links home). */
+@media (max-width: 479px) {
+  html[data-big='true'] .logo-word {
+    display: none;
+  }
 }

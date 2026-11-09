@@ -18,7 +18,7 @@ export function Logo() {
         </g>
         <circle cx="16" cy="6.2" r="1.4" fill="#e6c27a" />
       </svg>
-      <span className="font-display text-[1.45rem] font-semibold tracking-tight text-ink">Cakeita</span>
+      <span className="logo-word font-display text-[1.45rem] font-semibold tracking-tight text-ink">Cakeita</span>
     </span>
   );
 }

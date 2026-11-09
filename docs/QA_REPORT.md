@@ -1,6 +1,6 @@
 # QA report
 
-**Build:** v1.6.0 · **Date:** 2026-11-09 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
+**Build:** v1.9.0 · **Date:** 2026-11-09 · **Environment:** Node 22, Chromium (Playwright 1.63) at 375×812, SwiftShader WebGL
 
 ## Results
 
@@ -33,6 +33,7 @@
 | 11 | Same-phone demo (baker + customer) | Quote page re-ran its loader on every render (the text helper was a new function each time): endless re-render when the quote came from this phone, constant re-decoding when it came from a link | Text helper is now stable per language | e2e "no JS errors" + walkthrough |
 | 12 | Two-phone demo | The built-in Sample Bakery would have auto-answered on the customer's phone while a person answered as the demo baker on another phone | Only the map's "(sample)" shops answer by themselves | e2e (link flow with counter-offer) |
 | 13 | User's real inspo photo (white cake, maroon piping, concrete table) | Colors came out brown and cream; drip and sprinkles were added that weren't in the photo | Background taken from the photo's edges, grays/shadows ignored, strong accents kept; plain design when only colors are known | unit test with the photo's pixel values + screenshot |
+| 14 | Elder walkthrough (bigger text, 375 px) | The top bar was 432 px wide, so the page scrolled sideways | Wordmark hides under 480 px in bigger-text mode; logo still links home | screenshot script (scrollWidth = 375) |
 
 ## Open items (not yet verified)
 

@@ -264,7 +264,7 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
           <h2 id="ap-h" className="font-display text-xl font-semibold">
             {tx('Approve the quote', 'I-approve ang quote')}
           </h2>
-          <Field id="price" label={tx('Price to send (₱)', 'Presyong ipapadala (₱)')} hint={tx('Leave as is to use the suggested price.', 'Hayaan lang para gamitin ang suggested price.')}>
+          <Field id="price" label={tx('Price to send (₱)', 'Presyong ipapadala (₱)')} hint={tx(`Empty = suggested ${formatPeso(suggested)}`, `Blangko = suggested na ${formatPeso(suggested)}`)}>
             <input id="price" type="number" inputMode="numeric" min={0} step={50} className="input text-xl font-bold" placeholder={String(suggested)} value={priceText} onChange={(e) => setPriceText(e.target.value)} aria-describedby="price-hint" />
           </Field>
           <p aria-live="polite" className="font-semibold">
@@ -283,18 +283,19 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
             <Notice tone="info">{tx(`This is ${formatPeso(price - order.budget)} over the customer's budget.`, `Lampas ito ng ${formatPeso(price - order.budget)} sa budget ng customer.`)}</Notice>
           )}
           {order.estimate != null && (
-            <p className="text-sm" data-app-estimate>
+            <p className="text-sm text-ink-soft" data-app-estimate>
               {price === Math.round(order.estimate)
-                ? tx(`Same as the ${formatPeso(order.estimate)} the customer saw in the app: this accepts their request.`, `Pareho sa ${formatPeso(order.estimate)} na nakita ng customer sa app: tatanggapin nito ang request nila.`)
-                : tx(`The customer saw ${formatPeso(order.estimate)} in the app, so this goes to them as your counter-offer.`, `${formatPeso(order.estimate)} ang nakita ng customer sa app, kaya alok mo itong ibang presyo.`)}
+                ? tx(`The customer saw ${formatPeso(order.estimate)} in the app.`, `${formatPeso(order.estimate)} ang nakita ng customer sa app.`)
+                : tx(`The customer saw ${formatPeso(order.estimate)}, so this is your counter-offer.`, `${formatPeso(order.estimate)} ang nakita ng customer, kaya alok mo itong ibang presyo.`)}
             </p>
           )}
           <Field id="qnote" label={tx('Note to the customer (optional)', 'Note sa customer (optional)')}>
             <textarea id="qnote" className="input min-h-20" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder={tx('e.g. 50% down payment to reserve the date', 'hal. 50% down payment para ma-reserve ang petsa')} />
           </Field>
-          <Field id="valid" label={tx('Quote valid for (days)', 'Valid ang quote nang (araw)')}>
-            <input id="valid" type="number" min={1} max={30} className="input" value={validDays} onChange={(e) => setValidDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
-          </Field>
+          <div className="flex items-center gap-3">
+            <label htmlFor="valid" className="text-sm font-semibold">{tx('Quote valid for (days)', 'Valid ang quote nang (araw)')}</label>
+            <input id="valid" type="number" min={1} max={30} className="input !w-20" value={validDays} onChange={(e) => setValidDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
+          </div>
           <button type="button" className="btn w-full text-lg" onClick={approve} disabled={!quote || price <= 0}>
             <IconCheck />{' '}
             {order.estimate == null
@@ -303,12 +304,12 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
                 ? tx(`Accept at ${formatPeso(price)}`, `Tanggapin sa ${formatPeso(price)}`)
                 : tx(`Send counter-offer ${formatPeso(price)}`, `Ipadala ang alok na ${formatPeso(price)}`)}
           </button>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-ghost" onClick={replyByHand}>
+          <div className="flex flex-wrap items-center justify-center gap-x-5 text-sm">
+            <button type="button" className="link inline-flex min-h-11 items-center gap-1.5" onClick={replyByHand}>
               <IconPen /> {tx('Reply by hand', 'Sumagot nang manual')}
             </button>
             {order.status !== 'declined' && (
-              <button type="button" className="btn-ghost" onClick={() => setDeclining((d) => !d)} aria-expanded={declining} data-decline-open>
+              <button type="button" className="link min-h-11" onClick={() => setDeclining((d) => !d)} aria-expanded={declining} data-decline-open>
                 {tx('Decline politely', 'Tanggihan nang magalang')}
               </button>
             )}

@@ -28,10 +28,7 @@ export default function Home() {
             {tx('Custom cake quotes that fit the budget and still pay the baker', 'Custom cake quotes na pasok sa budget, at kumikita pa rin ang baker')}
           </h1>
           <p className="mx-auto max-w-xl text-[1.05rem] text-ink-soft">
-            {tx(
-              'Customers see three designs in 3D within their budget. Every part is priced from the baker\'s real costs, and the baker approves every quote.',
-              'Makikita ng customer ang tatlong design sa 3D na pasok sa budget nila. Bawat part ay may presyo mula sa totoong gastos ng baker, at ang baker ang nag-a-approve ng bawat quote.',
-            )}
+            {tx('See your cake in 3D within your budget. The baker approves every price.', 'Makita ang cake mo sa 3D, pasok sa budget. Ang baker ang nag-a-approve ng presyo.')}
           </p>
           <div className="mx-auto flex max-w-md flex-col gap-2.5 pt-1 sm:max-w-none sm:flex-row sm:justify-center">
             <Link to="/b/sample" className="btn min-h-14 px-7 text-[1.05rem]" data-home-design>
@@ -46,20 +43,15 @@ export default function Home() {
               {tx('Install Cakeita on this phone', 'I-install ang Cakeita sa phone')}
             </button>
           )}
-          <p className="text-sm text-ink-soft">
-            {db.bakery ? tx('Welcome back.', 'Welcome back.') : tx('Are you a baker?', 'Baker ka ba?')}{' '}
-            <Link to="/baker" className="font-semibold text-berry underline underline-offset-4">
-              {db.bakery ? tx('Open my bakery', 'Buksan ang bakery ko') : tx('Set up your bakery in 3 minutes', 'I-set up ang bakery mo sa 3 minuto')}
+          <p className="flex flex-wrap items-center justify-center gap-x-5 text-sm">
+            <Link to="/baker" className="link inline-flex min-h-11 items-center">
+              {db.bakery ? tx('Open my bakery', 'Buksan ang bakery ko') : tx('I’m a baker', 'Baker ako')}
             </Link>
-          </p>
- <p className="text-sm text-ink-soft">
-            <Link to="/demo" className="font-semibold text-berry underline underline-offset-4">
-              {tx('Try the guided demo (customer and baker)', 'Subukan ang guided demo (customer at baker)')}
+            <Link to="/demo" className="link inline-flex min-h-11 items-center">
+              {tx('Guided demo', 'Guided demo')}
             </Link>
-          </p>
-          <p className="text-sm text-ink-soft">
-            <Link to="/survey" className="font-semibold text-berry underline underline-offset-4" data-home-survey>
-              {tx('Help our pilot: 2-minute survey', 'Tumulong sa pilot: 2-minutong survey')}
+            <Link to="/survey" className="link inline-flex min-h-11 items-center" data-home-survey>
+              {tx('2-min survey', '2-minutong survey')}
             </Link>
           </p>
         </section>
@@ -73,14 +65,14 @@ export default function Home() {
           <div className="text-center">
             <p className="eyebrow">{tx('How it works', 'Paano ito gumagana')}</p>
             <h2 id="how-h" className="mt-1 text-3xl">
-              {tx('From a Messenger message to a confirmed order', 'Mula Messenger message hanggang confirmed order')}
+              {tx('Three steps to your cake', 'Tatlong hakbang sa cake mo')}
             </h2>
           </div>
           <ol className="grid gap-3 sm:grid-cols-3">
             {[
-              [tx('The customer asks', 'Nagtanong ang customer'), tx('Budget, people and the idea, typed in Taglish like a normal chat.', 'Budget, ilang tao at idea, naka-Taglish na parang normal na chat.')],
-              [tx('Cakeita designs and prices', 'Nagdi-design at nagpe-presyo ang Cakeita'), tx("Simple, Classic and Showstopper, built from the baker's own menu and priced by code.", 'Simple, Classic at Showstopper, mula sa sariling menu ng baker at may presyo gamit ang code.')],
-              [tx('The baker approves', 'Nag-a-approve ang baker'), tx('A clear cost breakdown, one tap to approve, and the quote goes back through Messenger.', 'Malinaw na breakdown ng gastos, isang tap para i-approve, at babalik ang quote sa Messenger.')],
+              [tx('Describe it', 'Ilarawan'), tx('Type it like a chat, or add an inspo photo.', 'I-type na parang chat, o magdagdag ng inspo photo.')],
+              [tx('See it and the price', 'Tingnan ang cake at presyo'), tx("Three designs in 3D, priced from the baker's menu.", 'Tatlong design sa 3D, may presyo mula sa menu ng baker.')],
+              [tx('The baker approves', 'Nag-a-approve ang baker'), tx('Accept, counter, or choose another baker.', 'Tanggapin, makipagtawaran, o pumili ng iba.')],
             ].map(([title, text], i) => (
               <li key={i} className="card rise" style={{ ['--d' as string]: `${200 + i * 90}ms` }}>
                 <p className="font-display text-3xl font-medium text-gold" aria-hidden="true">
@@ -100,11 +92,9 @@ export default function Home() {
           </div>
           <ul className="space-y-2.5 text-[0.95rem]">
             {[
-              tx('Free. Customers order without signing up. Works on a basic phone and weak signal.', 'Libre. Walang sign-up para sa customer. Gumagana sa simpleng phone at mahinang signal.'),
-              tx('AI only reads the request. Prices always come from your own costs.', 'Binabasa lang ng AI ang request. Galing lagi sa sarili mong gastos ang presyo.'),
-              tx('No payments inside the app, so no fake payment screens.', 'Walang bayaran sa app, kaya walang pekeng payment screen.'),
-              tx('Bakers sign in with Facebook, Google or email: a live inbox, short link and a spot on the map.', 'Nagsa-sign in ang baker gamit ang Facebook, Google o email: live inbox, maikling link at puwesto sa mapa.'),
-              tx('Bigger text button at the top for Lolo and Lola.', 'May button sa taas para lumaki ang letra, para kay Lolo at Lola.'),
+              tx('Free for customers, no sign-up.', 'Libre sa customer, walang sign-up.'),
+              tx("Prices come from the baker's own costs, never from AI.", 'Galing sa sariling gastos ng baker ang presyo, hindi sa AI.'),
+              tx('No payments in the app.', 'Walang bayaran sa app.'),
             ].map((t) => (
               <li key={t} className="flex gap-2.5">
                 <IconCheck className="mt-0.5 shrink-0 text-berry" />

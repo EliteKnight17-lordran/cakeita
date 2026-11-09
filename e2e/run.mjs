@@ -167,13 +167,14 @@ async function main() {
     check('"See it in 3D" jumps back to the big cake', cakeTop >= 0 && cakeTop < 400, `top ${Math.round(cakeTop)}`);
 
     // Nearby bakers map: same cake, each baker's own price.
-    await customer.getByRole('link', { name: /Ikumpara ang malapit na baker/ }).click();
+    await customer.goto(`${BASE}#/near?from=sample`);
     await customer.getByRole('heading', { name: /Mga baker na malapit/ }).waitFor();
     check('map loads with price pins', await waitTrue(async () => (await customer.locator('.leaflet-marker-icon .pin').count()) >= 2), `${await customer.locator('.leaflet-marker-icon .pin').count()} pins`);
     const requestButtons = customer.getByRole('button', { name: /^Mag-request kay/ });
     check('map lists bakers who can make it', (await requestButtons.count()) >= 1, `${await requestButtons.count()} bakers`);
     const pinPrices = await customer.locator('.leaflet-marker-icon .pin').allInnerTexts();
     check('pins show peso estimates', pinPrices.every((t) => /^₱[\d,]+$/.test(t.trim())), pinPrices.join(' '));
+    await customer.locator('[data-filters] summary').click();
     await customer.getByRole('button', { name: 'Kahit gaano kalayo' }).click();
     await customer.getByLabel('Yung kaya lang gawin').uncheck();
     check('unticking shows bakers who cannot make all of it', await waitTrue(async () => (await customer.getByText(/Hindi gumagawa ng|masyadong maaga/).count()) >= 1));
@@ -220,7 +221,7 @@ async function main() {
     // ---------------- Customer gets quote ----------------
     await customer.goto(quoteUrl);
     await customer.getByRole('heading', { name: /ito ang quote mo/ }).waitFor();
-    check('customer quote shows payment safety note', await customer.getByText('Tungkol sa bayad').isVisible());
+    check('customer quote page says to pay the baker directly', await customer.getByText(/Sa baker ka mismo magbabayad/).first().isVisible());
     await customer.waitForTimeout(800);
     await axe(customer, 'customer quote');
     await shot(customer, '06-quote');
@@ -326,7 +327,7 @@ async function main() {
     const ownNote = (await tester.locator('[data-own-note]').isVisible()) ? 1 : 0;
     check('own stand is free, replaces the priced one, and Customize stays open', ownPrice === before && ownNote === 1, `${ownPrice}, note ${ownNote}`);
     await tester.locator('[data-inspo]').waitFor();
-    check('inspo photo is a clear card under the request box', await tester.locator('[data-inspo]').getByText('May picture ka ng cake na gusto mo?').isVisible());
+    check('inspo photo is a clear card under the request box', await tester.locator('[data-inspo]').getByText('May inspo photo ka?').isVisible());
     // Inspo photo becomes the 3D cake: with no AI key, the phone still reads its colors.
     const inspoPng = await tester.evaluate(() => {
       const c = document.createElement('canvas'); c.width = 400; c.height = 400; const g = c.getContext('2d');
@@ -428,6 +429,7 @@ async function main() {
     await picker.locator('#date').fill(`${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`);
     await picker.locator('[data-choose-baker]').click();
     await picker.getByRole('heading', { name: /Piliin kung sino/ }).waitFor();
+    await picker.locator('[data-filters] summary').click();
     await picker.getByRole('button', { name: 'Kahit gaano kalayo' }).click();
     await picker.getByLabel('Yung kaya lang gawin').uncheck();
     await picker.locator('article', { hasText: 'masyadong maaga' }).first().locator('[data-send-to]').click();

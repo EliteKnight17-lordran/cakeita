@@ -13,6 +13,24 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.9.0',
+    date: '2026-11-09',
+    en: [
+      'Calmer, less crowded screens: shorter text everywhere, sample ideas and filters folded away until you need them, and one main button per screen.',
+      'The 3D cake tools are now four small round icons (turn, see inside, save) next to a one-line note.',
+      'Choose a baker: each card shows one line of fit, the delivery distance and a single Send button.',
+      'Quote page: offer a price or choose another baker are quiet links under the main button; the note for the baker opens only when you want it.',
+      'Bigger text no longer pushes the top bar off the side of a small phone.',
+    ],
+    tl: [
+      'Mas maaliwalas na mga screen: mas maikling text, nakatago muna ang mga halimbawa at filter hanggang kailanganin, at isang pangunahing button bawat screen.',
+      'Apat na maliliit na bilog na icon na lang ang tools ng 3D cake (ikot, tingnan ang loob, i-save), katabi ng isang linyang paalala.',
+      'Pumili ng baker: isang linya ng pagkakatugma, layo ng delivery at isang Ipadala button bawat card.',
+      'Quote page: tahimik na link na lang sa ilalim ng pangunahing button ang mag-alok ng presyo at pumili ng iba; bubukas lang ang note sa baker kapag gusto mo.',
+      'Hindi na lumalampas sa gilid ng maliit na phone ang top bar kapag malaki ang letra.',
+    ],
+  },
+  {
     version: '1.8.1',
     date: '2026-11-09',
     en: [

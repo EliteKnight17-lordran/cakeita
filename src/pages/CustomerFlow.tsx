@@ -281,12 +281,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
   };
 
 
-  const header = pickOnMap && draft.step !== 'done' ? (
-    <div className="mb-3 space-y-0.5" data-open-designer>
-      <p className="text-sm font-semibold text-ink-soft">{tx('Step 1 of 2: design it. Step 2: choose a baker.', 'Step 1 sa 2: i-design. Step 2: pumili ng baker.')}</p>
-      <p className="text-sm text-ink-soft">{tx('Prices here are a sample guide. Each baker’s own price shows when you choose.', 'Sample na gabay lang ang presyo dito. Lalabas ang sariling presyo ng bawat baker pag pumili ka.')}</p>
-    </div>
-  ) : (
+  const header = pickOnMap && draft.step !== 'done' ? null : (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div>
         <p className="text-sm font-semibold text-ink-soft">{tx('Cake request for', 'Cake request para sa')}</p>
@@ -359,11 +354,10 @@ function Flow({ menu }: { menu: PublicMenu }) {
         </aside>
       )}
       <div className="space-y-5">
-        <div className="space-y-1">
+        <div className="space-y-1" data-open-designer={pickOnMap || undefined}>
+          {pickOnMap && <p className="eyebrow">{tx('Step 1 of 2', 'Hakbang 1 sa 2')}</p>}
           <h1 className="text-3xl leading-tight sm:text-4xl">{tx('Design your cake', 'I-design ang cake mo')}</h1>
-          <p className="text-ink-soft">
-            {tx('One page. Type it like you would in Messenger, and the designs and prices update as you go.', 'Isang page lang. I-type na parang nasa Messenger ka, at kusang magbabago ang design at presyo.')}
-          </p>
+          <p className="text-ink-soft">{tx('Type it like a chat. The cake and price update as you go.', 'I-type na parang chat. Kusang magbabago ang cake at presyo.')}</p>
         </div>
 
         {/* 1. The message */}
@@ -382,45 +376,43 @@ function Flow({ menu }: { menu: PublicMenu }) {
             value={draft.description}
             onChange={(e) => update({ description: e.target.value })}
           />
-          <div className={`flex items-center gap-3 rounded-2xl border-2 border-dashed p-3 transition ${photo ? 'border-berry/40 bg-white' : 'border-[#d9c9bb] bg-[#fbf7f2] hover:border-berry/50'}`} data-inspo>
+          <div className={`flex items-center gap-3 rounded-2xl border border-dashed p-2.5 transition ${photo ? 'border-berry/40 bg-white' : 'border-[#d9c9bb] bg-[#fbf7f2] hover:border-berry/50'}`} data-inspo>
             {photo ? (
-              <img src={photo.dataUrl} alt={tx('Your inspo photo', 'Ang inspo photo mo')} className="h-20 w-20 shrink-0 rounded-xl object-cover" />
+              <img src={photo.dataUrl} alt={tx('Your inspo photo', 'Ang inspo photo mo')} className="h-14 w-14 shrink-0 rounded-xl object-cover" />
             ) : (
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-berry-soft text-berry" aria-hidden="true">
-                <IconCamera size={26} />
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-berry-soft text-berry" aria-hidden="true">
+                <IconCamera size={22} />
               </span>
             )}
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold leading-snug">{photo ? tx('Inspo photo added', 'May inspo photo na') : tx('Have a photo of a cake you like?', 'May picture ka ng cake na gusto mo?')}</p>
-              <p className="text-sm text-ink-soft">{photo ? tx('It goes with your request to the baker.', 'Kasama ito sa request mo sa baker.') : tx('A screenshot from FB, IG or Pinterest helps the baker get it right.', 'Ang screenshot mula FB, IG o Pinterest ay tumutulong sa baker.')}</p>
-              <div className="mt-1 flex flex-wrap gap-1">
-            <label className={`${photo ? 'btn-ghost' : 'btn-secondary'} cursor-pointer !min-h-11`}>
-              {photo ? tx('Change', 'Palitan') : <><IconCamera /> {tx('Add photo', 'Magdagdag ng photo')}</>}
-              <input
-                id="photo"
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={async (e) => {
-                  setPhotoError('');
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  try {
-                    const img = await resizeImage(f);
-                    setPhoto(img);
-                    await readPhoto(img);
-                  } catch {
-                    setPhotoError(tx("We couldn't open that photo. Try a screenshot of it instead.", 'Hindi mabuksan ang photo. Subukan ang screenshot nito.'));
-                  }
-                }}
-              />
-            </label>
-                {photo && (
-                  <button type="button" className="btn-ghost" onClick={() => { setPhoto(null); update({ photoHints: null }); }}>
-                    {tx('Remove', 'Alisin')}
-                  </button>
-                )}
-              </div>
+            <p className="min-w-0 flex-1 text-[0.95rem] font-semibold leading-snug">{photo ? tx('Inspo photo added', 'May inspo photo na') : tx('Have an inspo photo?', 'May inspo photo ka?')}</p>
+            <div className="flex shrink-0 gap-1">
+              <label className={`${photo ? 'btn-ghost' : 'btn-secondary !px-4'} cursor-pointer !min-h-11`}>
+                {photo ? tx('Change', 'Palitan') : tx('Add', 'Idagdag')}
+                <input
+                  id="photo"
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  aria-label={tx('Add an inspo photo', 'Magdagdag ng inspo photo')}
+                  onChange={async (e) => {
+                    setPhotoError('');
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    try {
+                      const img = await resizeImage(f);
+                      setPhoto(img);
+                      await readPhoto(img);
+                    } catch {
+                      setPhotoError(tx("We couldn't open that photo. Try a screenshot of it instead.", 'Hindi mabuksan ang photo. Subukan ang screenshot nito.'));
+                    }
+                  }}
+                />
+              </label>
+              {photo && (
+                <button type="button" className="btn-ghost" onClick={() => { setPhoto(null); update({ photoHints: null }); }}>
+                  {tx('Remove', 'Alisin')}
+                </button>
+              )}
             </div>
           </div>
           {busy && photo && <p className="text-sm font-semibold text-ink-soft" aria-live="polite">{tx('Building your cake from the photo…', 'Ginagawa ang cake mula sa photo…')}</p>}
@@ -434,16 +426,19 @@ function Flow({ menu }: { menu: PublicMenu }) {
           )}
           {photoError && <Notice tone="warn">{photoError}</Notice>}
           {menu.isSample && !hasText && (
-            <div>
-              <p className="hint mb-2">{tx('Or tap a sample:', 'O pumili ng sample:')}</p>
-              <div className="flex flex-wrap gap-2">
+            <details className="group">
+              <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm font-semibold text-ink-soft">
+                {tx('No idea yet? Try an example', 'Wala pang idea? Subukan ang halimbawa')}
+                <IconChevron size={16} className="transition group-open:rotate-180" />
+              </summary>
+              <div className="mt-1 flex flex-wrap gap-2">
                 {SCENARIOS.slice(0, 4).map((s) => (
                   <button key={s.key} type="button" className="btn-ghost" onClick={() => update({ description: s.message })}>
                     {s.title}
                   </button>
                 ))}
               </div>
-            </div>
+            </details>
           )}
           {reading.aiNote === 'photo-not-read' && <Notice tone="info">{tx('We could not read your photo automatically. Please describe it in words, and send the photo to the baker too.', 'Hindi namin nabasa ang photo. Ilarawan mo sa salita, at i-send din ang photo sa baker.')}</Notice>}
           {hasText && <ReadSummary reading={reading} menu={menu} compact />}
@@ -470,7 +465,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
                 <input id="servings" type="number" inputMode="numeric" min={1} max={500} className="input" placeholder={tx('e.g. 20', 'hal. 20')} value={wants.servings ?? ''} onChange={(e) => update({ servings: e.target.value ? Math.max(1, Math.min(500, Number(e.target.value))) : null })} />
               </Field>
               <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={tx('Quick pick: people', 'Mabilis na pili: tao')}>
-                {[8, 12, 20, 30, 45].map((n) => (
+                {[10, 20, 30, 50].map((n) => (
                   <Chip key={n} pressed={wants.servings === n} onClick={() => update({ servings: n })}>
                     {n} {tx('people', 'tao')}
                   </Chip>
@@ -494,7 +489,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
             </div>
           </div>
           <div>
-            <Field id="date" label={tx('When do you need it?', 'Kailan kailangan?')} hint={pickOnMap ? tx('Most bakers need 2 to 7 days. Next, you will see who can make your date.', 'Karaniwang 2 hanggang 7 araw ang kailangan ng baker. Sunod, makikita mo kung sino ang abot sa petsa mo.') : tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
+            <Field id="date" label={tx('When do you need it?', 'Kailan kailangan?')} hint={pickOnMap ? tx('Most bakers need 2 to 7 days.', 'Karaniwang 2 hanggang 7 araw ang abiso.') : tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
               <input id="date" type="date" className="input" min={minDate} max={addDays(today, 365)} value={eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" aria-invalid={!!errors.date || tooSoon || booked} />
             </Field>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -524,17 +519,12 @@ function Flow({ menu }: { menu: PublicMenu }) {
 
         {/* 3. Designs, live */}
         <section className="space-y-3" aria-labelledby="sec-designs">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <SectionTitle id="sec-designs" n="03">
-              {tx('Pick a design', 'Pumili ng design')}
-            </SectionTitle>
-            <Link to={`/near?from=${encodeURIComponent(menu.slug)}`} className="btn-ghost">
-              <IconPin /> {tx('Compare bakers near me', 'Ikumpara ang malapit na baker')}
-            </Link>
-          </div>
+          <SectionTitle id="sec-designs" n="03">
+            {tx('Pick a design', 'Pumili ng design')}
+          </SectionTitle>
           {designs.budgetTooLow && wants.budget != null && (
-            <Notice tone="warn" title={tx('Your budget is a bit low for this many people', 'Medyo kulang ang budget para sa ganitong dami')}>
-              {tx(`The simplest cake that feeds ${wants.servings ?? 'everyone'} starts at about ${formatPeso(designs.lowestPrice)}. You can pick fewer people or ask the baker.`, `Ang pinakasimpleng cake para sa ${wants.servings ?? 'lahat'} ay mga ${formatPeso(designs.lowestPrice)}. Puwedeng bawasan ang tao o itanong sa baker.`)}
+            <Notice tone="warn" title={tx('Budget is a bit low for this many people', 'Medyo kulang ang budget sa dami ng tao')}>
+              {tx(`The simplest cake for ${wants.servings ?? 'everyone'} is about ${formatPeso(designs.lowestPrice)}.`, `Mga ${formatPeso(designs.lowestPrice)} ang pinakasimple para sa ${wants.servings ?? 'lahat'}.`)}
             </Notice>
           )}
           {!wide && cakeStage}
@@ -604,16 +594,15 @@ function Flow({ menu }: { menu: PublicMenu }) {
           <label className="flex items-start gap-3 rounded-xl border border-line bg-[#fffdfa] p-3.5">
             <input id="consent" type="checkbox" className="mt-0.5 h-6 w-6 shrink-0 accent-[#8c2246]" checked={draft.consent} onChange={(e) => update({ consent: e.target.checked })} />
             <span>
-              {tx('I agree to send my name, contact, this request and my inspo photo (if added) to the baker. No payment happens in Cakeita.', 'Pumapayag ako na ipadala sa baker ang pangalan, contact, request na ito at inspo photo ko (kung meron). Walang bayaran sa Cakeita.')}
+              {tx('Send my name, contact, request and photo (if any) to the baker. Free, no payment in Cakeita, and the photo is never saved.', 'Ipadala sa baker ang pangalan, contact, request at photo ko (kung meron). Libre, walang bayaran sa Cakeita, at hindi sine-save ang photo.')}
             </span>
           </label>
           {(errors.name || errors.contact || errors.consent || errors.form) && (
             <Notice tone="danger">{[errors.name, errors.contact, errors.consent, errors.form].filter(Boolean).join(' ')}</Notice>
           )}
-          <p className="text-sm text-ink-soft">{tx('Free to use. No payment happens here. Your photo is never saved.', 'Libre. Walang bayaran dito. Hindi sine-save ang photo mo.')}</p>
           {pickOnMap && (
-            <p className="text-sm">
-              <button type="button" className="text-berry underline underline-offset-4" onClick={submit} disabled={!selection} data-send-direct>
+            <p className="text-center text-sm">
+              <button type="button" className="min-h-11 text-ink-soft underline underline-offset-4" onClick={submit} disabled={!selection} data-send-direct>
                 {tx(`Or send it straight to ${menu.name}`, `O ipadala diretso sa ${menu.name}`)}
               </button>
             </p>
@@ -630,7 +619,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
           <div className="min-w-0 flex-1" aria-live="polite">
             {menu.showEstimates && estimate != null ? (
               <>
-                <p className="eyebrow !text-ink-soft">{tx('Estimated price', 'Tantyang presyo')}</p>
+                <p className="eyebrow !text-ink-soft">{pickOnMap ? tx('Sample estimate', 'Sample na tantya') : tx('Estimated price', 'Tantyang presyo')}</p>
                 <p className="flex flex-wrap items-baseline gap-x-2">
                   <span key={estimate} className="price pop text-2xl" data-testid="live-price">{formatPeso(estimate)}</span>
                   {wants.budget != null && (
@@ -1081,15 +1070,14 @@ function PhotoMatch({ hints, menu, hasPhoto, onSee, onRemove }: { hints: PhotoHi
         </p>
       )}
       {!hints.usedAi && (
-        <p className="text-sm text-ink-soft">{tx('We matched the colors. Add tiers and decorations in the box above, or pick them in Customize.', 'Kinuha namin ang kulay. Idagdag ang tier at dekorasyon sa box sa itaas, o piliin sa Customize.')}</p>
+        <p className="text-sm text-ink-soft">{tx('Colors matched. Type the tiers and decorations above.', 'Kinuha ang kulay. I-type sa itaas ang tier at dekorasyon.')}</p>
       )}
-      <p className="text-sm text-ink-soft">{tx("Built only from parts this baker sells, so the picture matches the price. The baker also sees your photo.", 'Gawa lang sa parts na binebenta ng baker, kaya tugma ang itsura sa presyo. Makikita rin ng baker ang photo mo.')}</p>
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn-secondary" onClick={onSee} data-see-photo-cake>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" className="link min-h-11 text-sm" onClick={onSee} data-see-photo-cake>
           {tx('See the cake', 'Tingnan ang cake')}
         </button>
         {!hasPhoto && (
-          <button type="button" className="btn-ghost" onClick={onRemove}>
+          <button type="button" className="min-h-11 text-sm text-ink-soft underline underline-offset-4" onClick={onRemove}>
             {tx('Stop using it', 'Huwag nang gamitin')}
           </button>
         )}

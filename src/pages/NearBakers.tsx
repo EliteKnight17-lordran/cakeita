@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Cake2D } from '../cake/Cake2D';
 import { describeCake } from '../cake/describe';
 import { Layout } from '../components/Layout';
-import { IconAlert, IconArrow, IconCheck, IconPin, IconStore, IconTruck } from '../components/icons';
+import { IconAlert, IconArrow, IconCheck, IconChevron, IconPin, IconStore, IconTruck } from '../components/icons';
 import { Chip, Notice } from '../components/ui';
 import { DEFAULT_SPOT, formatKm, type LatLng } from '../domain/geo';
 import { matchBakeries, sortMatches, type BakeryMatch, type ListedBakery, type MatchSort } from '../domain/matching';
@@ -109,7 +109,6 @@ export default function NearBakers() {
   const inRange = all.filter((m) => radius == null || m.distanceKm <= radius);
   const shown = inRange.filter((m) => !onlyCan || m.suitable);
   const hidden = inRange.length - shown.length;
-  const cheapest = shown.reduce<BakeryMatch | null>((a, m) => (m.estimate != null && (a == null || m.estimate < (a.estimate ?? Infinity)) ? m : a), null);
 
   const visual = cake.selection ? toVisual(origin, cake.selection, cake.look) : null;
   const cakeText = visual ? describeCake(visual, prefs.lang) : '';
@@ -211,16 +210,16 @@ export default function NearBakers() {
         <div className="space-y-1">
           {ready ? (
             <>
-              <p className="eyebrow">{tx('Last step', 'Huling step')}</p>
+              <p className="eyebrow">{tx('Step 2 of 2', 'Hakbang 2 sa 2')}</p>
               <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{tx('Choose who bakes your cake', 'Piliin kung sino ang magbe-bake ng cake mo')}</h1>
               <p className="text-ink-soft" data-choose-intro>
-                {tx('Best match first: can make all of it, fits your budget, free on your date, then nearest. Send it to one baker. They accept, offer another price, or say no, and you can pick someone else.', 'Nauuna ang pinakaangkop: kaya lahat, pasok sa budget, bakante sa petsa mo, tapos pinakamalapit. Ipadala sa isang baker. Tatanggapin nila, mag-aalok ng ibang presyo, o tatanggi, at puwede kang pumili ng iba.')}
+                {tx('Best match first. Send to one baker; if they say no, pick another.', 'Nauuna ang pinakaangkop. Ipadala sa isa; kung tumanggi, pumili ng iba.')}
               </p>
             </>
           ) : (
             <>
               <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{tx('Bakers near you who can make your cake', 'Mga baker na malapit sa iyo na kayang gawin ang cake mo')}</h1>
-              <p className="text-ink-soft">{tx('Same cake, priced from each baker’s own costs. Each baker still confirms the final price.', 'Parehong cake, presyo mula sa sariling gastos ng bawat baker. Ang baker pa rin ang magko-confirm ng final na presyo.')}</p>
+              <p className="text-ink-soft">{tx('Same cake, each baker’s own price.', 'Parehong cake, sariling presyo ng bawat baker.')}</p>
             </>
           )}
         </div>
@@ -240,42 +239,47 @@ export default function NearBakers() {
           </Link>
         </section>
 
-        {/* Where + filters */}
-        <section className="space-y-3" aria-label={tx('Location and filters', 'Lokasyon at filter')}>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold">
-              <IconPin className="-mt-0.5 mr-1 inline text-berry" /> {tx('Near', 'Malapit sa')} {spot.label}
+        {/* Where + filters: one line, the rest folded away */}
+        <details className="group rounded-2xl border border-line bg-white" data-filters aria-label={tx('Location and filters', 'Lokasyon at filter')}>
+          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 py-2 text-sm">
+            <IconPin className="shrink-0 text-berry" />
+            <span className="min-w-0 flex-1 truncate font-semibold">
+              {radius == null ? tx('Any distance', 'Kahit gaano kalayo') : `${radius} km`} · {spot.label}
             </span>
+            <span className="shrink-0 font-semibold text-berry">{tx('Filters', 'Filter')}</span>
+            <IconChevron size={16} className="shrink-0 text-berry transition group-open:rotate-180" />
+          </summary>
+          <div className="space-y-3 border-t border-line px-4 py-3">
             <button type="button" className="btn-ghost" onClick={useMyLocation} disabled={locating}>
               {locating ? tx('Finding you…', 'Hinahanap ka…') : tx('Use my location', 'Gamitin ang location ko')}
             </button>
-          </div>
-          {locError && <Notice tone="warn">{locError}</Notice>}
-          <div className="flex flex-wrap gap-2" role="group" aria-label={tx('Distance', 'Layo')}>
-            {[3, 5, 10, 20].map((km) => (
-              <Chip key={km} pressed={radius === km} onClick={() => setRadius(km)}>
-                {km} km
+            <div className="flex flex-wrap gap-2" role="group" aria-label={tx('Distance', 'Layo')}>
+              {[3, 5, 10, 20].map((km) => (
+                <Chip key={km} pressed={radius === km} onClick={() => setRadius(km)}>
+                  {km} km
+                </Chip>
+              ))}
+              <Chip pressed={radius == null} onClick={() => setRadius(null)}>
+                {tx('Any distance', 'Kahit gaano kalayo')}
               </Chip>
-            ))}
-            <Chip pressed={radius == null} onClick={() => setRadius(null)}>
-              {tx('Any distance', 'Kahit gaano kalayo')}
-            </Chip>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3 font-semibold">
+                <input type="checkbox" className="h-5 w-5 accent-[#8c2246]" checked={onlyCan} onChange={(e) => setOnlyCan(e.target.checked)} />
+                {tx('Only bakers who can make it', 'Yung kaya lang gawin')}
+              </label>
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                {tx('Sort', 'Ayusin')}
+                <select className="input min-h-11 w-auto py-1" value={sort} onChange={(e) => setSort(e.target.value as MatchSort)}>
+                  <option value="best">{tx('Best match', 'Pinakaangkop')}</option>
+                  <option value="nearest">{tx('Nearest', 'Pinakamalapit')}</option>
+                  <option value="cheapest">{tx('Cheapest', 'Pinakamura')}</option>
+                </select>
+              </label>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3 font-semibold">
-              <input type="checkbox" className="h-5 w-5 accent-[#8c2246]" checked={onlyCan} onChange={(e) => setOnlyCan(e.target.checked)} />
-              {tx('Only bakers who can make it', 'Yung kaya lang gawin')}
-            </label>
-            <label className="flex items-center gap-2 text-sm font-semibold">
-              {tx('Sort', 'Ayusin')}
-              <select className="input min-h-11 w-auto py-1" value={sort} onChange={(e) => setSort(e.target.value as MatchSort)}>
-                <option value="best">{tx('Best match', 'Pinakaangkop')}</option>
-                <option value="nearest">{tx('Nearest', 'Pinakamalapit')}</option>
-                <option value="cheapest">{tx('Cheapest', 'Pinakamura')}</option>
-              </select>
-            </label>
-          </div>
-        </section>
+        </details>
+        {locError && <Notice tone="warn">{locError}</Notice>}
 
         <Suspense fallback={<div className="cakeita-map grid place-items-center text-ink-soft">{tx('Loading map…', 'Nilo-load ang mapa…')}</div>}>
           <BakeryMap
@@ -305,11 +309,6 @@ export default function NearBakers() {
               ? tx('No bakers match yet', 'Wala pang tugmang baker')
               : tx(`${shown.length} ${shown.length === 1 ? 'baker' : 'bakers'} can make it`, `${shown.length} baker ang kaya itong gawin`)}
           </h2>
-          {cheapest && shown.length > 1 && (
-            <p className="text-sm">
-              {tx('Lowest estimate', 'Pinakamababang tantya')}: <strong>{formatPeso(cheapest.estimate!)}</strong> {tx('at', 'sa')} {cheapest.name}
-            </p>
-          )}
           {sendError && <Notice tone="danger">{sendError}</Notice>}
           {shown.length === 0 && (
             <Notice tone="info">
@@ -344,12 +343,9 @@ export default function NearBakers() {
           )}
         </section>
 
-        <Notice tone="info" title={tx('About these bakeries', 'Tungkol sa mga bakery na ito')}>
-          {tx(
-            'Shops marked “(sample)” are fictional, with sample prices, and they answer by themselves in a few seconds so you can try the whole back-and-forth. Real home bakers answer by hand. Bakers can join from Baker → My link → “Get on the map”.',
-            'Ang may “(sample)” ay hindi totoong shop, may sample na presyo, at kusang sumasagot sa loob ng ilang segundo para masubukan mo ang buong usapan. Ang totoong home baker ay sumasagot mismo. Puwedeng sumali ang baker sa Baker → My link → “Get on the map”.',
-          )}
-        </Notice>
+        <p className="text-center text-xs text-ink-soft" data-sample-note>
+          {tx('“(sample)” shops are fictional and answer by themselves so you can try it. Real bakers answer by hand.', 'Ang may “(sample)” ay hindi totoong shop at kusang sumasagot para masubukan mo. Ang totoong baker ay sumasagot mismo.')}
+        </p>
       </div>
     </Layout>
   );
@@ -386,16 +382,18 @@ function BakerCard({ m, best, selected, onSelect, onOrder, onSend, sending, aske
         </div>
       </div>
       <ul className="space-y-1.5 border-t border-line pt-3 text-sm">
-        <Fact ok={m.canMakeAll}>{m.canMakeAll ? tx('Can make everything you picked', 'Kaya lahat ng pinili mo') : `${tx('Doesn’t make', 'Hindi gumagawa ng')}: ${m.missing.join(', ')}`}</Fact>
-        <Fact ok={m.leadOk}>{m.leadOk ? tx(`Needs ${m.leadTimeDays} day(s) notice, OK for your date`, `Kailangan ng ${m.leadTimeDays} araw na abiso, abot sa petsa mo`) : tx(`Needs ${m.leadTimeDays} days' notice, too soon for your date`, `Kailangan ng ${m.leadTimeDays} araw na abiso, masyadong maaga ang petsa mo`)}</Fact>
-        {m.booked && <Fact ok={false}>{tx('Fully booked on your date', 'Puno na ang schedule sa petsa mo')}</Fact>}
-        {!m.servesOk && <Fact ok={false}>{tx('Their biggest cake may not feed everyone', 'Baka kulang ang pinakamalaki nilang cake')}</Fact>}
-        <li className="flex gap-2">
-          {m.delivers ? <IconTruck className="mt-0.5 shrink-0 text-ink-soft" /> : <IconStore className="mt-0.5 shrink-0 text-ink-soft" />}
-          <span>{m.delivers ? tx(`Delivers to you (within ${m.deliveryKm} km)`, `Nagde-deliver sa iyo (hanggang ${m.deliveryKm} km)`) : m.deliveryKm === 0 ? tx('Pickup only', 'Pickup lang') : tx(`Pickup (delivers only within ${m.deliveryKm} km)`, `Pickup (nagde-deliver lang hanggang ${m.deliveryKm} km)`)}</span>
-        </li>
+        {m.canMakeAll && m.leadOk && !m.booked && m.servesOk ? (
+          <Fact ok>{tx('Can make it all, in time for your date', 'Kaya lahat, abot sa petsa mo')}</Fact>
+        ) : (
+          <>
+            {!m.canMakeAll && <Fact ok={false}>{`${tx('Doesn’t make', 'Hindi gumagawa ng')}: ${m.missing.join(', ')}`}</Fact>}
+            {!m.leadOk && <Fact ok={false}>{tx(`Needs ${m.leadTimeDays} days' notice, too soon for your date`, `Kailangan ng ${m.leadTimeDays} araw na abiso, masyadong maaga ang petsa mo`)}</Fact>}
+            {m.booked && <Fact ok={false}>{tx('Fully booked on your date', 'Puno na ang schedule sa petsa mo')}</Fact>}
+            {!m.servesOk && <Fact ok={false}>{tx('Their biggest cake may not feed everyone', 'Baka kulang ang pinakamalaki nilang cake')}</Fact>}
+          </>
+        )}
       </ul>
-      {m.tags.length > 0 && (
+      {!onSend && m.tags.length > 0 && (
         <p className="flex flex-wrap gap-1">
           {m.tags.map((t) => (
             <span key={t} className="tag border border-line bg-[#faf6f1] text-ink-soft">
@@ -404,19 +402,25 @@ function BakerCard({ m, best, selected, onSelect, onOrder, onSend, sending, aske
           ))}
         </p>
       )}
-      {asked ? (
-        <Link to={`/o/${asked.id}`} className="btn-secondary w-full" onClick={(e) => e.stopPropagation()} data-asked>
-          {askedLabel}: {tx('see their answer', 'tingnan ang sagot')} <IconArrow />
-        </Link>
-      ) : onSend ? (
-        <button type="button" className="btn w-full" disabled={sending} onClick={(e) => { e.stopPropagation(); onSend(); }} data-send-to={m.slug}>
-          {sending ? tx('Sending…', 'Ipinapadala…') : tx(`Send my cake to ${short}`, `Ipadala kay ${short}`)} <IconArrow />
-        </button>
-      ) : (
-        <button type="button" className="btn w-full" onClick={(e) => { e.stopPropagation(); onOrder(); }}>
-          {tx(`Request from ${short}`, `Mag-request kay ${short}`)} <IconArrow />
-        </button>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <p className="flex shrink-0 items-center gap-1.5 text-sm text-ink-soft">
+          {m.delivers ? <IconTruck className="shrink-0" /> : <IconStore className="shrink-0" />}
+          <span>{m.delivers ? tx(`Delivers, ${m.deliveryKm} km`, `Deliver, ${m.deliveryKm} km`) : tx('Pickup', 'Pickup')}</span>
+        </p>
+        {asked ? (
+          <Link to={`/o/${asked.id}`} className="btn-secondary shrink-0 !px-4" onClick={(e) => e.stopPropagation()} data-asked aria-label={`${askedLabel}: ${tx('see their answer', 'tingnan ang sagot')}`}>
+            {askedLabel} <IconArrow />
+          </Link>
+        ) : onSend ? (
+          <button type="button" className="btn shrink-0" disabled={sending} onClick={(e) => { e.stopPropagation(); onSend(); }} data-send-to={m.slug} aria-label={sending ? undefined : tx(`Send my cake to ${short}`, `Ipadala kay ${short}`)}>
+            {sending ? tx('Sending…', 'Ipinapadala…') : tx('Send', 'Ipadala')} <IconArrow />
+          </button>
+        ) : (
+          <button type="button" className="btn shrink-0" onClick={(e) => { e.stopPropagation(); onOrder(); }} aria-label={tx(`Request from ${short}`, `Mag-request kay ${short}`)}>
+            {tx('Request', 'Mag-request')} <IconArrow />
+          </button>
+        )}
+      </div>
     </article>
   );
 }

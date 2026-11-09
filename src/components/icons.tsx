@@ -36,3 +36,7 @@ export const IconMenu = (p: P) => <Svg {...p}><path d="M4 7h16M4 12h16M4 17h16" 
 export const IconCloud = (p: P) => <Svg {...p}><path d="M7 18h10a4 4 0 00.6-8A6 6 0 006.2 11 3.5 3.5 0 007 18z" /></Svg>;
 export const IconMail = (p: P) => <Svg {...p}><rect x="3.5" y="5.5" width="17" height="13" rx="2" /><path d="M4 7l8 6 8-6" /></Svg>;
 export const IconPlay = (p: P) => <Svg {...p}><path d="M8 5.5v13l10.5-6.5z" /></Svg>;
+export const IconTurnLeft = (p: P) => <Svg {...p}><path d="M4 5v5h5" /><path d="M5 14a7.5 7.5 0 101.8-7.6L4 10" /></Svg>;
+export const IconTurnRight = (p: P) => <Svg {...p}><path d="M20 5v5h-5" /><path d="M19 14a7.5 7.5 0 11-1.8-7.6L20 10" /></Svg>;
+export const IconSlice = (p: P) => <Svg {...p}><path d="M3 15l17-7v8l-17 3z" /><path d="M3 15v4M3 15l17-7M20 12l-17 4" /><path d="M14 6.5c0-1.2.8-2 2-2" /></Svg>;
+export const IconDownload = (p: P) => <Svg {...p}><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" /></Svg>;
