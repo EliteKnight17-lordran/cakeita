@@ -48,3 +48,74 @@ export function SurveyFinishCard() {
     </div>
   );
 }
+
+const TRY_START = 'cakeita.survey.tryStart';
+const PROMPTED = 'cakeita.survey.prompted';
+/** How long someone tries the app before we ask for part 2 (tests can shorten it). */
+function promptDelay(): number {
+  try {
+    const n = Number(localStorage.getItem('cakeita.survey.promptMs'));
+    return n > 0 ? n : 90_000;
+  } catch {
+    return 90_000;
+  }
+}
+const session = {
+  get: (k: string) => {
+    try {
+      return sessionStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  set: (k: string, v: string) => {
+    try {
+      sessionStorage.setItem(k, v);
+    } catch {
+      /* storage blocked */
+    }
+  },
+};
+
+/** After about 90 seconds of trying the app, ask once (per visit) for the last survey taps. */
+export function SurveyTimedPrompt() {
+  const tx = useTx();
+  const pending = useSurveyPending();
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!pending || session.get(PROMPTED)) return;
+    let start = Number(session.get(TRY_START) || 0);
+    if (!start) {
+      start = Date.now();
+      session.set(TRY_START, String(start));
+    }
+    const t = window.setTimeout(() => {
+      session.set(PROMPTED, '1');
+      setShow(true);
+    }, Math.max(0, promptDelay() - (Date.now() - start)));
+    return () => window.clearTimeout(t);
+  }, [pending]);
+  useEffect(() => {
+    if (!show) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setShow(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [show]);
+  if (!show || !pending) return null;
+  return (
+    <div className="no-print fixed inset-0 z-50 flex items-end justify-center bg-black/35 p-3 sm:items-center" data-survey-prompt>
+      <div role="dialog" aria-modal="true" aria-labelledby="survey-prompt-title" className="w-full max-w-sm space-y-3 rounded-3xl bg-white p-5 shadow-xl">
+        <p className="eyebrow">{tx('Survey', 'Survey')}</p>
+        <h2 id="survey-prompt-title" className="text-xl leading-snug">
+          {tx('Done trying? 3 quick taps to finish', 'Tapos na? 3 mabilis na tap para matapos')}
+        </h2>
+        <Link to="/survey?step=2" className="btn w-full" autoFocus onClick={() => setShow(false)}>
+          {tx('Answer now (1 min)', 'Sagutin na (1 min)')}
+        </Link>
+        <button type="button" className="btn-ghost w-full" onClick={() => setShow(false)}>
+          {tx('Later', 'Mamaya')}
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -390,11 +390,22 @@ async function main() {
     await tester.locator('[data-next]').click();
     await pick('Kinabukasan o mas matagal');
     await pick('Oo');
-    check('survey part 1 takes only taps and leads to trying the app', await tester.locator('[data-try-link]').waitFor({ timeout: 15000 }).then(() => true, () => false));
+    check('survey part 1 takes only taps and leads to trying the app', await tester.locator('[data-survey-try]').waitFor({ timeout: 15000 }).then(() => true, () => false));
     check('survey answers wait on the phone when offline', await tester.getByText(/Naka-save sa phone na ito/).isVisible());
+    const tryHere = tester.locator('[data-survey-try]');
+    await tryHere.getByLabel(/Ang cake mo, kasama ang budget/).fill('Chocolate cake with sprinkles, 12 pax, budget 900');
+    check('people try the app inside the survey: a cake and 3 prices, no leaving', (await tryHere.locator('figure [role="img"]').count()) >= 1 && (await tryHere.getByRole('radio').count()) >= 2 && (await tryHere.locator('[data-part2]').isVisible()));
+    await axe(tester, 'survey: try it here');
+    // Those who open the full app get a reminder bar, and a pop-up after a while (shortened for the test).
+    await tester.evaluate(() => localStorage.setItem('cakeita.survey.promptMs', '1500'));
+    await tester.locator('[data-try-it] details summary').click();
     await tester.locator('[data-try-link]').click();
-    await tester.getByTestId('live-price').waitFor();
+    await tester.locator('[data-open-designer]').first().waitFor();
     check('reminder to finish the survey shows while trying', await tester.locator('[data-survey-nudge]').isVisible());
+    check('after a while of trying, a pop-up asks for the last taps', await tester.locator('[data-survey-prompt]').waitFor({ timeout: 6000 }).then(() => true, () => false));
+    await axe(tester, 'survey pop-up');
+    await tester.getByRole('button', { name: 'Mamaya' }).click();
+    check('the pop-up can be closed and stays closed', (await tester.locator('[data-survey-prompt]').count()) === 0);
     await tester.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await tester.waitForTimeout(400);
     check('the survey reminder stays on screen while scrolling', await tester.locator('[data-survey-nudge]').evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= 200; }));

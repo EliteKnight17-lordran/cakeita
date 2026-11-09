@@ -13,6 +13,18 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.16.0',
+    date: '2026-11-09',
+    en: [
+      'Survey part 2 is easier to finish: right after part 1 you try Cakeita inside the survey (customers describe a cake and see it in 3D with prices; bakers approve a sample quote), then answer 3 quick taps.',
+      'If you open the full app from the survey, a one-time reminder pops up after about 90 seconds to come back for part 2.',
+    ],
+    tl: [
+      'Mas madali nang tapusin ang part 2 ng survey: pagkatapos ng part 1, subukan agad ang Cakeita sa loob mismo ng survey (ang customer ay mag-describe ng cake at makikita ito sa 3D na may presyo; ang baker ay mag-approve ng sample na quote), tapos 3 mabilis na tap.',
+      'Kapag binuksan mo ang buong app mula sa survey, may isang beses na paalala pagkalipas ng mga 90 segundo para bumalik sa part 2.',
+    ],
+  },
+  {
     version: '1.15.0',
     date: '2026-11-09',
     en: [

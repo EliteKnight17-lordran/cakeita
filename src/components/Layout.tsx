@@ -1,4 +1,4 @@
-import { SurveyStrip } from './SurveyFinish';
+import { SurveyStrip, SurveyTimedPrompt } from './SurveyFinish';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAccount } from '../cloud/account';
@@ -144,6 +144,7 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
           </a>
         </p>
       </footer>
+      <SurveyTimedPrompt />
       {prefs.dev && <DevPanel />}
     </div>
   );

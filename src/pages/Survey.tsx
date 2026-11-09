@@ -8,6 +8,7 @@ import { flushOutbox, sendEntry } from '../cloud/feedback';
 import { newId } from '../data/store';
 import { usePrefs, useTx } from '../lib/prefs';
 import { readSurvey, saveSurvey, surveyUrl, TRY_LINK, type SurveyState } from './surveyState';
+import { SurveyTry } from './SurveyTry';
 
 /**
  * Pilot survey. Part 1 asks about the real problem (before trying Cakeita), then sends people
@@ -204,32 +205,19 @@ function TryIt({ role, note, onDone }: { role: Role; note: string; onDone: () =>
   return (
     <div className="space-y-4" data-try-it>
       <p className="eyebrow">{tx('Part 1 done · salamat!', 'Tapos ang Part 1 · salamat!')}</p>
-      <h1 className="text-3xl leading-tight">{role === 'baker' ? tx('Now try it as a baker', 'Subukan mo bilang baker') : tx('Now order a sample cake', 'Subukang umorder ng sample cake')}</h1>
+      <h1 className="text-3xl leading-tight">{role === 'baker' ? tx('Now try it as a baker', 'Subukan mo bilang baker') : tx('Now try ordering a cake', 'Subukang umorder ng cake')}</h1>
+      <p className="text-ink-soft">{tx('One minute, right here. Then 3 quick taps and you are done.', 'Isang minuto, dito mismo. Tapos 3 mabilis na tap at tapos ka na.')}</p>
       {note && <Notice tone="info">{note}</Notice>}
-      <ol className="list-decimal space-y-1 pl-5 text-ink-soft">
-        {role === 'baker' ? (
-          <>
-            <li>{tx('Open the demo and tap “Run the sample bakery”.', 'Buksan ang demo at i-tap ang “Patakbuhin ang sample bakery”.')}</li>
-            <li>{tx('Open a request, look at the price breakdown, and approve a quote.', 'Buksan ang isang request, tingnan ang breakdown ng presyo, at mag-approve ng quote.')}</li>
-          </>
-        ) : (
-          <>
-            <li>{tx('Describe a cake the way you would message a baker, with your budget.', 'Ilarawan ang cake na parang nagme-message sa baker, kasama ang budget mo.')}</li>
-            <li>{tx('Pick one of the 3 designs and spin it in 3D.', 'Pumili sa 3 design at paikutin sa 3D.')}</li>
-          </>
-        )}
-        <li>{tx('Come back here for a few more taps. A red bar at the top of the screen brings you back.', 'Bumalik dito para sa ilang tap pa. May pulang bar sa taas ng screen na magbabalik sa iyo.')}</li>
-      </ol>
-      <Link to={TRY_LINK[role]} className="btn w-full" data-try-link>
-        {role === 'baker' ? tx('Try the baker side (2 min)', 'Subukan ang baker side (2 min)') : tx('Order a sample cake (2 min)', 'Umorder ng sample cake (2 min)')}
-      </Link>
-      <button type="button" className="btn-secondary w-full" onClick={onDone} data-part2>
-        {tx('I already tried it: answer part 2', 'Nasubukan ko na: sagutin ang part 2')}
-      </button>
+      <SurveyTry role={role} onTried={onDone} />
       <details className="card">
-        <summary className="cursor-pointer font-semibold">{tx('Trying on another phone or laptop? Scan this', 'Sa ibang phone o laptop susubukan? I-scan ito')}</summary>
-        <div className="mt-3 space-y-2">
-          <QR value={`${window.location.origin}${window.location.pathname}#${TRY_LINK[role]}`} label={tx('QR code to try Cakeita', 'QR code para subukan ang Cakeita')} size={180} />
+        <summary className="cursor-pointer font-semibold">{tx('Want to try the full app first?', 'Gusto mo munang subukan ang buong app?')}</summary>
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-ink-soft">{tx('A red bar at the top of the screen brings you back here for the last taps.', 'May pulang bar sa taas ng screen na magbabalik sa iyo dito para sa huling tap.')}</p>
+          <Link to={TRY_LINK[role]} className="btn-secondary w-full" data-try-link>
+            {role === 'baker' ? tx('Open the baker side', 'Buksan ang baker side') : tx('Open the full order page', 'Buksan ang buong order page')}
+          </Link>
+          <p className="text-sm font-semibold">{tx('On another phone or laptop? Scan this', 'Sa ibang phone o laptop? I-scan ito')}</p>
+          <QR value={`${window.location.origin}${window.location.pathname}#${TRY_LINK[role]}`} label={tx('QR code to try Cakeita', 'QR code para subukan ang Cakeita')} size={160} />
         </div>
       </details>
     </div>
