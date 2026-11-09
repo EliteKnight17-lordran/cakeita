@@ -2,54 +2,107 @@ import { COLOR_WORDS, type ColorHit } from './requestReader';
 
 /**
  * Read the main colors of an inspo photo, with no AI and no network.
- * Each sampled pixel goes to the nearest named color we already use for frosting
- * (pink, gold, sage…); the two most common become frosting and accent.
- * Pure code so it can be tested without a browser.
+ * Each pixel is sorted by hue, lightness and saturation into the color names we already
+ * use for frosting (white, maroon, gold, sage…). Grays are treated as background
+ * (table, board, wall) and very dark pixels as shadow. Pure code so it can be tested.
  */
 export type Rgb = [number, number, number];
 
-const PALETTE = COLOR_WORDS.map(([, name, hex]) => {
-  const n = parseInt(hex.slice(1), 16);
-  return { name, hex, rgb: [(n >> 16) & 255, (n >> 8) & 255, n & 255] as Rgb };
-});
+const HEX = new Map(COLOR_WORDS.map(([, name, hex]) => [name, hex]));
+const hit = (name: string): ColorHit => ({ name, hex: HEX.get(name) ?? '#fbf7f0' });
 
-/** Perceptual-ish distance ("redmean"), good enough to tell blush from peach. */
-function dist(a: Rgb, b: Rgb): number {
-  const rm = (a[0] + b[0]) / 2;
-  const dr = a[0] - b[0];
-  const dg = a[1] - b[1];
-  const db = a[2] - b[2];
-  return (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db;
+function hsl([r, g, b]: Rgb): { h: number; s: number; l: number } {
+  const R = r / 255;
+  const G = g / 255;
+  const B = b / 255;
+  const max = Math.max(R, G, B);
+  const min = Math.min(R, G, B);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return { h: 0, s: 0, l };
+  const s = d / (1 - Math.abs(2 * l - 1));
+  let h = max === R ? ((G - B) / d) % 6 : max === G ? (B - R) / d + 2 : (R - G) / d + 4;
+  h *= 60;
+  if (h < 0) h += 360;
+  return { h, s, l };
 }
 
-export function nearestColor(c: Rgb): ColorHit {
-  let best = PALETTE[0]!;
-  let d = Infinity;
-  for (const p of PALETTE) {
-    const x = dist(c, p.rgb);
-    if (x < d) {
-      d = x;
-      best = p;
-    }
+/** A color name for one pixel; 'gray' and 'shadow' are not cake colors. */
+export function classify(px: Rgb): string {
+  const { h, s, l } = hsl(px);
+  if (l < 0.13) return 'shadow';
+  // Neutrals: little color in them.
+  if (s < 0.16 || (l > 0.88 && s < 0.5)) {
+    if (l > 0.8) return px[0] - px[2] > 36 ? 'cream' : 'white';
+    if (l < 0.22) return 'black';
+    return 'gray';
   }
-  return { name: best.name, hex: best.hex };
+  // Pale and warm but not very colorful: ivory, beige, nude.
+  if (l > 0.72 && s < 0.4 && h >= 20 && h < 60) return px[0] - px[2] > 36 ? 'cream' : l > 0.78 ? 'white' : 'gray';
+  if (h < 18 || h >= 340) {
+    if (l < 0.33) return 'maroon';
+    if (l < 0.55) return 'red';
+    if (l < 0.66 && s > 0.6) return 'hot pink';
+    return l > 0.85 ? 'baby pink' : 'pink';
+  }
+  if (h < 40) {
+    // Washed-out beige in the middle is usually white or cream frosting in shade.
+    if (s < 0.3 && l >= 0.42) return 'gray';
+    if (l < 0.5) return 'brown';
+    if (l > 0.72) return s > 0.4 ? 'peach' : 'cream';
+    return s < 0.45 ? 'brown' : 'orange';
+  }
+  if (h < 65) return l < 0.62 && s < 0.8 ? 'gold' : l > 0.72 && s < 0.6 ? 'cream' : 'yellow';
+  if (h < 170) {
+    if (l > 0.75) return 'mint';
+    return s < 0.35 ? 'sage' : 'green';
+  }
+  if (h < 200) return 'teal';
+  if (h < 250) {
+    if (l < 0.32) return 'navy';
+    return l > 0.7 ? 'baby blue' : 'blue';
+  }
+  if (h < 300) return l > 0.68 ? 'lavender' : 'purple';
+  if (l > 0.85) return 'baby pink';
+  return s > 0.55 && l < 0.66 ? 'hot pink' : 'pink';
+}
+
+const NOT_CAKE = new Set(['gray', 'shadow', 'black']);
+
+function saturation(p: Rgb): number {
+  return hsl(p).s;
 }
 
 /**
- * Up to two colors that cover a fair share of the cake. Gray and near-black are left out
- * when there is a real color too, because they are usually the table, plate or shadows.
+ * Frosting = the biggest cake color left after removing the background (the colors on the
+ * photo's edge) and grays/shadows. Accent = the strongest other color, even when it covers
+ * less (a maroon piped border, gold drip, pink flowers).
  */
-export function colorsFromPixels(pixels: Rgb[], minShare = 0.08): ColorHit[] {
-  if (!pixels.length) return [];
-  const counts = new Map<string, { hit: ColorHit; n: number }>();
-  for (const p of pixels) {
-    const hit = nearestColor(p);
-    const row = counts.get(hit.name) ?? { hit, n: 0 };
+export function colorsFromPhoto(center: Rgb[], border: Rgb[] = []): ColorHit[] {
+  if (!center.length) return [];
+  const bgCount = new Map<string, number>();
+  for (const p of border) bgCount.set(classify(p), (bgCount.get(classify(p)) ?? 0) + 1);
+  const bg = new Set([...bgCount].filter(([, n]) => n / border.length >= 0.25).map(([k]) => k));
+  const rows = new Map<string, { name: string; n: number; sat: number; bg: boolean }>();
+  for (const p of center) {
+    const name = classify(p);
+    const row = rows.get(name) ?? { name, n: 0, sat: 0, bg: bg.has(name) };
     row.n++;
-    counts.set(hit.name, row);
+    row.sat += saturation(p);
+    rows.set(name, row);
   }
-  const ranked = [...counts.values()].filter((r) => r.n / pixels.length >= minShare).sort((a, b) => b.n - a.n);
-  const background = new Set(['silver', 'black']);
-  const colorful = ranked.filter((r) => !background.has(r.hit.name));
-  return (colorful.length ? colorful : ranked).slice(0, 2).map((r) => r.hit);
+  const total = center.length;
+  const ranked = [...rows.values()].sort((a, b) => b.n - a.n);
+  const usable = (r: { name: string; bg: boolean }) => !NOT_CAKE.has(r.name) && !r.bg;
+  // A white cake on a white table: if the background color is most of the middle, it is the cake.
+  const frosting =
+    ranked.find((r) => usable(r) && r.n / total >= 0.06) ??
+    ranked.find((r) => !NOT_CAKE.has(r.name) && r.n / total >= 0.06) ??
+    (ranked[0] && ranked[0].name === 'black' && ranked[0].n / total > 0.4 ? ranked[0] : undefined);
+  if (!frosting) return [];
+  const accent = ranked
+    .filter((r) => r !== frosting && usable(r) && r.n / total >= 0.02)
+    .map((r) => ({ r, score: r.n * (0.05 + (r.sat / r.n) ** 2) }))
+    .sort((a, b) => b.score - a.score)[0]?.r;
+  return accent ? [hit(frosting.name), hit(accent.name)] : [hit(frosting.name)];
 }

@@ -21,8 +21,8 @@ import { toVisual } from '../domain/visual';
 import { SCENARIOS } from '../data/demoScenarios';
 import { clearDraft, useDraft, type Draft } from '../data/draft';
 import { repo } from '../data/store';
-import { resizeImage, samplePixels, type SmallImage } from '../lib/image';
-import { colorsFromPixels } from '../domain/photoColors';
+import { resizeImage, samplePhoto, type SmallImage } from '../lib/image';
+import { colorsFromPhoto } from '../domain/photoColors';
 import type { PhotoHints } from '../domain/photoHints';
 import { linkErrorText } from '../lib/codec';
 import { usePrefs, useTx } from '../lib/prefs';
@@ -183,16 +183,17 @@ function Flow({ menu }: { menu: PublicMenu }) {
     try {
       const [ai, px] = await Promise.all([
         smartAvailable && !prefs.aiOff ? analyzeRequest('', menu, { image: { mimeType: img.mimeType, base64: img.base64 }, allowAi: true }).catch(() => null) : Promise.resolve(null),
-        samplePixels(img.dataUrl).catch(() => [] as Array<[number, number, number]>),
+        samplePhoto(img.dataUrl).catch(() => ({ center: [], border: [] })),
       ]);
       const usedAi = !!ai?.usedAi;
       const hints: PhotoHints = {
-        colors: usedAi && ai!.colors.length ? ai!.colors.slice(0, 2) : colorsFromPixels(px),
+        colors: usedAi && ai!.colors.length ? ai!.colors.slice(0, 2) : colorsFromPhoto(px.center, px.border),
         componentIds: usedAi ? ai!.componentIds : [],
         flavorId: usedAi ? ai!.flavorId : null,
         coveringId: usedAi ? ai!.coveringId : null,
         tiers: usedAi ? ai!.tiers : null,
         theme: usedAi ? ai!.theme : '',
+        textOnCake: usedAi ? ai!.textOnCake : '',
         licensedNote: usedAi ? ai!.licensedNote : '',
         unavailable: usedAi ? ai!.unavailable : [],
         flowerStyle: usedAi ? ai!.flowerStyle ?? null : null,
@@ -200,12 +201,15 @@ function Flow({ menu }: { menu: PublicMenu }) {
         summary: usedAi ? ai!.summary : '',
         usedAi,
       };
-      // Show the design that keeps the most of what the photo shows.
+      // Show the design that keeps the most of what the photo shows. With colors only, start
+      // from the plainest design so we don't add decorations the photo doesn't have.
       const next = { ...draft, photoHints: hints, selection: null, lookTouched: false };
       const c = currentCake(menu, next, today);
+      // Parts a design adds that the photo doesn't show (flavor and frosting don't count).
+      const extras = (ids: string[]) => ids.filter((id) => !c.wants.componentIds.includes(id) && !['flavor', 'covering'].includes(menu.components.find((x) => x.id === id)?.category ?? '')).length;
       const best = c.designs.options
-        .map((o) => ({ o, n: leftOut(menu, c.wants, o.selection).parts.length }))
-        .sort((a, b) => a.n - b.n || b.o.estimate - a.o.estimate)[0];
+        .map((o) => ({ o, missing: usedAi ? leftOut(menu, c.wants, o.selection).parts.length : 0, extra: extras(o.selection.componentIds) }))
+        .sort((a, b) => a.missing - b.missing || a.extra - b.extra || a.o.estimate - b.o.estimate)[0];
       update({ photoHints: hints, selection: null, lookTouched: false, ...(best ? { tier: best.o.tier } : {}) });
     } finally {
       setBusy(false);

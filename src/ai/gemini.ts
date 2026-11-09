@@ -42,6 +42,7 @@ export function buildPrompt(menu: PublicMenu, text: string, hasImage: boolean): 
     hasImage
       ? '- An inspiration photo is attached. Describe what you SEE in it using the menu ids: number of tiers (pick the closest size), frosting type, flavor if visible, every decoration, main colors (frosting first, then accent), and words written on the cake.'
       : '',
+    hasImage ? '- A piped shell or bead border is already part of buttercream frosting (drawn in the accent color); choose rosettes only for separate swirls on top. Ribbons, bows and other things not in the parts list go in detectedButUnavailable.' : '',
     hasImage ? `- flowerStyle (only if flowers are visible): one of ${JSON.stringify(FLOWER_STYLES)}. topperSpot (only if a topper is visible): one of ${JSON.stringify(TOPPER_SPOTS)}. Otherwise null.` : '',
     `Cake sizes: ${JSON.stringify(sizes)}`,
     `Parts: ${JSON.stringify(parts)}`,

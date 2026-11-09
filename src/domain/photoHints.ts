@@ -13,6 +13,8 @@ export interface PhotoHints {
   coveringId: string | null;
   tiers: number | null;
   theme: string;
+  /** Words written on the cake in the photo. */
+  textOnCake?: string;
   licensedNote: string;
   unavailable: string[];
   flowerStyle: FlowerStyle | null;
@@ -36,6 +38,7 @@ export function withPhoto<R extends ParsedRequest>(reading: R, hints: PhotoHints
     coveringId: reading.coveringId ?? (hints.coveringId && cat(hints.coveringId) === 'covering' ? hints.coveringId : null),
     tiers: reading.tiers ?? hints.tiers,
     theme: reading.theme || hints.theme,
+    textOnCake: reading.textOnCake || (hints.textOnCake ?? '').slice(0, 40),
     licensedNote: reading.licensedNote || hints.licensedNote,
     unavailable: [...new Set([...reading.unavailable, ...hints.unavailable])].slice(0, 10),
   };

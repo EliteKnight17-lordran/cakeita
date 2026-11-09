@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { colorsFromPixels, nearestColor, type Rgb } from './photoColors';
+import { classify, colorsFromPhoto, type Rgb } from './photoColors';
 import { withPhoto, type PhotoHints } from './photoHints';
 import { readRequest } from './requestReader';
 import { toPublicMenu } from './pricing';
@@ -8,24 +8,33 @@ import { createSampleBakery } from './starterMenus';
 const fill = (c: Rgb, n: number) => Array.from({ length: n }, () => c);
 
 describe('reading colors from an inspo photo (no AI)', () => {
-  it('maps pixels to the named frosting colors', () => {
-    expect(nearestColor([246, 170, 195]).name).toBe('pink');
-    expect(nearestColor([212, 175, 55]).name).toBe('gold');
-    expect(nearestColor([250, 247, 240]).name).toBe('white');
+  it('sorts real photo pixels into frosting color names', () => {
+    expect(classify([57, 19, 20])).toBe('maroon'); // shaded maroon piping
+    expect(classify([157, 143, 130])).toBe('gray'); // concrete table
+    expect(classify([238, 236, 232])).toBe('white');
+    expect(classify([212, 175, 55])).toBe('gold');
+    expect(classify([246, 170, 195])).toBe('pink');
+    expect(classify([201, 179, 230])).toBe('lavender');
+    expect(classify([20, 15, 15])).toBe('shadow');
   });
 
-  it('frosting first, accent second, and ignores small specks', () => {
-    const px = [...fill([246, 170, 195], 60), ...fill([212, 175, 55], 25), ...fill([60, 120, 200], 3)];
-    expect(colorsFromPixels(px).map((c) => c.name)).toEqual(['pink', 'gold']);
+  it('white cake with a maroon border on a concrete table (the real failing photo)', () => {
+    const table = fill([157, 143, 130], 80);
+    const center = [...fill([236, 233, 228], 50), ...fill([110, 25, 30], 18), ...fill([57, 19, 20], 10), ...fill([157, 143, 130], 30)];
+    expect(colorsFromPhoto(center, table).map((c) => c.name)).toEqual(['white', 'maroon']);
   });
 
-  it('leaves out a gray table or dark shadow when the cake has a real color', () => {
-    const px = [...fill([192, 192, 200], 50), ...fill([150, 102, 196], 40), ...fill([30, 30, 30], 10)];
-    expect(colorsFromPixels(px).map((c) => c.name)).toEqual(['purple']);
+  it('a small strong accent beats a bigger washed-out beige', () => {
+    const center = [...fill([246, 170, 195], 60), ...fill([212, 175, 55], 8), ...fill([226, 214, 196], 20)];
+    expect(colorsFromPhoto(center, []).map((c) => c.name)).toEqual(['pink', 'gold']);
+  });
+
+  it('a white cake on a white table is still white', () => {
+    expect(colorsFromPhoto(fill([240, 240, 238], 50), fill([240, 240, 238], 50)).map((c) => c.name)).toEqual(['white']);
   });
 
   it('no pixels, no colors', () => {
-    expect(colorsFromPixels([])).toEqual([]);
+    expect(colorsFromPhoto([], [])).toEqual([]);
   });
 });
 
@@ -43,6 +52,11 @@ describe('photo hints on the cake', () => {
     expect(r.tiers).toBe(2);
     expect(r.colors[0]?.name).toBe('pink');
     expect(r.unavailable).toContain('macarons');
+  });
+
+  it('words written on the cake in the photo carry over, unless the customer typed their own', () => {
+    expect(withPhoto(readRequest('20 pax', menu), { ...hints, textOnCake: 'Happy Birthday' }, menu).textOnCake).toBe('Happy Birthday');
+    expect(withPhoto(readRequest('"Happy 7th Mia" 20 pax', menu), { ...hints, textOnCake: 'Happy Birthday' }, menu).textOnCake).toBe('Happy 7th Mia');
   });
 
   it('what the customer typed wins over the photo', () => {

@@ -179,7 +179,7 @@ function ShellBorder({ r, y, color, size }: { r: number; y: number; color: strin
   return (
     <Instances count={n} seed={1} build={build}>
       <sphereGeometry args={[0.019, 14, 10]} />
-      <meshPhysicalMaterial color={color} roughness={0.55} sheen={0.5} sheenColor="#ffffff" />
+      <meshPhysicalMaterial color={color} roughness={0.55} sheen={0.5} sheenColor={shade(color, 0.3)} />
     </Instances>
   );
 }
@@ -411,7 +411,7 @@ function Rosettes({ r, y, color }: { r: number; y: number; color: string }) {
       }
       m.instanceMatrix.needsUpdate = true;
     }}>
-      <meshPhysicalMaterial color={color} roughness={0.55} sheen={0.6} sheenColor="#ffffff" />
+      <meshPhysicalMaterial color={color} roughness={0.55} sheen={0.6} sheenColor={shade(color, 0.3)} />
     </instancedMesh>
   );
 }

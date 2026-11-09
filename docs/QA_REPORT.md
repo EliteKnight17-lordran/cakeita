@@ -6,7 +6,7 @@
 
 | Suite | Result |
 | --- | --- |
-| Unit tests (Vitest) | **221 / 221 passed** |
+| Unit tests (Vitest) | **223 / 223 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
 | End-to-end checks (5 phones) | **101 / 101 passed** |
@@ -32,6 +32,7 @@
 | 10 | Customer walkthrough | Customize panel snapped shut when picks matched a suggestion again (e.g. removing a stand) | Panel stays open once opened | e2e |
 | 11 | Same-phone demo (baker + customer) | Quote page re-ran its loader on every render (the text helper was a new function each time): endless re-render when the quote came from this phone, constant re-decoding when it came from a link | Text helper is now stable per language | e2e "no JS errors" + walkthrough |
 | 12 | Two-phone demo | The built-in Sample Bakery would have auto-answered on the customer's phone while a person answered as the demo baker on another phone | Only the map's "(sample)" shops answer by themselves | e2e (link flow with counter-offer) |
+| 13 | User's real inspo photo (white cake, maroon piping, concrete table) | Colors came out brown and cream; drip and sprinkles were added that weren't in the photo | Background taken from the photo's edges, grays/shadows ignored, strong accents kept; plain design when only colors are known | unit test with the photo's pixel values + screenshot |
 
 ## Open items (not yet verified)
 

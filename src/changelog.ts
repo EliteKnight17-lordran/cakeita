@@ -13,6 +13,20 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.8.1',
+    date: '2026-11-09',
+    en: [
+      'Photo colors are much more accurate: the table or board around the cake is ignored, shadows don\'t count, and a strong accent (like a maroon piped border) is kept even when it is small.',
+      'With colors only, the cake starts plain instead of adding a drip or sprinkles the photo doesn\'t have. With smart reading, words written on the cake carry over too.',
+      'Dark piping and rosettes now look their real color in 3D.',
+    ],
+    tl: [
+      'Mas tama na ang kulay mula sa photo: hindi na binibilang ang mesa o board sa paligid ng cake at ang anino, at nananatili ang matapang na accent (gaya ng maroon na piping) kahit maliit.',
+      'Kapag kulay lang ang nabasa, simple muna ang cake, walang drip o sprinkles na wala sa photo. Kapag may smart reading, kasama na rin ang nakasulat sa cake.',
+      'Totoong kulay na sa 3D ang madidilim na piping at rosettes.',
+    ],
+  },
+  {
     version: '1.8.0',
     date: '2026-11-09',
     en: [
