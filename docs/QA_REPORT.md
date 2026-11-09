@@ -6,11 +6,11 @@
 
 | Suite | Result |
 | --- | --- |
-| Unit tests (Vitest) | **203 / 203 passed** |
+| Unit tests (Vitest) | **213 / 213 passed** |
 | Typecheck (strict) | Pass |
 | Lint | Pass |
-| End-to-end checks (4 phones) | **78 / 78 passed** |
-| Firestore security rules (emulator) | **54 / 54 passed** |
+| End-to-end checks (5 phones) | **99 / 99 passed** |
+| Firestore security rules (emulator) | **61 / 61 passed** |
 | Accessibility (axe, 15 screens) | **0 serious or critical issues** |
 | JavaScript errors during e2e | 0 on all phones |
 | `npm audit` | 0 known vulnerabilities |
@@ -30,6 +30,8 @@
 | 8 | Unit test | "budget ko ngayon 2k" not read | Allow filler words after "budget" | unit test |
 | 9 | Visual check | Camera too close; cake top cropped | Fit camera to cake size | screenshot |
 | 10 | Customer walkthrough | Customize panel snapped shut when picks matched a suggestion again (e.g. removing a stand) | Panel stays open once opened | e2e |
+| 11 | Same-phone demo (baker + customer) | Quote page re-ran its loader on every render (the text helper was a new function each time): endless re-render when the quote came from this phone, constant re-decoding when it came from a link | Text helper is now stable per language | e2e "no JS errors" + walkthrough |
+| 12 | Two-phone demo | The built-in Sample Bakery would have auto-answered on the customer's phone while a person answered as the demo baker on another phone | Only the map's "(sample)" shops answer by themselves | e2e (link flow with counter-offer) |
 
 ## Open items (not yet verified)
 

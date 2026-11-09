@@ -267,4 +267,16 @@ export interface Order extends CakeRequest {
   customerNote: string;
   paid: boolean;
   history: OrderEvent[];
+  /** Why the baker said no (shown to the customer). */
+  declineReason?: string;
+  /** The customer's one counter-offer and the baker's answer. */
+  offer?: CustomerOffer | null;
+}
+
+/** A customer may answer a quote with one lower price. The baker accepts it or keeps their price. */
+export interface CustomerOffer {
+  price: number;
+  note: string;
+  at: string;
+  answer: 'pending' | 'accepted' | 'kept';
 }

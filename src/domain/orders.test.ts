@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyConfirmation, approveOrder, isQuoteExpired, quoteLinkPayload, requestToOrder } from './orders';
+import { answerOffer, applyConfirmation, applyOffer, approveOrder, declineOrder, isQuoteExpired, quoteLinkPayload, requestToOrder } from './orders';
 import { priceSelection } from './pricing';
 import { quoteLinkSchema } from './schemas';
 import { createSampleBakery } from './starterMenus';
@@ -62,5 +62,67 @@ describe('order lifecycle (review gate)', () => {
   it('quote expiry', () => {
     expect(isQuoteExpired('2026-11-05', NOW)).toBe(true);
     expect(isQuoteExpired('2026-11-06', NOW)).toBe(false);
+  });
+});
+
+describe('accept, decline, and one counter-offer each way', () => {
+  const quoted = () => approveOrder(bakery, requestToOrder(req, 'cloud', NOW), { selection: req.selection, look: req.look, price: 1600, note: 'Rush fee', validDays: 3 }, NOW);
+  const offer = (price: number) => ({ v: 1 as const, orderId: 'r1', price, note: 'Pickup ako', customerName: 'Ana', at: NOW.toISOString() });
+
+  it('a decline reaches the customer with the reason and no price', () => {
+    const d = declineOrder(requestToOrder(req, 'cloud', NOW), "We're fully booked.", NOW);
+    expect(d.status).toBe('declined');
+    const p = quoteLinkPayload(bakery, d)!;
+    expect(quoteLinkSchema.safeParse(p).success).toBe(true);
+    expect(p).toMatchObject({ kind: 'declined', reason: "We're fully booked.", price: 0 });
+    expect(JSON.stringify(p)).not.toMatch(/cost|margin/i);
+  });
+
+  it('the quote tells the customer what the app estimated, so a counter-offer is visible', () => {
+    const p = quoteLinkPayload(bakery, quoted())!;
+    expect(p).toMatchObject({ kind: 'quote', price: 1600, estimate: 1450, offer: null });
+  });
+
+  it('older quote links (before offers) still open', () => {
+    const p = quoteLinkPayload(bakery, quoted())!;
+    const old: Record<string, unknown> = { ...p };
+    for (const k of ['kind', 'reason', 'estimate', 'offer']) delete old[k];
+    const r = quoteLinkSchema.safeParse(old);
+    expect(r.success && r.data.kind).toBe('quote');
+  });
+
+  it('the customer can offer once, only below the quote, only on an open quote', () => {
+    expect(applyOffer(undefined, offer(1400))).toEqual({ ok: false, reason: 'unknown' });
+    expect(applyOffer(requestToOrder(req, 'cloud', NOW), offer(1400))).toEqual({ ok: false, reason: 'not-quoted' });
+    expect(applyOffer(quoted(), offer(1600))).toEqual({ ok: false, reason: 'bad-price' });
+    expect(applyOffer(quoted(), offer(0))).toEqual({ ok: false, reason: 'bad-price' });
+    const r = applyOffer(quoted(), offer(1400));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.order.offer).toMatchObject({ price: 1400, answer: 'pending' });
+    expect(applyOffer(r.order, offer(1300))).toEqual({ ok: false, reason: 'already' });
+  });
+
+  it('accepting re-prices the same cake at the offer, with cost from code, and confirmation then needs the new price', () => {
+    const r = applyOffer(quoted(), offer(1400));
+    if (!r.ok) throw new Error('offer');
+    const a = answerOffer(bakery, r.order, true, NOW);
+    expect(a.quote!.price).toBe(1400);
+    expect(a.quote!.cost).toBe(priceSelection(bakery, req.selection)!.costTotal);
+    expect(a.offer!.answer).toBe('accepted');
+    expect(quoteLinkPayload(bakery, a)!.offer).toEqual({ price: 1400, note: 'Pickup ako', answer: 'accepted' });
+    const c = { v: 1 as const, orderId: 'r1', price: 1600, confirmedAt: NOW.toISOString(), note: '', customerName: 'Ana' };
+    expect(applyConfirmation(a, c)).toEqual({ ok: false, reason: 'price-changed' });
+    expect(applyConfirmation(a, { ...c, price: 1400 }).ok).toBe(true);
+    // Final: answering again changes nothing.
+    expect(answerOffer(bakery, a, false, NOW)).toBe(a);
+  });
+
+  it('keeping the price leaves the quote as it was', () => {
+    const r = applyOffer(quoted(), offer(1400));
+    if (!r.ok) throw new Error('offer');
+    const k = answerOffer(bakery, r.order, false, NOW);
+    expect(k.quote!.price).toBe(1600);
+    expect(k.offer!.answer).toBe('kept');
   });
 });

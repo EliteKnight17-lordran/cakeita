@@ -3,12 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { describeCake } from '../../cake/describe';
 import { CakeView } from '../../cake/CakeView';
 import { ShareBox } from '../../components/ShareBox';
-import { Field, Notice } from '../../components/ui';
+import { Chip, Field, Notice } from '../../components/ui';
 import { IconCheck, IconPen, IconPrint } from '../../components/icons';
 import { normalizeSelection } from '../../domain/designs';
 import { addDays } from '../../domain/insights';
 import { formatPeso } from '../../domain/money';
-import { approveOrder, quoteLinkPayload } from '../../domain/orders';
+import { answerOffer, approveOrder, declineOrder, quoteLinkPayload } from '../../domain/orders';
 import { evaluatePrice, priceSelection, toPublicMenu } from '../../domain/pricing';
 import { formatQty, shoppingForOrder } from '../../domain/shopping';
 import type { Bakery, CakeLook, Order, Selection } from '../../domain/types';
@@ -61,6 +61,8 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
   const [editing, setEditing] = useState(order.status === 'new');
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState('');
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState('');
 
   const quote = priceSelection(bakery, selection);
   const suggested = quote?.suggestedPrice ?? 0;
@@ -95,14 +97,33 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
     setCopied((await copyText(msg)) ? tx('Reply copied. Paste it in Messenger.', 'Na-copy ang reply. I-paste sa Messenger.') : '');
   };
 
+  const REASONS: Array<[string, string]> = [
+    [tx(`We're fully booked on ${order.eventDate}.`, `Puno na kami sa ${order.eventDate}.`), tx('Fully booked', 'Puno na')],
+    [tx(`We need ${bakery.leadTimeDays} days' notice, so your date is too soon.`, `Kailangan namin ng ${bakery.leadTimeDays} araw na abiso, kaya masyadong maaga ang petsa mo.`), tx('Too soon', 'Masyadong maaga')],
+    [tx("We don't make this kind of design.", 'Hindi namin ginagawa ang ganitong design.'), tx("Don't make this", 'Hindi namin ginagawa')],
+    [tx("We can't make it work for this budget.", 'Hindi namin kaya sa budget na ito.'), tx('Budget too low', 'Kulang ang budget')],
+  ];
+
   const decline = async () => {
+    const why = reason.trim();
     const msg = tx(
-      `Hi ${order.customer.name.split(' ')[0]}! Thank you for thinking of us. Sorry, we can't take this order for ${order.eventDate}. We hope to bake for you next time!`,
-      `Hi ${order.customer.name.split(' ')[0]}! Salamat sa pag-message. Pasensya na, hindi namin kaya ang order para sa ${order.eventDate}. Sana makapag-bake kami para sa iyo sa susunod!`,
+      `Hi ${order.customer.name.split(' ')[0]}! Thank you for thinking of us. Sorry, we can't take this order for ${order.eventDate}.${why ? ` ${why}` : ''} We hope to bake for you next time!`,
+      `Hi ${order.customer.name.split(' ')[0]}! Salamat sa pag-message. Pasensya na, hindi namin kaya ang order para sa ${order.eventDate}.${why ? ` ${why}` : ''} Sana makapag-bake kami para sa iyo sa susunod!`,
     );
-    await copyText(msg);
-    repo.updateOrder(order.id, { status: 'declined' }, { type: 'declined' });
-    setCopied(tx('Polite reply copied. Paste it in Messenger.', 'Na-copy ang magalang na reply. I-paste sa Messenger.'));
+    const ok = await copyText(msg);
+    repo.upsertOrder(declineOrder(order, why));
+    setDeclining(false);
+    setCopied(
+      order.source === 'cloud' || order.source === 'same-device'
+        ? tx('Sent. The customer sees your reason in Cakeita. A polite reply is also copied for Messenger.', 'Naipadala. Makikita ng customer ang dahilan mo sa Cakeita. Na-copy din ang magalang na reply para sa Messenger.')
+        : ok
+          ? tx('Polite reply copied. Paste it in Messenger.', 'Na-copy ang magalang na reply. I-paste sa Messenger.')
+          : '',
+    );
+  };
+
+  const answer = (accept: boolean) => {
+    repo.upsertOrder(answerOffer(bakery, order, accept));
   };
 
   const remove = () => {
@@ -164,6 +185,21 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
       {tooSoon && <Notice tone="warn">{tx(`Event is sooner than your ${bakery.leadTimeDays}-day notice.`, `Mas maaga sa ${bakery.leadTimeDays} araw na abiso mo ang event.`)}</Notice>}
       {order.hasInspoPhoto && <InspoPhoto order={order} />}
       {order.customerNote && <Notice tone="ok" title={tx('Customer note', 'Note ng customer')}>{order.customerNote}</Notice>}
+      {order.status === 'declined' && (
+        <Notice tone="info" title={tx('You said no to this one', 'Tinanggihan mo ito')}>
+          {order.declineReason || tx('No reason given.', 'Walang dahilan.')} {tx('You can still approve a quote below if you change your mind.', 'Puwede ka pang mag-approve sa baba kung magbago ang isip mo.')}
+        </Notice>
+      )}
+      {order.offer && order.quote && order.status === 'quoted' && order.offer.answer === 'pending' && (
+        <OfferCard bakery={bakery} quoted={order.quote.price} cost={order.quote.cost} offer={order.offer} onAnswer={answer} />
+      )}
+      {order.offer && order.offer.answer !== 'pending' && (
+        <p className="text-sm text-ink-soft" data-offer-answered>
+          {order.offer.answer === 'accepted'
+            ? tx(`You accepted the customer's offer of ${formatPeso(order.offer.price)}.`, `Tinanggap mo ang alok ng customer na ${formatPeso(order.offer.price)}.`)
+            : tx(`You kept your price. The customer offered ${formatPeso(order.offer.price)}.`, `Hindi mo binago ang presyo. Nag-alok ang customer ng ${formatPeso(order.offer.price)}.`)}
+        </p>
+      )}
 
       <CakeView visual={visual} description={desc} />
 
@@ -246,6 +282,13 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
           {order.budget != null && price > order.budget && (
             <Notice tone="info">{tx(`This is ${formatPeso(price - order.budget)} over the customer's budget.`, `Lampas ito ng ${formatPeso(price - order.budget)} sa budget ng customer.`)}</Notice>
           )}
+          {order.estimate != null && (
+            <p className="text-sm" data-app-estimate>
+              {price === Math.round(order.estimate)
+                ? tx(`Same as the ${formatPeso(order.estimate)} the customer saw in the app: this accepts their request.`, `Pareho sa ${formatPeso(order.estimate)} na nakita ng customer sa app: tatanggapin nito ang request nila.`)
+                : tx(`The customer saw ${formatPeso(order.estimate)} in the app, so this goes to them as your counter-offer.`, `${formatPeso(order.estimate)} ang nakita ng customer sa app, kaya alok mo itong ibang presyo.`)}
+            </p>
+          )}
           <Field id="qnote" label={tx('Note to the customer (optional)', 'Note sa customer (optional)')}>
             <textarea id="qnote" className="input min-h-20" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder={tx('e.g. 50% down payment to reserve the date', 'hal. 50% down payment para ma-reserve ang petsa')} />
           </Field>
@@ -253,16 +296,41 @@ function Detail({ bakery, order }: { bakery: Bakery; order: Order }) {
             <input id="valid" type="number" min={1} max={30} className="input" value={validDays} onChange={(e) => setValidDays(Math.max(1, Math.min(30, Number(e.target.value) || 1)))} />
           </Field>
           <button type="button" className="btn w-full text-lg" onClick={approve} disabled={!quote || price <= 0}>
-            <IconCheck /> {tx('Approve', 'I-approve')} {formatPeso(price)}
+            <IconCheck />{' '}
+            {order.estimate == null
+              ? `${tx('Approve', 'I-approve')} ${formatPeso(price)}`
+              : price === Math.round(order.estimate)
+                ? tx(`Accept at ${formatPeso(price)}`, `Tanggapin sa ${formatPeso(price)}`)
+                : tx(`Send counter-offer ${formatPeso(price)}`, `Ipadala ang alok na ${formatPeso(price)}`)}
           </button>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-ghost" onClick={replyByHand}>
               <IconPen /> {tx('Reply by hand', 'Sumagot nang manual')}
             </button>
-            <button type="button" className="btn-ghost" onClick={decline}>
-              {tx('Decline politely', 'Tanggihan nang magalang')}
-            </button>
+            {order.status !== 'declined' && (
+              <button type="button" className="btn-ghost" onClick={() => setDeclining((d) => !d)} aria-expanded={declining} data-decline-open>
+                {tx('Decline politely', 'Tanggihan nang magalang')}
+              </button>
+            )}
           </div>
+          {declining && (
+            <div className="space-y-3 rounded-2xl border border-line p-3" data-decline-form>
+              <p className="font-semibold">{tx('Why? The customer sees this, so they can pick another baker.', 'Bakit? Makikita ito ng customer para makapili sila ng ibang baker.')}</p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label={tx('Reasons', 'Mga dahilan')}>
+                {REASONS.map(([full, label]) => (
+                  <Chip key={label} pressed={reason === full} onClick={() => setReason(full)}>
+                    {label}
+                  </Chip>
+                ))}
+              </div>
+              <Field id="dreason" label={tx('Reason (you can edit it)', 'Dahilan (puwedeng i-edit)')}>
+                <input id="dreason" className="input" maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} />
+              </Field>
+              <button type="button" className="btn-danger" onClick={decline} data-send-decline>
+                {tx('Send “sorry, we can’t”', 'Ipadala ang “pasensya, hindi namin kaya”')}
+              </button>
+            </div>
+          )}
           <p className="min-h-6 font-semibold text-ok-ink" aria-live="polite">
             {copied}
           </p>
@@ -394,5 +462,38 @@ function InspoPhoto({ order }: { order: Order }) {
       </button>
       <p className="text-sm text-ink-soft">{tx('Price from your menu, not the photo. The photo may show more than the budget allows.', 'Sa menu mo ang presyo, hindi sa photo. Puwedeng mas mahal ang nasa photo kaysa sa budget.')}</p>
     </figure>
+  );
+}
+
+/** The customer's one counter-offer: accept it or keep your price. Both are final. */
+function OfferCard({ bakery, quoted, cost, offer, onAnswer }: { bakery: Bakery; quoted: number; cost: number; offer: NonNullable<Order['offer']>; onAnswer: (accept: boolean) => void }) {
+  const tx = useTx();
+  const ev = evaluatePrice(offer.price, cost, bakery.targetMarginPct);
+  return (
+    <section className="card space-y-3 !border-amber-ink" aria-labelledby="offer-h" data-offer-card>
+      <h2 id="offer-h" className="font-display text-xl font-semibold">
+        {tx(`The customer offers ${formatPeso(offer.price)}`, `Nag-aalok ang customer ng ${formatPeso(offer.price)}`)}
+      </h2>
+      <p>
+        {tx(`Your quote was ${formatPeso(quoted)}.`, `${formatPeso(quoted)} ang quote mo.`)} {offer.note && <span>“{offer.note}”</span>}
+      </p>
+      <p className="font-semibold" aria-live="polite">
+        {tx('Your margin at their price', 'Tubo mo sa presyo nila')}: {ev.marginPct}% ({tx('target', 'target')} {bakery.targetMarginPct}%)
+      </p>
+      {ev.loss ? (
+        <Notice tone="danger" title={tx('You will lose money', 'Lugi ka rito')}>{tx(`Below your cost of ${formatPeso(cost)}.`, `Mas mababa sa gastos mong ${formatPeso(cost)}.`)}</Notice>
+      ) : ev.belowTarget ? (
+        <Notice tone="warn">{tx('Below your target margin, but not a loss.', 'Mababa sa target mong tubo, pero hindi lugi.')}</Notice>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn" onClick={() => onAnswer(true)} data-offer-accept>
+          <IconCheck /> {tx(`Accept ${formatPeso(offer.price)}`, `Tanggapin ang ${formatPeso(offer.price)}`)}
+        </button>
+        <button type="button" className="btn-secondary" onClick={() => onAnswer(false)} data-offer-keep>
+          {tx(`Keep ${formatPeso(quoted)}`, `Manatili sa ${formatPeso(quoted)}`)}
+        </button>
+      </div>
+      <p className="text-sm text-ink-soft">{tx('One offer each way: your answer is final, and the customer can then confirm or choose another baker.', 'Isang alok bawat panig: final ang sagot mo, tapos puwedeng mag-confirm o pumili ng ibang baker ang customer.')}</p>
+    </section>
   );
 }

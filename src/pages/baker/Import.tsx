@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Notice } from '../../components/ui';
-import { applyConfirmation, requestToOrder } from '../../domain/orders';
-import { cakeRequestSchema, confirmLinkSchema } from '../../domain/schemas';
+import { applyConfirmation, applyOffer, requestToOrder } from '../../domain/orders';
+import { cakeRequestSchema, confirmLinkSchema, offerLinkSchema } from '../../domain/schemas';
 import { repo, useDb } from '../../data/store';
 import { decodePayload, linkErrorText } from '../../lib/codec';
 import { useTx } from '../../lib/prefs';
 import { BakerShell } from './BakerShell';
 
-/** Opens a request or confirmation link a customer sent the baker. */
+/** Opens a request, counter-offer or confirmation link a customer sent the baker. */
 export default function Import() {
   const loc = useLocation();
   const nav = useNavigate();
@@ -18,6 +18,7 @@ export default function Import() {
   const params = new URLSearchParams(loc.search);
   const r = params.get('r');
   const c = params.get('c');
+  const o = params.get('o');
 
   useEffect(() => {
     if (!db.bakery) return;
@@ -49,6 +50,26 @@ export default function Import() {
           }[out.reason];
           setMsg({ tone: out.reason === 'already' ? 'ok' : 'warn', text });
         }
+      } else if (o) {
+        const res = await decodePayload(o, offerLinkSchema);
+        if (!alive) return;
+        if (!res.ok) return setMsg({ tone: 'danger', text: linkErrorText(res.error, tx) });
+        const order = repo.get().orders.find((x) => x.id === res.value.orderId);
+        const out = applyOffer(order, res.value);
+        if (out.ok) {
+          repo.upsertOrder(out.order);
+          nav(`/baker/order/${out.order.id}`, { replace: true });
+        } else if (out.reason === 'already' && order) {
+          nav(`/baker/order/${order.id}`, { replace: true });
+        } else {
+          const text = {
+            unknown: tx('We could not find this order on this phone. Open it on the phone where you made the quote.', 'Wala ang order sa phone na ito. Buksan sa phone kung saan ka nag-quote.'),
+            'not-quoted': tx('This order has no open quote, so there is nothing to answer.', 'Walang bukas na quote ang order, kaya walang sasagutin.'),
+            'bad-price': tx('This offer is not lower than your quote.', 'Hindi mas mababa sa quote mo ang alok na ito.'),
+            already: '',
+          }[out.reason];
+          setMsg({ tone: 'warn', text });
+        }
       } else {
         setMsg({ tone: 'warn', text: tx('Nothing to open in this link.', 'Walang mabuksan sa link na ito.') });
       }
@@ -56,7 +77,7 @@ export default function Import() {
     return () => {
       alive = false;
     };
-  }, [r, c, db.bakery, nav, tx]);
+  }, [r, c, o, db.bakery, nav, tx]);
 
   return (
     <BakerShell>

@@ -1,6 +1,6 @@
 import { sendNotify } from '../push/client';
 import { useEffect, useSyncExternalStore } from 'react';
-import { applyConfirmation, quoteLinkPayload, requestToOrder } from '../domain/orders';
+import { applyConfirmation, applyOffer, quoteLinkPayload, requestToOrder } from '../domain/orders';
 import type { Bakery } from '../domain/types';
 import { repo, useDb, type MyRequest } from '../data/store';
 import { quoteLink } from '../lib/links';
@@ -8,6 +8,7 @@ import { startAccountIfKnown, useAccount } from './account';
 import { cloudEnabled } from './config';
 import {
   listenConfirmations,
+  listenOffers,
   listenQuote,
   listenRequests,
   loadBakery,
@@ -172,19 +173,25 @@ export function CloudSync() {
       const res = applyConfirmation(order, c);
       if (res.ok) repo.upsertOrder(res.order);
     }).then((off) => (alive ? offs.push(off) : off()), () => {});
+    listenOffers(uid, (x) => {
+      const res = applyOffer(repo.get().orders.find((o) => o.id === x.orderId), x);
+      if (res.ok) repo.upsertOrder(res.order);
+    }).then((off) => (alive ? offs.push(off) : off()), () => {});
     return () => {
       alive = false;
       offs.forEach((f) => f());
     };
   }, [mineBakery, uid]);
 
-  // Quotes up: every approved quote also goes to the cloud, so the customer sees it live.
+  // Quotes up: every approved quote (and every "sorry, we can't") also goes to the cloud,
+  // so the customer sees it live. A new answer to their counter-offer goes up again.
   useEffect(() => {
     if (!mineBakery || !uid || !bakery) return;
     const done = pushedSet();
     for (const o of db.orders) {
-      if (!o.quote || !['quoted', 'confirmed', 'baking', 'ready', 'done'].includes(o.status)) continue;
-      const key = `${o.id}@${o.quote.approvedAt}`;
+      const declined = o.status === 'declined' && o.source === 'cloud';
+      if (!declined && (!o.quote || !['quoted', 'confirmed', 'baking', 'ready', 'done'].includes(o.status))) continue;
+      const key = declined ? `${o.id}@declined` : `${o.id}@${o.quote!.approvedAt}${o.offer ? `@offer-${o.offer.answer}` : ''}`;
       if (done.has(key)) continue;
       const q = quoteLinkPayload(bakery, o);
       if (!q) continue;
@@ -215,8 +222,8 @@ export function CloudSync() {
     return () => window.clearTimeout(t);
   }, [uid, myRequests]);
 
-  // Anyone: live quotes for requests sent to cloud bakeries.
-  const waiting = myRequests.filter((r: MyRequest) => r.cloud && r.status === 'sent').slice(0, 10);
+  // Anyone: live answers for requests sent to cloud bakeries (the quote, a "no", or the answer to an offer).
+  const waiting = myRequests.filter((r: MyRequest) => r.cloud && (r.status === 'sent' || r.status === 'quoted')).slice(0, 10);
   const waitingKey = waiting.map((r) => r.id).join(',');
   useEffect(() => {
     if (!waitingKey || !cloudEnabled()) return;
@@ -225,7 +232,9 @@ export function CloudSync() {
     for (const id of waitingKey.split(',')) {
       listenQuote(id, async (q) => {
         const link = await quoteLink(q);
-        repo.updateMyRequest(id, { status: 'quoted', quoteLink: link });
+        const now = repo.get().myRequests.find((r) => r.id === id);
+        if (!now || now.status === 'confirmed' || now.quoteLink === link) return;
+        repo.updateMyRequest(id, { status: q.kind === 'declined' ? 'declined' : 'quoted', quoteLink: link });
       }).then((off) => (alive ? offs.push(off) : off()), () => {});
     }
     return () => {

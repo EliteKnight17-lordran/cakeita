@@ -14,9 +14,11 @@ import { createSampleBakery, SAMPLE_BASE_CAKES, SAMPLE_COMPONENTS } from '../dom
 import { toVisual } from '../domain/visual';
 import { listedBakeries } from '../data/directory';
 import { useDraft, writeDraft } from '../data/draft';
-import { localBakeryFor } from '../data/store';
+import { localBakeryFor, useDb, type MyRequest } from '../data/store';
+import { celebrate } from '../lib/celebrate';
 import { usePrefs, useTx } from '../lib/prefs';
 import { currentCake } from './customerCake';
+import { carriedPhoto, sendCakeRequest } from './sendRequest';
 
 const BakeryMap = lazy(() => import('./near/BakeryMap'));
 
@@ -44,6 +46,11 @@ export default function NearBakers() {
   const today = useMemo(() => new Date(), []);
   const cake = currentCake(origin, draft, today);
   const hasCake = cake.hasText || draft.servings != null || draft.budget != null || !!draft.selection;
+  const db = useDb();
+  // Details already filled in on the design page: the customer picks a baker here and it is sent from here.
+  const ready = !!cake.selection && !!cake.eventDate && !!draft.name.trim() && draft.contact.trim().length >= 5 && draft.consent;
+  const [sending, setSending] = useState<string | null>(null);
+  const [sendError, setSendError] = useState('');
 
   const defaultSpot: Spot = { lat: DEFAULT_SPOT.lat, lng: DEFAULT_SPOT.lng, label: tx(DEFAULT_SPOT.label, DEFAULT_SPOT.labelTl) };
   const [spot, setSpotState] = useState<Spot>(() => loadSpot() ?? defaultSpot);
@@ -83,12 +90,22 @@ export default function NearBakers() {
       alive = false;
     };
   }, []);
-  const listed = useMemo(() => [...real, ...listedBakeries()], [real]);
+  // The demo baker running on this phone shows up too, so one laptop can play customer and baker.
+  const demoBaker = db.bakery?.isSample && db.bakery.slug === 'sample' ? db.bakery : null;
+  const listed = useMemo(() => {
+    const own: ListedBakery[] = demoBaker
+      ? [{ menu: toPublicMenu(demoBaker), lat: spot.lat + 0.004, lng: spot.lng + 0.004, area: tx('On this phone (demo baker)', 'Nasa phone na ito (demo baker)'), deliveryKm: 5, tags: [tx('Demo: you answer as the baker', 'Demo: ikaw ang sasagot bilang baker')] }]
+      : [];
+    return [...own, ...real, ...listedBakeries()];
+  }, [real, demoBaker, spot.lat, spot.lng, tx]);
   const all = useMemo(() => {
     if (!cake.selection) return [];
     const want = { selection: cake.selection, servings: cake.wants.servings, budget: cake.wants.budget, eventDate: cake.eventDate };
     return sortMatches(matchBakeries(want, listed, spot, nameOf, today), sort);
   }, [JSON.stringify(cake.selection), cake.wants.servings, cake.wants.budget, cake.eventDate, spot, sort, listed]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Requests for this same cake date already sent from this phone, by baker.
+  const asked = new Map<string, MyRequest>();
+  for (const r of db.myRequests) if (r.eventDate && r.eventDate === cake.eventDate && r.fromSlug === origin.slug && !asked.has(r.bakerySlug)) asked.set(r.bakerySlug, r);
   const inRange = all.filter((m) => radius == null || m.distanceKm <= radius);
   const shown = inRange.filter((m) => !onlyCan || m.suitable);
   const hidden = inRange.length - shown.length;
@@ -138,6 +155,51 @@ export default function NearBakers() {
     nav(`/b/${m.slug}`);
   };
 
+  /** Send this cake to one baker, from here. Each baker gets the cake in their own menu's parts and price. */
+  const sendTo = async (m: BakeryMatch) => {
+    const to = listed.find((l) => l.menu.slug === m.slug)?.menu;
+    if (!to || sending) return;
+    setSending(m.slug);
+    setSendError('');
+    try {
+      const sel = m.selection;
+      const res = await sendCakeRequest(
+        {
+          menu: to,
+          fromSlug: origin.slug,
+          name: draft.name,
+          contact: draft.contact,
+          note: draft.note,
+          description: draft.description,
+          occasion: cake.occasion,
+          eventDate: cake.eventDate,
+          servings: cake.wants.servings ?? to.baseCakes.find((b) => b.id === sel.baseCakeId)?.servings ?? 1,
+          budget: cake.wants.budget,
+          tier: draft.selection ? 'custom' : draft.tier,
+          selection: sel,
+          look: cake.look,
+          theme: cake.reading.theme ?? '',
+          licensedNote: cake.reading.licensedNote ?? '',
+          unavailable: [...new Set([...(cake.reading.unavailable ?? []), ...m.missing])],
+          estimate: m.estimate,
+          summary: describeCake(toVisual(to, sel, cake.look), prefs.lang),
+          photo: carriedPhoto(),
+          notifySub: null,
+          lang: prefs.lang,
+        },
+        tx,
+      );
+      if (!res.ok) {
+        setSendError(tx('Something is missing. Go back to your cake and check your answers.', 'May kulang pa. Bumalik sa cake mo at i-check ang mga sagot.'));
+        return;
+      }
+      celebrate();
+      nav(`/o/${res.id}`);
+    } finally {
+      setSending(null);
+    }
+  };
+
   const pick = (slug: string) => {
     setSelected(slug);
     document.getElementById(`bk-${slug}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -147,8 +209,20 @@ export default function NearBakers() {
     <Layout>
       <div className="space-y-4">
         <div className="space-y-1">
-          <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{tx('Bakers near you who can make your cake', 'Mga baker na malapit sa iyo na kayang gawin ang cake mo')}</h1>
-          <p className="text-ink-soft">{tx('Same cake, priced from each baker’s own costs. Each baker still confirms the final price.', 'Parehong cake, presyo mula sa sariling gastos ng bawat baker. Ang baker pa rin ang magko-confirm ng final na presyo.')}</p>
+          {ready ? (
+            <>
+              <p className="eyebrow">{tx('Last step', 'Huling step')}</p>
+              <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{tx('Choose who bakes your cake', 'Piliin kung sino ang magbe-bake ng cake mo')}</h1>
+              <p className="text-ink-soft" data-choose-intro>
+                {tx('Best match first: can make all of it, fits your budget, free on your date, then nearest. Send it to one baker. They accept, offer another price, or say no, and you can pick someone else.', 'Nauuna ang pinakaangkop: kaya lahat, pasok sa budget, bakante sa petsa mo, tapos pinakamalapit. Ipadala sa isang baker. Tatanggapin nila, mag-aalok ng ibang presyo, o tatanggi, at puwede kang pumili ng iba.')}
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">{tx('Bakers near you who can make your cake', 'Mga baker na malapit sa iyo na kayang gawin ang cake mo')}</h1>
+              <p className="text-ink-soft">{tx('Same cake, priced from each baker’s own costs. Each baker still confirms the final price.', 'Parehong cake, presyo mula sa sariling gastos ng bawat baker. Ang baker pa rin ang magko-confirm ng final na presyo.')}</p>
+            </>
+          )}
         </div>
 
         {/* The cake being compared */}
@@ -236,6 +310,7 @@ export default function NearBakers() {
               {tx('Lowest estimate', 'Pinakamababang tantya')}: <strong>{formatPeso(cheapest.estimate!)}</strong> {tx('at', 'sa')} {cheapest.name}
             </p>
           )}
+          {sendError && <Notice tone="danger">{sendError}</Notice>}
           {shown.length === 0 && (
             <Notice tone="info">
               {hidden > 0
@@ -246,7 +321,16 @@ export default function NearBakers() {
           <ul className="space-y-3">
             {shown.map((m) => (
               <li key={m.slug} id={`bk-${m.slug}`}>
-                <BakerCard m={m} selected={selected === m.slug} onSelect={() => setSelected(m.slug)} onOrder={() => orderFrom(m)} />
+                <BakerCard
+                  m={m}
+                  best={ready && sort === 'best' && m.suitable && m === shown[0]}
+                  selected={selected === m.slug}
+                  onSelect={() => setSelected(m.slug)}
+                  onOrder={() => orderFrom(m)}
+                  onSend={ready ? () => sendTo(m) : null}
+                  sending={sending === m.slug}
+                  asked={asked.get(m.slug) ?? null}
+                />
               </li>
             ))}
           </ul>
@@ -262,8 +346,8 @@ export default function NearBakers() {
 
         <Notice tone="info" title={tx('About these bakeries', 'Tungkol sa mga bakery na ito')}>
           {tx(
-            'For this demo, every shop on the map is a fictional sample with its own sample prices. Real home bakers can join from Baker → My link → “Get on the map”.',
-            'Para sa demo, lahat ng shop sa mapa ay sample lang (hindi totoo) at may sariling sample na presyo. Puwedeng sumali ang totoong home baker sa Baker → My link → “Get on the map”.',
+            'Shops marked “(sample)” are fictional, with sample prices, and they answer by themselves in a few seconds so you can try the whole back-and-forth. Real home bakers answer by hand. Bakers can join from Baker → My link → “Get on the map”.',
+            'Ang may “(sample)” ay hindi totoong shop, may sample na presyo, at kusang sumasagot sa loob ng ilang segundo para masubukan mo ang buong usapan. Ang totoong home baker ay sumasagot mismo. Puwedeng sumali ang baker sa Baker → My link → “Get on the map”.',
           )}
         </Notice>
       </div>
@@ -271,12 +355,23 @@ export default function NearBakers() {
   );
 }
 
-function BakerCard({ m, selected, onSelect, onOrder }: { m: BakeryMatch; selected: boolean; onSelect: () => void; onOrder: () => void }) {
+function BakerCard({ m, best, selected, onSelect, onOrder, onSend, sending, asked }: { m: BakeryMatch; best: boolean; selected: boolean; onSelect: () => void; onOrder: () => void; onSend: (() => void) | null; sending: boolean; asked: MyRequest | null }) {
   const tx = useTx();
+  const short = m.name.replace(' (sample)', '').replace(' (demo data)', '');
+  const askedLabel = asked
+    ? asked.status === 'declined'
+      ? tx('Said no to this cake', 'Tumanggi sa cake na ito')
+      : asked.status === 'quoted'
+        ? tx('Answered you', 'Sumagot na')
+        : asked.status === 'confirmed'
+          ? tx('Confirmed', 'Confirmed')
+          : tx('Request sent', 'Naipadala na')
+    : '';
   return (
-    <article className={`card space-y-3 ${selected ? '!border-ink ring-1 ring-ink' : ''}`} aria-label={m.name} onClick={onSelect}>
+    <article className={`card space-y-3 ${selected ? '!border-ink ring-1 ring-ink' : ''}`} aria-label={m.name} onClick={onSelect} data-baker-card={m.slug}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
+          {best && <span className="tag mb-1 bg-ink text-white" data-best-match>{tx('Best match', 'Pinakaangkop')}</span>}
           <h3 className="font-display text-lg font-semibold leading-tight">{m.name}</h3>
           <p className="text-sm text-ink-soft">
             {m.area} · {formatKm(m.distanceKm)}
@@ -309,9 +404,19 @@ function BakerCard({ m, selected, onSelect, onOrder }: { m: BakeryMatch; selecte
           ))}
         </p>
       )}
-      <button type="button" className="btn w-full" onClick={(e) => { e.stopPropagation(); onOrder(); }}>
-        {tx(`Request from ${m.name.replace(' (sample)', '')}`, `Mag-request kay ${m.name.replace(' (sample)', '')}`)} <IconArrow />
-      </button>
+      {asked ? (
+        <Link to={`/o/${asked.id}`} className="btn-secondary w-full" onClick={(e) => e.stopPropagation()} data-asked>
+          {askedLabel}: {tx('see their answer', 'tingnan ang sagot')} <IconArrow />
+        </Link>
+      ) : onSend ? (
+        <button type="button" className="btn w-full" disabled={sending} onClick={(e) => { e.stopPropagation(); onSend(); }} data-send-to={m.slug}>
+          {sending ? tx('Sending…', 'Ipinapadala…') : tx(`Send my cake to ${short}`, `Ipadala kay ${short}`)} <IconArrow />
+        </button>
+      ) : (
+        <button type="button" className="btn w-full" onClick={(e) => { e.stopPropagation(); onOrder(); }}>
+          {tx(`Request from ${short}`, `Mag-request kay ${short}`)} <IconArrow />
+        </button>
+      )}
     </article>
   );
 }

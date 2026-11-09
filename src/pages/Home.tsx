@@ -34,11 +34,11 @@ export default function Home() {
             )}
           </p>
           <div className="mx-auto flex max-w-md flex-col gap-2.5 pt-1 sm:max-w-none sm:flex-row sm:justify-center">
-            <Link to="/near" className="btn min-h-14 px-7 text-[1.05rem]">
-              <IconPin /> {tx('Find a baker near me', 'Maghanap ng baker na malapit')}
+            <Link to="/b/sample" className="btn min-h-14 px-7 text-[1.05rem]" data-home-design>
+              {tx('Design my cake', 'I-design ang cake ko')} <IconArrow />
             </Link>
-            <Link to="/demo" className="btn-secondary min-h-14 px-6 text-[1.05rem]">
-              {tx('Try the demo', 'Subukan ang demo')} <IconArrow />
+            <Link to="/near" className="btn-secondary min-h-14 px-6 text-[1.05rem]">
+              <IconPin /> {tx('Bakers near me', 'Mga baker na malapit')}
             </Link>
           </div>
           {install && (
@@ -50,6 +50,11 @@ export default function Home() {
             {db.bakery ? tx('Welcome back.', 'Welcome back.') : tx('Are you a baker?', 'Baker ka ba?')}{' '}
             <Link to="/baker" className="font-semibold text-berry underline underline-offset-4">
               {db.bakery ? tx('Open my bakery', 'Buksan ang bakery ko') : tx('Set up your bakery in 3 minutes', 'I-set up ang bakery mo sa 3 minuto')}
+            </Link>
+          </p>
+ <p className="text-sm text-ink-soft">
+            <Link to="/demo" className="font-semibold text-berry underline underline-offset-4">
+              {tx('Try the guided demo (customer and baker)', 'Subukan ang guided demo (customer at baker)')}
             </Link>
           </p>
           <p className="text-sm text-ink-soft">

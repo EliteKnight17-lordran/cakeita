@@ -1,6 +1,6 @@
 import { addDays } from './insights';
 import { evaluatePrice, priceSelection, toPublicMenu } from './pricing';
-import type { ConfirmLink, QuoteLink } from './schemas';
+import type { ConfirmLink, OfferLink, QuoteLink } from './schemas';
 import type { Bakery, CakeLook, CakeRequest, Order, Selection } from './types';
 import { toVisual } from './visual';
 
@@ -45,16 +45,23 @@ export function approveOrder(
   };
 }
 
+/**
+ * What the customer sees: the baker's approved quote, or their "sorry, we can't" with a reason.
+ * Never includes cost or margin.
+ */
 export function quoteLinkPayload(bakery: Bakery, order: Order): QuoteLink | null {
-  if (!order.quote) return null;
+  const declined = order.status === 'declined';
+  if (!order.quote && !declined) return null;
   const menu = toPublicMenu(bakery);
-  const sel = order.quote.selection;
+  const sel = order.quote && !declined ? order.quote.selection : order.selection;
+  const look = order.quote && !declined ? order.quote.look : order.look;
   const base = bakery.baseCakes.find((b) => b.id === sel.baseCakeId);
-  const visual = toVisual(menu, sel, order.quote.look);
+  const visual = toVisual(menu, sel, look);
   const names = sel.componentIds
     .map((id) => bakery.components.find((c) => c.id === id))
     .filter((c) => !!c)
     .map((c) => c.name);
+  const declinedAt = [...order.history].reverse().find((h) => h.type === 'declined')?.at ?? order.createdAt;
   return {
     v: 1,
     orderId: order.id,
@@ -63,16 +70,60 @@ export function quoteLinkPayload(bakery: Bakery, order: Order): QuoteLink | null
     occasion: order.occasion,
     eventDate: order.eventDate,
     servings: order.servings,
-    price: order.quote.price,
-    note: order.quote.note,
-    approvedAt: order.quote.approvedAt,
-    validUntil: order.quote.validUntil,
+    price: declined || !order.quote ? 0 : order.quote.price,
+    note: declined || !order.quote ? '' : order.quote.note,
+    approvedAt: declined || !order.quote ? declinedAt : order.quote.approvedAt,
+    validUntil: declined || !order.quote ? order.eventDate : order.quote.validUntil,
     parts: names,
     sizeLabel: base?.sizeLabel ?? '',
     visual,
     // Words are only promised when a lettering part (piped message or topper) is priced in.
-    textOnCake: visual.textStyle ? order.quote.look.textOnCake : '',
+    textOnCake: visual.textStyle ? look.textOnCake : '',
+    kind: declined ? 'declined' : 'quote',
+    reason: declined ? (order.declineReason ?? '').slice(0, 300) : '',
+    estimate: order.estimate ?? null,
+    offer: order.offer ? { price: order.offer.price, note: order.offer.note.slice(0, 300), answer: order.offer.answer } : null,
   };
+}
+
+/** The baker says no, with a reason the customer will see. */
+export function declineOrder(order: Order, reason: string, now = new Date()): Order {
+  const r = reason.trim().slice(0, 300);
+  return { ...order, status: 'declined', declineReason: r, history: [...order.history, { at: now.toISOString(), type: 'declined', detail: r }] };
+}
+
+export type OfferResult = { ok: true; order: Order } | { ok: false; reason: 'unknown' | 'not-quoted' | 'already' | 'bad-price' };
+
+/** Apply the customer's one counter-offer. Only on an open quote, only once, only below the quoted price. */
+export function applyOffer(order: Order | undefined, o: OfferLink, now = new Date()): OfferResult {
+  if (!order) return { ok: false, reason: 'unknown' };
+  if (order.status !== 'quoted' || !order.quote) return { ok: false, reason: 'not-quoted' };
+  if (order.offer) return { ok: false, reason: 'already' };
+  const price = Math.round(o.price);
+  if (!(price > 0) || price >= order.quote.price) return { ok: false, reason: 'bad-price' };
+  return {
+    ok: true,
+    order: {
+      ...order,
+      offer: { price, note: o.note.slice(0, 300), at: o.at || now.toISOString(), answer: 'pending' },
+      history: [...order.history, { at: now.toISOString(), type: 'offer', detail: `₱${price}` }],
+    },
+  };
+}
+
+/**
+ * The baker answers the counter-offer. Accepting re-approves the same cake at the customer's price
+ * (cost and margin still from code); keeping leaves the quote as it was. Either way it is final.
+ */
+export function answerOffer(bakery: Bakery, order: Order, accept: boolean, now = new Date()): Order {
+  if (!order.offer || order.offer.answer !== 'pending' || !order.quote || order.status !== 'quoted') return order;
+  if (!accept) {
+    return { ...order, offer: { ...order.offer, answer: 'kept' }, history: [...order.history, { at: now.toISOString(), type: 'offer-kept' }] };
+  }
+  const q = order.quote;
+  const days = Math.max(1, Math.round((Date.parse(q.validUntil) - Date.parse(q.approvedAt.slice(0, 10))) / 86_400_000)) || 3;
+  const next = approveOrder(bakery, order, { selection: q.selection, look: q.look, price: order.offer.price, note: q.note, validDays: Math.min(30, days) }, now);
+  return { ...next, offer: { ...order.offer, answer: 'accepted' }, history: [...next.history, { at: now.toISOString(), type: 'offer-accepted', detail: `₱${order.offer.price}` }] };
 }
 
 export type ConfirmResult = { ok: true; order: Order } | { ok: false; reason: 'unknown' | 'not-quoted' | 'price-changed' | 'already' };

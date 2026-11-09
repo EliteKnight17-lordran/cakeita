@@ -21,9 +21,18 @@ export interface MyRequest {
   summary: string;
   requestLink: string;
   quoteLink?: string;
-  status: 'sent' | 'quoted' | 'confirmed';
+  status: 'sent' | 'quoted' | 'confirmed' | 'declined';
   /** Sent to a bakery with a cloud inbox: the quote arrives here live. */
   cloud?: boolean;
+  /** A labeled sample bakery that answers by itself, for the demo. */
+  auto?: boolean;
+  /** Where the design was made (draft key), so "choose another baker" reuses it. */
+  fromSlug?: string;
+  eventDate?: string;
+  /** Baker's contact, for the Messenger fallback. */
+  contact?: string;
+  /** The customer's one counter-offer on the quote. */
+  offer?: { price: number; note: string; at: string };
 }
 
 export interface DbState {

@@ -70,6 +70,14 @@ await t('confirm only once', assertFails(setDoc(doc(anon, 'confirmations/rq-abc1
 await t('cannot confirm without a quote', assertFails(setDoc(doc(anon, 'confirmations/rq-none'), { bakerUid: 'anaUid0000001', conf: '{}', createdAt: now })));
 await t('baker reads confirmations', assertSucceeds(getDocs(query(collection(ana, 'confirmations'), where('bakerUid', '==', 'anaUid0000001')))));
 await t('others cannot read confirmations', assertFails(getDoc(doc(anon, 'confirmations/rq-abc123def456'))));
+// One counter-offer per quote, for the quote's baker only.
+await t('offer must go to the quote baker', assertFails(setDoc(doc(anon, 'offers/rq-abc123def456'), { bakerUid: 'benUid0000001', offer: '{}', createdAt: now })));
+await t('offer has no extra fields', assertFails(setDoc(doc(anon, 'offers/rq-abc123def456'), { bakerUid: 'anaUid0000001', offer: '{}', createdAt: now, price: 1 })));
+await t('customer sends one offer on a real quote', assertSucceeds(setDoc(doc(anon, 'offers/rq-abc123def456'), { bakerUid: 'anaUid0000001', offer: '{}', createdAt: now })));
+await t('only one offer per quote', assertFails(setDoc(doc(anon, 'offers/rq-abc123def456'), { bakerUid: 'anaUid0000001', offer: '{}', createdAt: now })));
+await t('cannot offer without a quote', assertFails(setDoc(doc(anon, 'offers/rq-none'), { bakerUid: 'anaUid0000001', offer: '{}', createdAt: now })));
+await t('baker reads offers', assertSucceeds(getDocs(query(collection(ana, 'offers'), where('bakerUid', '==', 'anaUid0000001')))));
+await t('others cannot read offers', assertFails(getDoc(doc(anon, 'offers/rq-abc123def456'))));
 
 await t('customer saves own My cakes', assertSucceeds(setDoc(doc(ben, 'users/benUid0000001'), { myRequests: '[]', updatedAt: now })));
 await t('others cannot read it', assertFails(getDoc(doc(ana, 'users/benUid0000001'))));

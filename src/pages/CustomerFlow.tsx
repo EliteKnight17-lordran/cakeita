@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { aiAvailable, analyzeRequest, type Reading } from '../ai/client';
 import { describeCake } from '../cake/describe';
 import { CakeView } from '../cake/CakeView';
@@ -9,32 +9,28 @@ import { Layout } from '../components/Layout';
 import { IconArrow, IconCamera, IconCheck, IconChevron, IconPin, IconSparkle } from '../components/icons';
 import { ShareBox } from '../components/ShareBox';
 import { Bubble, Chip, Field, Notice, SampleBadge } from '../components/ui';
-import { leftOut, normalizeSelection, type DesignOption } from '../domain/designs';
+import { leftOut, type DesignOption } from '../domain/designs';
 import { addDays, earliestDate } from '../domain/insights';
 import { formatPeso } from '../domain/money';
 import { MOTIF_KEYS, MOTIFS } from '../domain/motifs';
-import { requestToOrder } from '../domain/orders';
 import { estimateFromMenu, isFullDate } from '../domain/pricing';
 import { COLOR_WORDS } from '../domain/requestReader';
-import { cakeRequestSchema } from '../domain/schemas';
-import { FLOWER_STYLES, TOPPER_SPOTS, type CakeRequest, type OwnItem, type PublicMenu, type Selection } from '../domain/types';
-import { FLOWER_LABELS, OWN_LABELS, ownText } from '../domain/placement';
+import { FLOWER_STYLES, TOPPER_SPOTS, type OwnItem, type PublicMenu, type Selection } from '../domain/types';
+import { FLOWER_LABELS, OWN_LABELS } from '../domain/placement';
 import { toVisual } from '../domain/visual';
 import { SCENARIOS } from '../data/demoScenarios';
 import { clearDraft, useDraft, type Draft } from '../data/draft';
-import { newId, repo } from '../data/store';
+import { repo } from '../data/store';
 import { resizeImage, type SmallImage } from '../lib/image';
 import { linkErrorText } from '../lib/codec';
-import { requestLink } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
 import { celebrate } from '../lib/celebrate';
-import { cloudEnabled } from '../cloud/config';
-import { sendNotify } from '../push/client';
 import { QuoteAlertToggle } from '../push/PushButtons';
 import { useMedia } from '../lib/useMedia';
 import { MiniCake } from './MiniCake';
 import { currentCake, offlineReading } from './customerCake';
 import { useMenu } from './useMenu';
+import { carryPhoto, sendCakeRequest, type RequestParts } from './sendRequest';
 
 const OCCASIONS: Array<[string, string]> = [
   ['Birthday', 'Birthday'],
@@ -100,6 +96,7 @@ export default function CustomerFlow() {
 
 function Flow({ menu }: { menu: PublicMenu }) {
   const tx = useTx();
+  const nav = useNavigate();
   const prefs = usePrefs();
   const [draft, update] = useDraft(menu.slug);
   const [photo, setPhoto] = useState<SmallImage | null>(null);
@@ -114,7 +111,10 @@ function Flow({ menu }: { menu: PublicMenu }) {
   const cakeRef = useRef<HTMLDivElement>(null);
   const wide = useMedia('(min-width: 1024px)');
   const today = useMemo(() => new Date(), []);
-  const minDate = earliestDate(menu.leadTimeDays, today);
+  // The open designer (the sample menu anyone can use) sends to a baker picked on the map,
+  // and each baker there checks their own notice days.
+  const pickOnMap = menu.slug === 'sample';
+  const minDate = pickOnMap ? addDays(today, 1) : earliestDate(menu.leadTimeDays, today);
 
   useEffect(() => {
     if (!prefs.aiOff) aiAvailable().then(setSmartAvailable).catch(() => setSmartAvailable(false));
@@ -171,12 +171,12 @@ function Flow({ menu }: { menu: PublicMenu }) {
     }
   };
 
-  const submit = async () => {
-    if (!selection) return;
+  /** Check the form. `anyBaker` skips this baker's own date limits (each baker on the map checks their own). */
+  const formOk = (anyBaker: boolean): boolean => {
     const e: typeof errors = {};
     if (!eventDate) e.date = tx('Pick the date you need the cake.', 'Piliin kung kailan kailangan ang cake.');
-    else if (eventDate < minDate) e.date = tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.');
-    else if (isFullDate(menu, eventDate)) e.date = tx('The baker is fully booked that day. Please pick another date.', 'Puno na ang baker sa araw na iyon. Pumili ng ibang petsa.');
+    else if (eventDate < minDate) e.date = pickOnMap ? tx('Please pick a date after today.', 'Pumili ng petsa pagkatapos ng araw na ito.') : tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.');
+    else if (!anyBaker && isFullDate(menu, eventDate)) e.date = tx('The baker is fully booked that day. Please pick another date.', 'Puno na ang baker sa araw na iyon. Pumili ng ibang petsa.');
     if (!draft.name.trim()) e.name = tx('Please add your name.', 'Pakilagay ang pangalan mo.');
     if (draft.contact.trim().length < 5) e.contact = tx('Please add your Messenger name or mobile number.', 'Pakilagay ang Messenger name o mobile number mo.');
     if (!draft.consent) e.consent = tx('Please tick the box so we can send this to the baker.', 'Pakicheck ang box para maipadala namin ito sa baker.');
@@ -186,70 +186,62 @@ function Flow({ menu }: { menu: PublicMenu }) {
       const el = document.getElementById(first === 'consent' ? 'consent' : first);
       el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       el?.focus({ preventScroll: true });
-      return;
+      return false;
     }
-    const servings = wants.servings ?? menu.baseCakes.find((b) => b.id === selection.baseCakeId)?.servings ?? 1;
-    const req: CakeRequest = {
-      id: newId('rq'),
-      bakerySlug: menu.slug,
-      createdAt: new Date().toISOString(),
-      customer: { name: draft.name.trim().slice(0, 80), contact: draft.contact.trim().slice(0, 120) },
-      occasion: (occasion || 'Other').slice(0, 40),
-      eventDate,
-      servings: Math.max(1, Math.min(500, Math.round(servings))),
-      budget: wants.budget,
-      description: [draft.description, draft.note && `Note: ${draft.note}`].filter(Boolean).join('\n').slice(0, 1000),
-      tier: isCustom ? 'custom' : draft.tier,
-      selection: normalizeSelection(menu, selection).selection,
-      look: { ...look, textOnCake: look.textOnCake.slice(0, 40) },
-      theme: (reading.theme ?? '').slice(0, 60),
-      licensedNote: (reading.licensedNote ?? '').slice(0, 240),
-      unavailable: (reading.unavailable ?? []).slice(0, 20),
-      estimate: menu.showEstimates ? estimate : null,
-      hasInspoPhoto: !!photo,
-      lang: prefs.lang,
-    };
-    const valid = cakeRequestSchema.safeParse(req);
-    if (!valid.success) {
+    return true;
+  };
+
+  /** Everything the request needs, for this baker (or another one picked on the map). */
+  const requestParts = (to: PublicMenu): RequestParts => ({
+    menu: to,
+    fromSlug: menu.slug,
+    name: draft.name,
+    contact: draft.contact,
+    note: draft.note,
+    description: draft.description,
+    occasion,
+    eventDate,
+    servings: wants.servings ?? menu.baseCakes.find((b) => b.id === selection?.baseCakeId)?.servings ?? 1,
+    budget: wants.budget,
+    tier: isCustom ? 'custom' : draft.tier,
+    selection: selection!,
+    look,
+    theme: reading.theme ?? '',
+    licensedNote: reading.licensedNote ?? '',
+    unavailable: reading.unavailable ?? [],
+    estimate,
+    summary: description,
+    photo,
+    notifySub,
+    lang: prefs.lang,
+  });
+
+  /** Main path from the open designer: see who can bake it, ranked, and send it to one of them. */
+  const chooseBaker = () => {
+    if (!selection || !formOk(true)) return;
+    carryPhoto(photo);
+    nav(`/near?from=${encodeURIComponent(menu.slug)}&send=1`);
+  };
+
+  const submit = async () => {
+    if (!selection || !formOk(false)) return;
+    const res = await sendCakeRequest(requestParts(menu), tx);
+    if (!res.ok) {
       setErrors({ form: tx('Something is missing. Please check your answers.', 'May kulang pa. Pakicheck ang mga sagot mo.') });
       return;
     }
-    const link = await requestLink(req);
-    // Bakers with an account get it in their inbox right away, with the inspo photo (the Messenger message still goes too).
-    let cloud = false;
-    let photoSent = false;
-    if (menu.owner && cloudEnabled()) {
-      try {
-        const { sendRequest } = await import('../cloud/data');
-        photoSent = await Promise.race([sendRequest(req as CakeRequest, menu.owner, photo?.dataUrl ?? null, notifySub), new Promise<boolean>((_, rej) => setTimeout(() => rej(new Error('slow')), 12000))]);
-        cloud = true;
-        // Ping the baker's phone (if they turned alerts on). Fire and forget.
-        sendNotify({ kind: 'request', bakerUid: menu.owner, id: req.id });
-      } catch {
-        cloud = false;
-      }
-    }
-    const lines = [
-      tx(`Hi ${menu.name}! Cake request from ${req.customer.name}:`, `Hi ${menu.name}! Cake request po mula kay ${req.customer.name}:`),
-      `• ${req.occasion}, ${req.eventDate}, ${tx('for', 'para sa')} ${req.servings} ${tx('people', 'tao')}`,
-      `• ${description}`,
-      req.budget != null ? `• Budget: ${formatPeso(req.budget)}` : '',
-      req.estimate != null ? `• ${tx('Estimate in the app', 'Tantya sa app')}: ${formatPeso(req.estimate)}` : '',
-      req.look.own?.length ? `• ${ownText(req.look.own, prefs.lang)}` : '',
-      photo ? (photoSent ? tx('• My inspo photo is with the request in Cakeita.', '• Kasama sa request sa Cakeita ang inspo photo ko.') : tx('• I will send my inspo photo here too.', '• Ise-send ko rin dito ang inspo photo ko.')) : '',
-      tx('Open my request:', 'Buksan ang request ko:'),
-    ].filter(Boolean);
-    const message = lines.join('\n');
-    repo.addMyRequest({ id: req.id, bakerySlug: menu.slug, bakeryName: menu.name, createdAt: req.createdAt, summary: description, requestLink: link, status: 'sent', cloud });
-    // Same device as the baker (demo laptop or a baker testing their own link): drop it straight in the inbox.
-    const own = repo.get().bakery;
-    if (own && own.slug === menu.slug) repo.upsertOrder(requestToOrder(req, 'same-device'));
-    update({ sentId: req.id, sentLink: link, sentMessage: message, step: 'done' });
+    update({ sentId: res.id, sentLink: res.link, sentMessage: res.message, step: 'done' });
     window.scrollTo({ top: 0 });
     celebrate();
   };
 
-  const header = (
+
+  const header = pickOnMap && draft.step !== 'done' ? (
+    <div className="mb-3 space-y-0.5" data-open-designer>
+      <p className="text-sm font-semibold text-ink-soft">{tx('Step 1 of 2: design it. Step 2: choose a baker.', 'Step 1 sa 2: i-design. Step 2: pumili ng baker.')}</p>
+      <p className="text-sm text-ink-soft">{tx('Prices here are a sample guide. Each baker’s own price shows when you choose.', 'Sample na gabay lang ang presyo dito. Lalabas ang sariling presyo ng bawat baker pag pumili ka.')}</p>
+    </div>
+  ) : (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div>
         <p className="text-sm font-semibold text-ink-soft">{tx('Cake request for', 'Cake request para sa')}</p>
@@ -453,7 +445,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
             </div>
           </div>
           <div>
-            <Field id="date" label={tx('When do you need it?', 'Kailan kailangan?')} hint={tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
+            <Field id="date" label={tx('When do you need it?', 'Kailan kailangan?')} hint={pickOnMap ? tx('Most bakers need 2 to 7 days. Next, you will see who can make your date.', 'Karaniwang 2 hanggang 7 araw ang kailangan ng baker. Sunod, makikita mo kung sino ang abot sa petsa mo.') : tx(`${menu.name} needs at least ${menu.leadTimeDays} days' notice.`, `Kailangan ng ${menu.name} ng ${menu.leadTimeDays} araw na abiso.`)}>
               <input id="date" type="date" className="input" min={minDate} max={addDays(today, 365)} value={eventDate} onChange={(e) => update({ eventDate: e.target.value })} aria-describedby="date-hint" aria-invalid={!!errors.date || tooSoon || booked} />
             </Field>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -475,7 +467,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
             )}
             {(errors.date || tooSoon) && (
               <div className="mt-2">
-                <Notice tone="warn">{errors.date ?? tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.')}</Notice>
+                <Notice tone="warn">{errors.date ?? (pickOnMap ? tx('Please pick a date after today.', 'Pumili ng petsa pagkatapos ng araw na ito.') : tx('That is too soon for this baker. Please pick a later date.', 'Masyadong maaga para sa baker. Pumili ng mas huling petsa.'))}</Notice>
               </div>
             )}
           </div>
@@ -570,6 +562,13 @@ function Flow({ menu }: { menu: PublicMenu }) {
             <Notice tone="danger">{[errors.name, errors.contact, errors.consent, errors.form].filter(Boolean).join(' ')}</Notice>
           )}
           <p className="text-sm text-ink-soft">{tx('Free to use. No payment happens here. Your photo is never saved.', 'Libre. Walang bayaran dito. Hindi sine-save ang photo mo.')}</p>
+          {pickOnMap && (
+            <p className="text-sm">
+              <button type="button" className="text-berry underline underline-offset-4" onClick={submit} disabled={!selection} data-send-direct>
+                {tx(`Or send it straight to ${menu.name}`, `O ipadala diretso sa ${menu.name}`)}
+              </button>
+            </p>
+          )}
         </section>
       </div>
       </div>
@@ -594,9 +593,15 @@ function Flow({ menu }: { menu: PublicMenu }) {
               <p className="text-sm font-semibold">{tx('The baker gives the price', 'Ang baker ang magbibigay ng presyo')}</p>
             )}
           </div>
-          <button type="button" className="btn shrink-0" disabled={!selection} onClick={submit}>
-            {tx('Send to baker', 'Ipadala sa baker')} <IconArrow />
-          </button>
+          {pickOnMap ? (
+            <button type="button" className="btn shrink-0" disabled={!selection} onClick={chooseBaker} data-choose-baker>
+              <IconPin /> {tx('Choose a baker', 'Pumili ng baker')}
+            </button>
+          ) : (
+            <button type="button" className="btn shrink-0" disabled={!selection} onClick={submit}>
+              {tx('Send to baker', 'Ipadala sa baker')} <IconArrow />
+            </button>
+          )}
         </div>
       </div>
     </Layout>

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { CloudSync } from './cloud/CloudSync';
+import { SampleBakerSync } from './data/sampleBakers';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { Layout } from './components/Layout';
 import { setPrefs } from './lib/prefs';
@@ -55,6 +56,7 @@ export default function App() {
     <HashRouter>
       <DevFlag />
       <CloudSync />
+      <SampleBakerSync />
       <Guarded>
       <Suspense fallback={<div className="p-10 text-center text-ink-soft">Loading…</div>}>
         <Routes>

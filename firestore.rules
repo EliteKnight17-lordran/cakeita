@@ -96,6 +96,17 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Customer -> baker: one counter-offer on a quote ("Puwede ba ₱X?"). Same shape as confirmations.
+    match /offers/{id} {
+      allow create: if exists(quoteDoc(id))
+        && request.resource.data.keys().hasOnly(['bakerUid', 'offer', 'createdAt'])
+        && request.resource.data.bakerUid == get(quoteDoc(id)).data.bakerUid
+        && text(request.resource.data.offer, 1000)
+        && stamp(request.resource.data.createdAt);
+      allow read, delete: if signedIn() && resource.data.bakerUid == request.auth.uid;
+      allow update: if false;
+    }
+
     // Phones a baker turned notifications on for. Readable by exact id (the notify function reads it
     // to send "new request"); a subscription is useless without the server's private key.
     match /push/{uid} {

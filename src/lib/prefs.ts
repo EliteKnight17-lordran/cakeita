@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
 /** Per-device display preferences. Stored in localStorage; safe if storage is blocked. */
 export interface Prefs {
@@ -93,8 +93,8 @@ export function usePrefs(): Prefs {
   );
 }
 
-/** Inline bilingual text: tx('Next', 'Sunod'). Taglish is the default. */
+/** Inline bilingual text: tx('Next', 'Sunod'). Taglish is the default. Stable while the language stays the same, so it is safe in effect deps. */
 export function useTx() {
   const { lang } = usePrefs();
-  return (en: string, tl: string) => (lang === 'tl' ? tl : en);
+  return useCallback((en: string, tl: string) => (lang === 'tl' ? tl : en), [lang]);
 }

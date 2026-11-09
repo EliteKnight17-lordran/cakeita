@@ -41,6 +41,11 @@ Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quo
 - **C8** I am never asked for payment inside Cakeita.
 - **C9** I can compare nearby bakers on a map. Each shows its own estimate for the same cake (from that baker's costs), distance, notice needed and delivery, and I can send my request to the one I pick.
   *AC:* the map estimate equals the price that baker's own app would suggest; sample shops are labeled "(sample)"; the list still works if map pictures can't load.
+- **C11** After designing, I choose a baker from a ranked list (best match first: can make all of it, fits my budget, free on my date, then nearest) and send my cake to them in one tap, with no retyping.
+  *AC:* ranking is plain code; each baker's price comes from their own menu; bakers I already asked for this date show their answer instead of a second send.
+- **C12** The baker's answer comes back to me in Cakeita: accepted at the app price, their counter-offer, or "sorry, we can't" with a reason. I can take it, offer a lower price once, or choose another baker.
+  *AC:* only one offer per quote (also enforced by the database rules); an offer must be lower than the quote; after the baker's answer, I can only confirm or pick someone else. Messenger links work for all of it when there is no cloud.
+- **C13** For the demo, the "(sample)" shops answer by themselves within a few seconds using plain rules (decline if the date is too soon or booked; counter an over-budget request but never below their minimum margin). Real bakers always answer by hand.
 - **C10** While customizing I can still see my cake: a small floating cake on phones (tap to enlarge or jump back to 3D) and the cake pinned beside the form on laptops.
 
 ### Baker
@@ -48,7 +53,9 @@ Filipino home bakers sell custom cakes through Facebook pages and Messenger. Quo
 - **B2** I can paste a customer DM and get a priced draft.
 - **B3** For each request I see the 3D design, the customer's words, things I don't make (amber), character warnings, and a full breakdown: ingredients, labor, extras, cost, suggested price, margin.
 - **B4** I can edit parts and the price; a red warning shows when the price is below my target margin or below cost.
-- **B5** Nothing goes to the customer until I tap Approve.
+- **B5** Nothing goes to the customer until I tap Approve. The button says whether I'm accepting at the price the customer saw or sending a counter-offer.
+- **B11** I can decline with a reason (quick picks: fully booked, too soon, don't make this, budget too low), and the customer sees it so they can choose another baker.
+- **B12** If the customer offers a lower price, I see it with my margin at that price and tap Accept or Keep my price. Either answer is final.
 - **B6** Confirmed orders appear on a board (this week, next week, later) with paid toggle and status; I get per-order and weekly shopping lists.
 - **B7** I can update prices by typing or speaking ("butter 520 per kilo") and confirm before saving; units are converted by code.
 - **B8** I see which menu prices are now below target ("Itaas sa ₱1,450?").

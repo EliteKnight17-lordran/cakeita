@@ -1,6 +1,6 @@
 import type { ListedBakery } from '../domain/matching';
 import { toPublicMenu } from '../domain/pricing';
-import { cakeRequestSchema, confirmLinkSchema, publicMenuSchema, quoteLinkSchema, type ConfirmLink, type QuoteLink } from '../domain/schemas';
+import { cakeRequestSchema, confirmLinkSchema, offerLinkSchema, publicMenuSchema, quoteLinkSchema, type ConfirmLink, type OfferLink, type QuoteLink } from '../domain/schemas';
 import type { Bakery, CakeRequest, PublicMenu } from '../domain/types';
 import type { MyRequest } from '../data/store';
 import { loadCloud } from './fb';
@@ -12,6 +12,7 @@ import { loadCloud } from './fb';
  *   requests/{id}       customer -> baker. Anyone creates for a listed owner; only that baker reads.
  *   quotes/{orderId}    baker -> customer. Anyone with the (unguessable) order id reads.
  *   confirmations/{id}  customer -> baker. Anyone creates for an existing quote; only the baker reads.
+ *   offers/{id}         customer -> baker: one counter-offer per quote. Same rules as confirmations.
  *   users/{uid}         a customer's own list of requests, so "My cakes" follows them to a new phone.
  * Payloads are stored as JSON text and checked with the same zod schemas as share links,
  * so cloud data is never trusted more than a link.
@@ -201,6 +202,32 @@ export async function listenConfirmations(uid: string, onConf: (c: ConfirmLink) 
   );
 }
 
+/** The customer's one counter-offer (create-only, so a second one is refused). */
+export async function sendOffer(offer: OfferLink, bakerUid: string): Promise<void> {
+  const c = await loadCloud();
+  await c.m.fs.setDoc(c.m.fs.doc(c.db, 'offers', offer.orderId), { bakerUid, offer: JSON.stringify(offer), createdAt: now() });
+}
+
+export async function listenOffers(uid: string, onOffer: (o: OfferLink) => void): Promise<() => void> {
+  const c = await loadCloud();
+  const { collection, onSnapshot, query, where } = c.m.fs;
+  return onSnapshot(
+    query(collection(c.db, 'offers'), where('bakerUid', '==', uid)),
+    (snap) => {
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === 'removed') return;
+        try {
+          const r = offerLinkSchema.safeParse(JSON.parse(String(ch.doc.data().offer)));
+          if (r.success && r.data.orderId === ch.doc.id) onOffer(r.data);
+        } catch {
+          /* ignore */
+        }
+      });
+    },
+    () => {},
+  );
+}
+
 export async function saveMyRequests(uid: string, list: MyRequest[]): Promise<void> {
   const c = await loadCloud();
   await c.m.fs.setDoc(c.m.fs.doc(c.db, 'users', uid), { myRequests: JSON.stringify(list.slice(0, 50)), updatedAt: now() });
@@ -220,16 +247,20 @@ export async function loadMyRequests(uid: string): Promise<MyRequest[]> {
 
 /**
  * Deletes everything this account put in the cloud: private bakery, public menu and map pin,
- * inbox requests and confirmations, published quotes, and the customer's "My cakes" list.
+ * inbox requests, confirmations and offers, published quotes, and the customer's "My cakes" list.
  * Data on this phone is left alone (the person can clear it from About).
  */
 export async function deleteCloudData(uid: string, slug: string | null, quoteIds: string[]): Promise<void> {
   const c = await loadCloud();
   const { doc, deleteDoc, getDoc, getDocs, collection, query, where } = c.m.fs;
   const jobs: Promise<unknown>[] = [];
-  for (const col of ['requests', 'confirmations'] as const) {
-    const snap = await getDocs(query(collection(c.db, col), where('bakerUid', '==', uid)));
-    snap.forEach((d) => jobs.push(deleteDoc(d.ref)));
+  for (const col of ['requests', 'confirmations', 'offers'] as const) {
+    // A rules version without "offers" refuses this query; delete the rest anyway.
+    const snap = await getDocs(query(collection(c.db, col), where('bakerUid', '==', uid))).catch((e) => {
+      if (col === 'offers') return null;
+      throw e;
+    });
+    snap?.forEach((d) => jobs.push(deleteDoc(d.ref)));
   }
   for (const id of quoteIds) {
     jobs.push(

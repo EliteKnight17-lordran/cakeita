@@ -11,7 +11,13 @@ export default function MyCakes() {
   const db = useDb();
   const account = useAccount();
   const label = (s: string) =>
-    s === 'quoted' ? tx('Quote ready', 'May quote na') : s === 'confirmed' ? tx('Confirmed', 'Confirmed') : tx('Waiting for the baker', 'Hinihintay ang baker');
+    s === 'quoted'
+      ? tx('Answer ready', 'May sagot na')
+      : s === 'confirmed'
+        ? tx('Confirmed', 'Confirmed')
+        : s === 'declined'
+          ? tx('Said no: choose another baker', 'Tumanggi: pumili ng iba')
+          : tx('Waiting for the baker', 'Hinihintay ang baker');
   return (
     <Layout>
       <div className="space-y-5">
@@ -32,7 +38,7 @@ export default function MyCakes() {
                   <span className="min-w-0">
                     <span className="block font-display text-lg font-semibold">{r.bakeryName}</span>
                     <span className="block truncate text-sm text-ink-soft">{r.summary}</span>
-                    <span className={`tag mt-1 ${r.status === 'sent' ? 'bg-amber-bg text-amber-ink' : 'bg-ok-bg text-ok-ink'}`}>{label(r.status)}</span>
+                    <span className={`tag mt-1 ${r.status === 'sent' ? 'bg-amber-bg text-amber-ink' : r.status === 'declined' ? 'border border-line bg-white text-ink-soft' : 'bg-ok-bg text-ok-ink'}`}>{label(r.status)}</span>
                   </span>
                   <IconArrow className="shrink-0 text-ink-soft" />
                 </Link>

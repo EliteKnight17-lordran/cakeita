@@ -146,6 +146,24 @@ export const quoteLinkSchema = z.object({
   sizeLabel: shortText(40),
   visual: cakeVisualSchema,
   textOnCake: shortText(40),
+  // Added in 1.7. Optional so older quote links still open.
+  /** 'declined' means the baker said no; price is 0 then. */
+  kind: z.enum(['quote', 'declined']).default('quote'),
+  reason: shortText(300).default(''),
+  /** The estimate the customer saw in the app, so they can tell an accept from a counter-offer. */
+  estimate: money.nullable().default(null),
+  /** The customer's one counter-offer and the baker's answer. */
+  offer: z.object({ price: money, note: shortText(300), answer: z.enum(['pending', 'accepted', 'kept']) }).nullable().default(null),
+});
+
+/** Customer -> baker: one counter-offer on a quote ("Puwede ba ₱X?"). */
+export const offerLinkSchema = z.object({
+  v: z.literal(1),
+  orderId: id,
+  price: money,
+  note: shortText(300),
+  customerName: shortText(80),
+  at: z.string().max(40),
 });
 
 /** Customer -> baker: "Ito ang gusto ko". */
@@ -181,4 +199,5 @@ export const aiReadingSchema = z.object({
 
 export type QuoteLink = z.infer<typeof quoteLinkSchema>;
 export type ConfirmLink = z.infer<typeof confirmLinkSchema>;
+export type OfferLink = z.infer<typeof offerLinkSchema>;
 export type AiReading = z.infer<typeof aiReadingSchema>;

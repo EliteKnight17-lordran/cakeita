@@ -184,13 +184,14 @@ async function main() {
     await designGroup.waitFor();
     check('cake survives the trip to the map and back', (await customer.getByLabel(/Ilarawan ang cake/).inputValue()).includes('Happy 7th Mia'));
 
-    await customer.getByRole('button', { name: /Ipadala sa baker/ }).click();
-    check('send blocks empty name', await customer.getByText(/Pakilagay ang pangalan/).isVisible());
+    await customer.locator('[data-choose-baker]').click();
+    check('choosing a baker first asks for name and contact', await customer.getByText(/Pakilagay ang pangalan/).isVisible());
     await customer.getByLabel('Pangalan mo').fill('Ana Test');
     await customer.getByLabel(/Messenger name o mobile/).fill('0917 123 4567');
     await customer.locator('#consent').check();
     await axe(customer, 'customer contact');
-    await customer.getByRole('button', { name: /Ipadala sa baker/ }).click();
+    // Two-phone demo: send straight to the demo bakery and pass the link like Messenger would.
+    await customer.locator('[data-send-direct]').click();
     await customer.getByRole('heading', { name: /Ipadala na sa baker/ }).waitFor();
     const requestUrl = await linkFromShareBox(customer);
     check('request link created', !!requestUrl && requestUrl.includes('#/baker/import?r='), `${requestUrl?.length} chars`);
@@ -204,14 +205,14 @@ async function main() {
     await baker.goto(requestUrl);
     await baker.getByRole('heading', { name: 'Ana Test' }).waitFor();
     check('baker sees breakdown', await baker.getByRole('heading', { name: 'Breakdown ng presyo' }).isVisible());
-    check('baker sees approve button', await baker.getByRole('button', { name: /I-approve ₱/ }).isVisible());
+    check('baker sees "accept at the app price" button', await baker.getByRole('button', { name: /Tanggapin sa ₱/ }).isVisible());
     await baker.getByLabel(/Presyong ipapadala/).fill('500');
     check('red warning for a losing price', await baker.getByText('Lugi ka rito').isVisible());
     await baker.getByLabel(/Presyong ipapadala/).fill('');
     await baker.waitForTimeout(800);
     await axe(baker, 'baker approval card');
     await shot(baker, '05-approval');
-    await baker.getByRole('button', { name: /I-approve ₱/ }).click();
+    await baker.getByRole('button', { name: /Tanggapin sa ₱/ }).click();
     await baker.getByText('Ipadala ang quote sa customer').waitFor();
     const quoteUrl = await linkFromShareBox(baker);
     check('quote link created', !!quoteUrl && quoteUrl.includes('#/o/'));
@@ -366,7 +367,89 @@ async function main() {
     check('feedback from any page records where it came from', fbItem?.entry.kind === 'feedback' && fbItem.entry.page === '/near', fbItem?.entry.page);
     await axe(tester, 'feedback');
 
-    for (const p of [customer, baker, elder, tester]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+
+    // ---------------- Choose a baker, counter-offers, sample bakers that answer ----------------
+    const picker = await phone(browser, 'picker');
+    await picker.goto(`${BASE}#/b/sample`);
+    await picker.getByLabel(/Ilarawan ang cake/).fill('Ube birthday cake with drip and sprinkles, 20 pax, budget 1200');
+    await picker.locator('[data-quick-date]').nth(2).click();
+    await picker.getByLabel('Pangalan mo').fill('Carla Test');
+    await picker.getByLabel(/Messenger name o mobile/).fill('0917 222 3333');
+    await picker.locator('#consent').check();
+    await picker.locator('[data-choose-baker]').click();
+    await picker.getByRole('heading', { name: /Piliin kung sino/ }).waitFor();
+    check('after designing, bakers are ranked with a best match', (await picker.locator('[data-best-match]').count()) === 1 && (await picker.locator('article').first().locator('[data-best-match]').count()) === 1);
+    await picker.waitForTimeout(800);
+    await axe(picker, 'choose a baker');
+    await shot(picker, '14-choose-baker');
+    const firstName = (await picker.locator('article h3').first().innerText()).trim();
+    await picker.locator('article').first().locator('[data-send-to]').click();
+    check('request goes straight to the chosen baker', await picker.locator('[data-waiting-auto]').waitFor({ timeout: 8000 }).then(() => true, () => false), firstName);
+    check('sample baker answers by itself', await picker.locator('[data-quote-price]').waitFor({ timeout: 10000 }).then(() => true, () => false));
+    check('an over-budget answer shows as their counter-offer', (await picker.locator('[data-counter]').count()) === 1);
+    const pPrice = Number((await picker.locator('[data-quote-price]').innerText()).replace(/[^\d]/g, ''));
+    await picker.locator('[data-offer-open]').click();
+    await picker.getByLabel(/Presyo mo/).fill(String(pPrice + 50));
+    await picker.locator('[data-send-offer]').click();
+    check('offer must be lower than the quote', await picker.getByText(/Dapat mas mababa/).isVisible());
+    await picker.getByLabel(/Presyo mo/).fill(String(pPrice - 50));
+    await axe(picker, 'counter-offer form');
+    await picker.locator('[data-send-offer]').click();
+    check('customer offer waits for the baker', await picker.locator('[data-offer-pending]').isVisible());
+    check('sample baker answers the offer (final)', await picker.waitForFunction(() => !document.querySelector('[data-offer-pending]'), null, { timeout: 10000 }).then(() => true, () => false));
+    check('only one offer per quote', (await picker.locator('[data-offer-open]').count()) === 0);
+    await shot(picker, '15-offer-answered');
+    await picker.getByRole('button', { name: /Ito ang gusto ko/ }).click();
+    check('confirming a sample bakery says no real order was made', await picker.getByText(/walang totoong order/).isVisible());
+    await picker.goto(`${BASE}#/near?from=sample`);
+    check('the chosen baker shows as already asked', await picker.locator('[data-asked]').first().waitFor({ timeout: 8000 }).then(() => true, () => false));
+    // A date too soon for a baker: they say no with a reason, and the customer picks another.
+    const soon = new Date();
+    soon.setDate(soon.getDate() + 2);
+    await picker.goto(`${BASE}#/b/sample`);
+    await picker.locator('#date').fill(`${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`);
+    await picker.locator('[data-choose-baker]').click();
+    await picker.getByRole('heading', { name: /Piliin kung sino/ }).waitFor();
+    await picker.getByRole('button', { name: 'Kahit gaano kalayo' }).click();
+    await picker.getByLabel('Yung kaya lang gawin').uncheck();
+    await picker.locator('article', { hasText: 'masyadong maaga' }).first().locator('[data-send-to]').click();
+    check('a baker who can\'t make it says no with a reason', await picker.locator('[data-declined]').waitFor({ timeout: 10000 }).then(() => true, () => false) && (await picker.getByText(/araw na abiso/).isVisible()));
+    await axe(picker, 'declined request');
+    await picker.locator('[data-choose-another]').click();
+    check('"choose another baker" goes back to the ranked list', await picker.getByRole('heading', { name: /Piliin kung sino/ }).waitFor({ timeout: 8000 }).then(() => true, () => false));
+
+    // Counter-offer over Messenger links (no cloud): baker counters, customer offers once, baker accepts.
+    await picker.goto(`${BASE}#/b/sample`);
+    await picker.locator('[data-quick-date]').nth(1).click();
+    await picker.locator('[data-send-direct]').click();
+    await picker.getByRole('heading', { name: /Ipadala na sa baker/ }).waitFor();
+    const req2 = await linkFromShareBox(picker);
+    await baker.goto(req2);
+    await baker.getByRole('heading', { name: 'Carla Test' }).waitFor();
+    const est2 = Number(((await baker.locator('[data-app-estimate]').innerText()).match(/₱([\d,]+)/) ?? ['', '0'])[1].replace(/,/g, ''));
+    await baker.getByLabel(/Presyong ipapadala/).fill(String(est2 + 200));
+    check('a different price is sent as the baker\'s counter-offer', await baker.getByRole('button', { name: /Ipadala ang alok na ₱/ }).isVisible());
+    await baker.getByRole('button', { name: /Ipadala ang alok na ₱/ }).click();
+    await baker.getByText('Ipadala ang quote sa customer').waitFor();
+    const q2 = await linkFromShareBox(baker);
+    await picker.goto(q2);
+    await picker.locator('[data-counter]').waitFor();
+    await picker.locator('[data-offer-open]').click();
+    await picker.getByLabel(/Presyo mo/).fill(String(est2));
+    await picker.locator('[data-send-offer]').click();
+    await picker.locator('[data-offer-pending]').waitFor();
+    const offerUrl = await linkFromShareBox(picker);
+    check('offer link made for Messenger', !!offerUrl && offerUrl.includes('#/baker/import?o='));
+    await baker.goto(offerUrl);
+    check('baker sees the offer with their margin', await baker.locator('[data-offer-card]').waitFor({ timeout: 8000 }).then(() => true, () => false) && (await baker.getByText(/Tubo mo sa presyo nila/).isVisible()));
+    await axe(baker, 'offer card');
+    await baker.locator('[data-offer-accept]').click();
+    await baker.getByText('Ipadala ang quote sa customer').waitFor();
+    const q3 = await linkFromShareBox(baker);
+    await picker.goto(q3);
+    check('customer sees the accepted offer at their price', await picker.getByText('Pumayag sila sa alok mo').waitFor({ timeout: 8000 }).then(() => true, () => false) && Number((await picker.locator('[data-quote-price]').innerText()).replace(/[^\d]/g, '')) === est2);
+
+    for (const p of [customer, baker, elder, tester, picker]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
     await browser.close();
   } finally {
     server.kill();

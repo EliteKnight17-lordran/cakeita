@@ -1,5 +1,5 @@
 import { toPublicMenu } from '../domain/pricing';
-import type { ConfirmLink, QuoteLink } from '../domain/schemas';
+import type { ConfirmLink, OfferLink, QuoteLink } from '../domain/schemas';
 import type { Bakery, CakeRequest } from '../domain/types';
 import { encodePayload } from './codec';
 
@@ -26,6 +26,17 @@ export async function quoteLink(q: QuoteLink): Promise<string> {
 
 export async function confirmLink(c: ConfirmLink): Promise<string> {
   return `${appBase()}#/baker/import?c=${await encodePayload(c)}`;
+}
+
+export async function offerLink(o: OfferLink): Promise<string> {
+  return `${appBase()}#/baker/import?o=${await encodePayload(o)}`;
+}
+
+/** The ?q= code inside a saved quote link, or null. */
+export function quoteCodeFrom(link: string | undefined): string | null {
+  if (!link) return null;
+  const i = link.indexOf('?', link.indexOf('#'));
+  return i < 0 ? null : new URLSearchParams(link.slice(i + 1)).get('q');
 }
 
 export type ShareOutcome = 'shared' | 'copied' | 'failed' | 'cancelled';

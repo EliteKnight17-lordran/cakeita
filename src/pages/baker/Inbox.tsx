@@ -44,6 +44,7 @@ export function OrderRow({ order }: { order: Order }) {
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate font-bold">{order.customer.name}</p>
             <StatusTag status={order.status} />
+            {order.offer?.answer === 'pending' && order.status === 'quoted' && <span className="tag bg-amber-bg text-amber-ink" data-offer-tag>{tx(`Offer ${formatPeso(order.offer.price)}`, `Alok ${formatPeso(order.offer.price)}`)}</span>}
             {order.unavailable.length > 0 && <span className="tag bg-amber-bg text-amber-ink"><IconAlert size={13} /> {order.unavailable.length}</span>}
           </div>
           <p className="text-sm text-ink-soft">

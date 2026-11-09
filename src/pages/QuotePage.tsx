@@ -9,11 +9,12 @@ import { ShareBox } from '../components/ShareBox';
 import { Field, Notice, SampleBadge } from '../components/ui';
 import { IconHeart } from '../components/icons';
 import { formatPeso } from '../domain/money';
-import { applyConfirmation, isQuoteExpired, quoteLinkPayload } from '../domain/orders';
-import { quoteLinkSchema, type QuoteLink } from '../domain/schemas';
-import { repo, useDb } from '../data/store';
+import { applyConfirmation, applyOffer, isQuoteExpired, quoteLinkPayload } from '../domain/orders';
+import { quoteLinkSchema, type OfferLink, type QuoteLink } from '../domain/schemas';
+import { confirmSample } from '../data/sampleBakers';
+import { repo, useDb, type MyRequest } from '../data/store';
 import { decodePayload, linkErrorText } from '../lib/codec';
-import { confirmLink } from '../lib/links';
+import { confirmLink, offerLink, quoteCodeFrom } from '../lib/links';
 import { usePrefs, useTx } from '../lib/prefs';
 
 export default function QuotePage() {
@@ -24,6 +25,10 @@ export default function QuotePage() {
   const tx = useTx();
   const [quote, setQuote] = useState<QuoteLink | null>(null);
   const [err, setErr] = useState('');
+  const mine = db.myRequests.find((r) => r.id === id);
+  // The latest answer this phone has heard (sample bakery, or a cloud baker while the app was open).
+  const savedCode = code ? null : quoteCodeFrom(mine?.quoteLink);
+  const auto = !!mine?.auto;
 
   useEffect(() => {
     let alive = true;
@@ -43,8 +48,13 @@ export default function QuotePage() {
         setQuote(quoteLinkPayload(bakery, order));
         return;
       }
+      if (savedCode) {
+        const r = await decodePayload(savedCode, quoteLinkSchema);
+        if (!alive) return;
+        if (r.ok && r.value.orderId === id) setQuote(r.value);
+      }
       // Otherwise the quote may be waiting in the cloud; it also appears live when the baker approves.
-      if (cloudEnabled()) {
+      if (cloudEnabled() && !auto) {
         try {
           const { listenQuote } = await import('../cloud/data');
           const off = await listenQuote(id, (q) => alive && setQuote(q));
@@ -59,9 +69,7 @@ export default function QuotePage() {
       alive = false;
       stop?.();
     };
-  }, [code, id, db.orders, tx]);
-
-  const mine = db.myRequests.find((r) => r.id === id);
+  }, [code, id, db.orders, savedCode, auto, tx]);
 
   if (err) {
     return (
@@ -82,11 +90,37 @@ export default function QuotePage() {
           <h1 className="font-display text-2xl font-semibold">{tx('Your cake request', 'Ang cake request mo')}</h1>
           {mine ? (
             <>
-              <Notice tone="info" title={tx('Waiting for the baker', 'Hinihintay ang baker')}>
-                {tx(`${mine.bakeryName} will send you a quote link in Messenger. Open it to see your final price.`, `Magpapadala si ${mine.bakeryName} ng quote link sa Messenger. Buksan ito para makita ang final na presyo.`)}
-              </Notice>
+              {mine.auto ? (
+                <div data-waiting-auto>
+                  <Notice tone="info" title={tx(`${mine.bakeryName} is looking at your cake…`, `Tinitingnan ni ${mine.bakeryName} ang cake mo…`)}>
+                    <span aria-live="polite">{tx('This is a sample bakery for the demo, so it answers by itself in a few seconds. A real baker answers here too, usually within the day.', 'Sample bakery ito para sa demo, kaya kusang sasagot sa loob ng ilang segundo. Dito rin sasagot ang totoong baker, kadalasan sa loob ng araw.')}</span>
+                  </Notice>
+                </div>
+              ) : mine.cloud ? (
+                <Notice tone="ok" title={tx(`Delivered to ${mine.bakeryName}`, `Nasa inbox na ni ${mine.bakeryName}`)}>
+                  {tx('Their answer shows up right here and in My cakes: a price, another offer, or a “sorry, we can’t”.', 'Dito lalabas ang sagot nila at sa "Mga cake ko": presyo, ibang alok, o "pasensya, hindi namin kaya".')}
+                </Notice>
+              ) : (
+                <Notice tone="info" title={tx('Waiting for the baker', 'Hinihintay ang baker')}>
+                  {tx(`${mine.bakeryName} will send you a quote link in Messenger. Open it to see your final price.`, `Magpapadala si ${mine.bakeryName} ng quote link sa Messenger. Buksan ito para makita ang final na presyo.`)}
+                </Notice>
+              )}
               <p>{mine.summary}</p>
-              <ShareBox url={mine.requestLink} message={tx('Hi! Here is my cake request again:', 'Hi po! Ito ulit ang cake request ko:')} title="Cake request" qrLabel="QR" />
+              {!mine.auto && (mine.cloud ? (
+                <details className="card">
+                  <summary className="cursor-pointer font-semibold">{tx('Also send it on Messenger (optional)', 'Ipadala rin sa Messenger (optional)')}</summary>
+                  <div className="mt-3">
+                    <ShareBox url={mine.requestLink} contact={mine.contact} message={tx('Hi! Here is my cake request:', 'Hi po! Ito ang cake request ko:')} title="Cake request" qrLabel="QR" />
+                  </div>
+                </details>
+              ) : (
+                <ShareBox url={mine.requestLink} contact={mine.contact} message={tx('Hi! Here is my cake request again:', 'Hi po! Ito ulit ang cake request ko:')} title="Cake request" qrLabel="QR" />
+              ))}
+              {mine.fromSlug && (
+                <Link to={`/near?from=${encodeURIComponent(mine.fromSlug)}`} className="btn-ghost">
+                  {tx('Back to the bakers', 'Bumalik sa mga baker')}
+                </Link>
+              )}
             </>
           ) : (
             <>
@@ -101,23 +135,52 @@ export default function QuotePage() {
       </Layout>
     );
   }
-  return <QuoteView quote={quote} />;
+  return <QuoteView quote={quote} mine={mine ?? null} />;
 }
 
-function QuoteView({ quote }: { quote: QuoteLink }) {
+function QuoteView({ quote, mine }: { quote: QuoteLink; mine: MyRequest | null }) {
   const tx = useTx();
   const prefs = usePrefs();
   const db = useDb();
   const [note, setNote] = useState('');
   const [link, setLink] = useState<string | null>(null);
+  const [offerOpen, setOfferOpen] = useState(false);
+  const [offerText, setOfferText] = useState('');
+  const [offerNote, setOfferNote] = useState('');
+  const [offerErr, setOfferErr] = useState('');
+  const [sentOffer, setSentOffer] = useState<MyRequest['offer'] | null>(null);
+  const [offerUrl, setOfferUrl] = useState<string | null>(null);
   const expired = isQuoteExpired(quote.validUntil);
   const local = db.orders.find((o) => o.id === quote.orderId);
-  const confirmedHere = local && ['confirmed', 'baking', 'ready', 'done'].includes(local.status);
+  const auto = !!mine?.auto;
+  const confirmedHere = (local && ['confirmed', 'baking', 'ready', 'done'].includes(local.status)) || (auto && mine?.status === 'confirmed');
   const desc = describeCake(quote.visual, prefs.lang);
+  const other = `/near?from=${encodeURIComponent(mine?.fromSlug ?? 'sample')}`;
+  const myOffer = mine?.offer ?? sentOffer;
+  const offerPending = !!myOffer && (!quote.offer || quote.offer.answer === 'pending');
+  const canOffer = !myOffer && !quote.offer;
+  const isCounter = quote.estimate != null && Math.round(quote.estimate) !== Math.round(quote.price);
+  // Only the link can reach a baker without Cakeita open on this phone or in the cloud.
+  const offerByLink = offerPending && !auto && !local && !mine?.cloud;
+
+  useEffect(() => {
+    if (!offerByLink || offerUrl || !myOffer) return;
+    let alive = true;
+    offerLink({ v: 1, orderId: quote.orderId, price: myOffer.price, note: myOffer.note, customerName: quote.customerName, at: myOffer.at }).then((u) => alive && setOfferUrl(u));
+    return () => {
+      alive = false;
+    };
+  }, [offerByLink, offerUrl, myOffer, quote.orderId, quote.customerName]);
 
   const confirm = async (e?: React.MouseEvent<HTMLElement>) => {
     celebrate(e?.currentTarget);
     const c = { v: 1 as const, orderId: quote.orderId, price: quote.price, confirmedAt: new Date().toISOString(), note: note.slice(0, 300), customerName: quote.customerName };
+    if (auto) {
+      // Sample bakery: nothing real to send.
+      confirmSample(quote.orderId, c.note);
+      repo.updateMyRequest(quote.orderId, { status: 'confirmed' });
+      return;
+    }
     setLink(await confirmLink(c));
     // Tell the baker right away if they have a cloud inbox (the Messenger link still works too).
     if (cloudEnabled()) {
@@ -134,6 +197,53 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
     repo.updateMyRequest(quote.orderId, { status: 'confirmed' });
   };
 
+  const sendOffer = async () => {
+    const price = Math.round(Number(offerText));
+    if (!offerText.trim() || !Number.isFinite(price) || price <= 0) return setOfferErr(tx('Type the price you can pay.', 'I-type ang presyong kaya mo.'));
+    if (price >= quote.price) return setOfferErr(tx(`Your offer should be lower than ${formatPeso(quote.price)}.`, `Dapat mas mababa sa ${formatPeso(quote.price)} ang alok mo.`));
+    setOfferErr('');
+    const o: OfferLink = { v: 1, orderId: quote.orderId, price, note: offerNote.trim().slice(0, 300), customerName: quote.customerName, at: new Date().toISOString() };
+    const saved = { price: o.price, note: o.note, at: o.at };
+    setSentOffer(saved);
+    if (mine) repo.updateMyRequest(quote.orderId, { offer: saved });
+    // Demo on one device: straight into the baker's copy.
+    const res = applyOffer(repo.get().orders.find((x) => x.id === quote.orderId), o);
+    if (res.ok) repo.upsertOrder(res.order);
+    if (!auto && cloudEnabled()) {
+      import('../cloud/data')
+        .then(async ({ quoteOwner, sendOffer: send }) => {
+          const owner = await quoteOwner(o.orderId);
+          if (owner) await send(o, owner);
+        })
+        .catch(() => {});
+    }
+    setOfferOpen(false);
+  };
+
+  if (quote.kind === 'declined') {
+    return (
+      <Layout>
+        <div className="space-y-4" data-declined>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-display text-xl font-semibold">{quote.bakery.name}</p>
+            <SampleBadge show={quote.bakery.isSample} text={tx('Sample bakery, demo data', 'Sample bakery, demo data')} />
+          </div>
+          <h1 className="font-display text-3xl font-semibold">{tx(`Sorry, ${quote.bakery.name.replace(' (sample)', '')} can’t bake this one`, `Pasensya, hindi kaya ni ${quote.bakery.name.replace(' (sample)', '')} ang cake na ito`)}</h1>
+          {quote.reason && (
+            <p className="rounded-2xl bg-berry-soft p-3">
+              <strong>{tx('Their reason', 'Dahilan nila')}:</strong> {quote.reason}
+            </p>
+          )}
+          <p>{tx('Your cake is saved. Send it to another baker; each one prices it from their own menu.', 'Naka-save ang cake mo. Ipadala sa ibang baker; sariling menu nila ang presyo.')}</p>
+          <Link to={other} className="btn w-full" data-choose-another>
+            {tx('Choose another baker', 'Pumili ng ibang baker')}
+          </Link>
+          <p className="text-sm text-ink-soft">{desc}</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="space-y-4">
@@ -146,8 +256,18 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
         </h1>
         <CakeView visual={quote.visual} description={desc} />
         <div className="card space-y-2">
-          <p className="text-sm font-semibold text-ink-soft">{tx('Price from the baker', 'Presyo mula sa baker')}</p>
-          <p className="price text-4xl">{formatPeso(quote.price)}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-ink-soft">{tx('Price from the baker', 'Presyo mula sa baker')}</p>
+            {quote.offer?.answer === 'accepted' ? (
+              <span className="tag bg-ok-bg text-ok-ink">{tx('Your offer, accepted', 'Alok mo, tinanggap')}</span>
+            ) : isCounter ? (
+              <span className="tag bg-amber-bg text-amber-ink" data-counter>{tx('Their counter-offer', 'Alok nilang presyo')}</span>
+            ) : quote.estimate != null ? (
+              <span className="tag bg-ok-bg text-ok-ink" data-accepted>{tx('Accepted at the app price', 'Tinanggap sa presyo ng app')}</span>
+            ) : null}
+          </div>
+          <p className="price text-4xl" data-quote-price>{formatPeso(quote.price)}</p>
+          {isCounter && quote.offer?.answer !== 'accepted' && <p className="text-sm text-ink-soft">{tx(`The app estimate was ${formatPeso(quote.estimate!)}.`, `${formatPeso(quote.estimate!)} ang tantya ng app.`)}</p>}
           <ul className="space-y-1 text-base">
             <li>
               <strong>{tx('Size', 'Laki')}:</strong> {quote.sizeLabel} · {tx('for', 'para sa')} {quote.servings} {tx('people', 'tao')}
@@ -173,13 +293,27 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
             </p>
           )}
         </div>
+        {quote.offer?.answer === 'accepted' && (
+          <Notice tone="ok" title={tx('They said yes to your offer', 'Pumayag sila sa alok mo')}>
+            {tx(`${formatPeso(quote.price)} it is. Confirm below to lock it in.`, `${formatPeso(quote.price)} na. I-confirm sa baba para sigurado.`)}
+          </Notice>
+        )}
+        {quote.offer?.answer === 'kept' && (
+          <div data-offer-kept>
+            <Notice tone="info" title={tx('They kept their price', 'Hindi nila binago ang presyo')}>
+              {tx(`They can't do ${formatPeso(quote.offer.price)}. You can still take ${formatPeso(quote.price)}, or choose another baker.`, `Hindi nila kaya ang ${formatPeso(quote.offer.price)}. Puwede mo pa ring kunin sa ${formatPeso(quote.price)}, o pumili ng ibang baker.`)}
+            </Notice>
+          </div>
+        )}
         <Notice tone="info" title={tx('About payment', 'Tungkol sa bayad')}>
           {tx('Cakeita never asks for or handles payment. Pay only the baker you are talking to, the way you both agree.', 'Hindi humihingi o humahawak ng bayad ang Cakeita. Sa baker ka lang mismo magbayad, sa paraang napag-usapan ninyo.')}
         </Notice>
 
         {confirmedHere ? (
           <Notice tone="ok" title={tx('Confirmed!', 'Confirmed na!')}>
-            {tx('The baker has your confirmation.', 'Natanggap na ng baker ang confirmation mo.')}
+            {auto
+              ? tx('This is a sample bakery, so no real order was made. With a real baker, they get your confirmation in Cakeita right away.', 'Sample bakery ito, kaya walang totoong order. Sa totoong baker, matatanggap nila agad sa Cakeita ang confirmation mo.')
+              : tx('The baker has your confirmation.', 'Natanggap na ng baker ang confirmation mo.')}
           </Notice>
         ) : expired ? (
           <Notice tone="warn" title={tx('This quote has expired', 'Expired na ang quote')}>
@@ -196,6 +330,21 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
               message={tx(`Hi ${quote.bakery.name}! I confirm my cake for ${quote.eventDate} at ${formatPeso(quote.price)}.`, `Hi ${quote.bakery.name}! Kinukumpirma ko po ang cake ko para sa ${quote.eventDate}, ${formatPeso(quote.price)}.`)}
             />
           </div>
+        ) : offerPending && myOffer ? (
+          <div className="card space-y-3" data-offer-pending>
+            <p className="font-bold" aria-live="polite">
+              {tx(`You offered ${formatPeso(myOffer.price)}. Waiting for their answer…`, `Nag-alok ka ng ${formatPeso(myOffer.price)}. Hinihintay ang sagot nila…`)}
+            </p>
+            <p className="text-sm text-ink-soft">
+              {auto
+                ? tx('Sample bakery: it answers by itself in a few seconds.', 'Sample bakery: kusang sasagot sa loob ng ilang segundo.')
+                : tx('They will accept it or keep their price. Either way, that is their final answer.', 'Tatanggapin nila o hindi babaguhin ang presyo. Alinman doon, iyon na ang final na sagot nila.')}
+            </p>
+            {offerByLink && offerUrl && (
+              <ShareBox url={offerUrl} title="Cake offer" contact={quote.bakery.contact} qrLabel="QR" message={tx(`Hi ${quote.bakery.name}! Could you do my cake for ${formatPeso(myOffer.price)}?`, `Hi ${quote.bakery.name}! Puwede po ba ang cake ko sa ${formatPeso(myOffer.price)}?`)} />
+            )}
+            <Link to={other} className="btn-ghost">{tx('Choose another baker instead', 'Pumili na lang ng ibang baker')}</Link>
+          </div>
         ) : (
           <div className="card space-y-3">
             <Field id="cnote" label={tx('Note for the baker (optional)', 'Note para sa baker (optional)')}>
@@ -204,7 +353,34 @@ function QuoteView({ quote }: { quote: QuoteLink }) {
             <button type="button" className="btn w-full text-lg" onClick={confirm}>
               <IconHeart /> {tx('This is the one I want', 'Ito ang gusto ko')}
             </button>
-            <p className="hint text-center">{tx('Not ready? Just reply to the baker in Messenger.', 'Hindi pa sigurado? Mag-reply lang sa baker sa Messenger.')}</p>
+            {canOffer &&
+              (offerOpen ? (
+                <div className="space-y-3 rounded-2xl border border-line p-3" data-offer-form>
+                  <Field id="offer" label={tx('Your price (₱)', 'Presyo mo (₱)')} hint={tx('You can do this once. They accept it or keep their price.', 'Isang beses lang ito. Tatanggapin nila o hindi babaguhin ang presyo.')}>
+                    <input id="offer" type="number" inputMode="numeric" min={1} max={Math.max(1, quote.price - 1)} step={50} className="input text-xl font-bold" value={offerText} onChange={(e) => setOfferText(e.target.value)} aria-describedby="offer-hint" aria-invalid={!!offerErr} />
+                  </Field>
+                  <Field id="offer-note" label={tx('Short note (optional)', 'Maikling note (optional)')}>
+                    <input id="offer-note" className="input" maxLength={300} value={offerNote} onChange={(e) => setOfferNote(e.target.value)} placeholder={tx('e.g. I can pick it up myself', 'hal. Ako na ang magpi-pickup')} />
+                  </Field>
+                  {offerErr && <Notice tone="warn">{offerErr}</Notice>}
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" className="btn-secondary" onClick={sendOffer} data-send-offer>
+                      {tx('Send my offer', 'Ipadala ang alok ko')}
+                    </button>
+                    <button type="button" className="btn-ghost" onClick={() => setOfferOpen(false)}>
+                      {tx('Cancel', 'Huwag na')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" className="btn-secondary w-full" onClick={() => setOfferOpen(true)} data-offer-open>
+                  {tx('Offer a different price', 'Mag-alok ng ibang presyo')}
+                </button>
+              ))}
+            <Link to={other} className="btn-ghost w-full" data-choose-another>
+              {tx('Choose another baker', 'Pumili ng ibang baker')}
+            </Link>
+            {!auto && <p className="hint text-center">{tx('Not ready? Just reply to the baker in Messenger.', 'Hindi pa sigurado? Mag-reply lang sa baker sa Messenger.')}</p>}
           </div>
         )}
         {quote.bakery.isSample && (

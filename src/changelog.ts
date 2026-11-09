@@ -13,6 +13,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.7.0',
+    date: '2026-11-09',
+    en: [
+      'Design first, then choose a baker: after designing, customers see bakers ranked by best match (can make it, fits the budget, free on the date, nearest) and send the cake to one of them in a tap.',
+      'Bakers can accept at the app price, send a counter-offer, or say no with a reason the customer sees. Customers can take it, offer a lower price once, or pick another baker. Messenger links still work as a backup.',
+      'Demo: the "(sample)" shops on the map answer by themselves in a few seconds, so anyone can try the whole back-and-forth. Real bakers always answer by hand.',
+      'Fixed: some pages kept re-drawing in the background, wasting battery.',
+    ],
+    tl: [
+      'I-design muna, tapos pumili ng baker: pagkatapos mag-design, makikita ng customer ang mga baker ayon sa pinakaangkop (kaya gawin, pasok sa budget, bakante sa petsa, pinakamalapit) at isang tap lang para ipadala.',
+      'Puwedeng tanggapin ng baker sa presyo ng app, mag-alok ng ibang presyo, o tumanggi na may dahilang makikita ng customer. Puwedeng kunin ng customer, mag-alok ng mas mababang presyo nang isang beses, o pumili ng ibang baker. Gumagana pa rin ang Messenger links bilang backup.',
+      'Demo: kusang sumasagot sa loob ng ilang segundo ang mga "(sample)" na shop sa mapa, para masubukan ng kahit sino ang buong usapan. Ang totoong baker ay sumasagot mismo.',
+      'Naayos: may mga page na paulit-ulit nagre-redraw sa background at umuubos ng battery.',
+    ],
+  },
+  {
     version: '1.6.0',
     date: '2026-11-09',
     en: [
