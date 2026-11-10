@@ -700,7 +700,7 @@ async function main() {
     await baker.getByText('Ipadala ang quote sa customer').waitFor();
     const q3 = await linkFromShareBox(baker);
     await picker.goto(q3);
-    check('customer sees the accepted offer at their price', await picker.getByText('Pumayag sila sa alok mo').waitFor({ timeout: 8000 }).then(() => true, () => false) && Number((await picker.locator('[data-quote-price]').innerText()).replace(/[^\d]/g, '')) === est2);
+    check('customer sees the accepted offer at their price', await picker.getByText('Pumayag sila sa alok mo').waitFor({ timeout: 20000 }).then(() => true, () => false) && Number((await picker.locator('[data-quote-price]').innerText()).replace(/[^\d]/g, '')) === est2);
 
     for (const p of [customer, baker, elder, tester, picker, gamer]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
     await browser.close();

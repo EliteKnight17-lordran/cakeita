@@ -96,7 +96,7 @@ export function ReadySender({ order, link, cloud }: { order: Order; link: string
           {order.ready?.photo && <img src={order.ready.photo} alt={tx('Finished cake', 'Tapos na cake')} className="max-h-64 w-full rounded-2xl border border-line object-cover" />}
           {cloud && <Notice tone="ok">{tx('They see it in Cakeita on their quote page. You can also message them:', 'Makikita nila ito sa Cakeita sa quote page nila. Puwede mo rin silang i-message:')}</Notice>}
           {link && <ShareBox url={link} title="Cake ready" qrLabel={tx('QR code of the order', 'QR code ng order')} message={message} />}
-          {order.ready?.photo && !cloud && <p className="text-sm text-ink-soft">{tx('Messenger links can’t carry photos: send the cake photo in the chat too.', 'Hindi kasya ang photo sa link: i-send din ang picture sa chat.')}</p>}
+          {order.ready?.photo && !cloud && order.source !== 'same-device' && <p className="text-sm text-ink-soft">{tx('Messenger links can’t carry photos: send the cake photo in the chat too.', 'Hindi kasya ang photo sa link: i-send din ang picture sa chat.')}</p>}
           <button type="button" className="link min-h-11 text-sm" onClick={() => setEditing(true)}>
             {tx('Change the photo or note', 'Palitan ang photo o note')}
           </button>
