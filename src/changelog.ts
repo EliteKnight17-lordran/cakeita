@@ -13,6 +13,12 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.29.0',
+    date: '2026-11-10',
+    en: ['Chats button at the bottom right of every page: all your conversations with a new-message count. Chats stay on your phone even after an order is finished or deleted.'],
+    tl: ['Chat button sa kanang ibaba ng bawat page: lahat ng usapan mo, may bilang ng bagong message. Naiiwan ang chat sa phone mo kahit tapos o binura na ang order.'],
+  },
+  {
     version: '1.28.0',
     date: '2026-11-10',
     en: ['Hero cakes no longer all look the same: new generic toppers (web, hero mask, power ring, hero cape) next to the shield. "Green Lantern" and more heroes are now recognized, each with its own colors and the licensed-topper note.'],

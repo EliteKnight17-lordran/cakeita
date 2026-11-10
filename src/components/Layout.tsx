@@ -1,4 +1,5 @@
 import { SurveyStrip, SurveyTimedPrompt } from './SurveyFinish';
+import { ChatDock } from './ChatDock';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAccount } from '../cloud/account';
@@ -156,6 +157,7 @@ export function Layout({ children, nav, wide = false }: { children: ReactNode; n
         </p>
       </footer>
       <SurveyTimedPrompt />
+      <ChatDock />
       {prefs.dev && <DevPanel />}
     </div>
   );

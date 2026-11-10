@@ -785,7 +785,7 @@ function Flow({ menu }: { menu: PublicMenu }) {
   );
 
   const priceBar = (action: ReactNode, back?: ReactNode) => (
-    <div className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#fffdfa] p-3 shadow-[0_-12px_30px_-24px_rgb(36_26_23/0.45)]">
+    <div data-price-bar className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-[#fffdfa] p-3 shadow-[0_-12px_30px_-24px_rgb(36_26_23/0.45)]">
       <div className={`mx-auto flex max-w-3xl items-center gap-2 sm:gap-3 ${pickOnMap ? '' : 'lg:max-w-6xl'}`}>
         {back}
         <div className="min-w-0 flex-1" aria-live="polite">

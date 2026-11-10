@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MAX_CHAT, useChat, type ChatMode } from '../chat/chat';
+import { entryKey, markSeen, MAX_CHAT, rememberChat, useChat, type ChatMode } from '../chat/chat';
 import { usePrefs, useTx } from '../lib/prefs';
 
 /**
@@ -14,6 +14,7 @@ export function OrderChat({
   otherName,
   quick,
   messengerHref,
+  embedded = false,
 }: {
   orderId: string;
   me: 'customer' | 'baker';
@@ -22,6 +23,8 @@ export function OrderChat({
   otherName: string;
   quick: string[];
   messengerHref?: string | null;
+  /** Inside the chat dock: no card, no title. */
+  embedded?: boolean;
 }) {
   const tx = useTx();
   const prefs = usePrefs();
@@ -34,6 +37,15 @@ export function OrderChat({
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs.length]);
+  // Every conversation goes in the chat dock (bottom right), and stays there.
+  useEffect(() => {
+    if (mode) rememberChat({ orderId, me, mode, bakerUid, otherName, messengerHref: messengerHref ?? null });
+  }, [orderId, me, mode, bakerUid, otherName, messengerHref]);
+  // Open on screen = read.
+  const last = msgs.at(-1)?.at ?? '';
+  useEffect(() => {
+    if (last) markSeen(entryKey({ me, orderId }), last);
+  }, [last, me, orderId]);
 
   const go = async (t: string) => {
     if (!t.trim() || busy) return;
@@ -49,10 +61,12 @@ export function OrderChat({
   const title = me === 'customer' ? tx(`Chat with ${otherName}`, `Chat kay ${otherName}`) : tx(`Chat with ${otherName}`, `Chat kay ${otherName}`);
 
   return (
-    <section className="card space-y-3" aria-labelledby={`chat-h-${orderId}`} data-chat={mode ?? 'none'}>
-      <h2 id={`chat-h-${orderId}`} className="font-display text-xl font-semibold">
-        {title}
-      </h2>
+    <section className={embedded ? 'space-y-3' : 'card space-y-3'} aria-labelledby={embedded ? undefined : `chat-h-${orderId}`} aria-label={embedded ? title : undefined} data-chat={mode ?? 'none'}>
+      {!embedded && (
+        <h2 id={`chat-h-${orderId}`} className="font-display text-xl font-semibold">
+          {title}
+        </h2>
+      )}
       {mode ? (
         <>
           <div ref={listRef} tabIndex={0} className="max-h-72 space-y-2 overflow-y-auto rounded-2xl bg-[#f6f1ea] p-3" role="log" aria-live="polite" aria-label={tx('Messages', 'Mga message')} data-chat-log>
@@ -88,10 +102,10 @@ export function OrderChat({
               go(text);
             }}
           >
-            <label htmlFor={`chat-in-${orderId}`} className="sr-only">
+            <label htmlFor={`chat-in-${embedded ? 'dock-' : ''}${orderId}`} className="sr-only">
               {tx('Your message', 'Message mo')}
             </label>
-            <textarea id={`chat-in-${orderId}`} rows={1} className="input min-h-11 flex-1 resize-none" maxLength={MAX_CHAT} placeholder={tx('Type a message', 'Mag-type ng message')} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(text); } }} data-chat-input />
+            <textarea id={`chat-in-${embedded ? 'dock-' : ''}${orderId}`} rows={1} className="input min-h-11 flex-1 resize-none" maxLength={MAX_CHAT} placeholder={tx('Type a message', 'Mag-type ng message')} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); go(text); } }} data-chat-input />
             <button type="submit" className="btn shrink-0" disabled={busy || !text.trim()} data-chat-send>
               {tx('Send', 'Send')}
             </button>

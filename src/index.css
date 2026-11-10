@@ -518,3 +518,11 @@ body {
     animation: none;
   }
 }
+
+/* Chats button (bottom right). Moves up above the sticky price bar, and the small cake moves above it. */
+.chat-dock-btn { bottom: 1rem; }
+.chat-dock-panel { bottom: 5.25rem; }
+body:has([data-price-bar]) .chat-dock-btn { bottom: 6rem; }
+body:has([data-price-bar]) .chat-dock-panel { bottom: 10.25rem; }
+body:has([data-price-bar]):has([data-chat-dock-btn]) [data-testid='mini-cake'] { bottom: 10.25rem; }
+body:has([data-price-bar]):has([data-chat-dock-btn]) [data-testid='mini-cake-open'] { bottom: 10.25rem; }
