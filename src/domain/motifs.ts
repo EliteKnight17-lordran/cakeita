@@ -20,7 +20,7 @@ export interface Motif {
 }
 
 export const MOTIF_KEYS = [
-  'star', 'heart', 'hero', 'crown', 'rocket', 'dino', 'unicorn', 'butterfly', 'ball', 'paw', 'car', 'grad', 'snowflake', 'shell', 'rainbow', 'bolt', 'blocks',
+  'star', 'heart', 'hero', 'web', 'mask', 'ring', 'cape', 'crown', 'rocket', 'dino', 'unicorn', 'butterfly', 'ball', 'paw', 'car', 'grad', 'snowflake', 'shell', 'rainbow', 'bolt', 'blocks',
 ] as const;
 export type MotifKey = (typeof MOTIF_KEYS)[number];
 
@@ -74,6 +74,23 @@ function snowflake(): string {
   return parts.join(' ');
 }
 
+/** A spider-web pattern (generic: no character, just the web). */
+function web(): string {
+  const parts: string[] = [];
+  const n = 8;
+  const pt = (k: number, r: number) => [50 + Math.cos((k * 2 * Math.PI) / n - Math.PI / 2) * r, 50 + Math.sin((k * 2 * Math.PI) / n - Math.PI / 2) * r] as const;
+  for (let k = 0; k < n; k++) {
+    const [x, y] = pt(k, 44);
+    parts.push(bar(50, 50, x, y, 3.6));
+    for (const r of [13, 25, 37]) {
+      const [x1, y1] = pt(k, r);
+      const [x2, y2] = pt(k + 1, r);
+      parts.push(bar(x1, y1, x2, y2, 3.2));
+    }
+  }
+  return parts.join(' ');
+}
+
 function arcBand(R: number, t: number, cy = 80): string {
   return `M${50 - R} ${cy} A${R} ${R} 0 0 1 ${50 + R} ${cy} L${50 + R - t} ${cy} A${R - t} ${R - t} 0 0 0 ${50 - R + t} ${cy} Z`;
 }
@@ -97,6 +114,49 @@ export const MOTIFS: Record<MotifKey, Motif> = {
       { d: shield(1), fill: 'accent' },
       { d: shield(0.8), fill: 'main' },
       { d: starPath(50, 50, 24, 10), fill: 'white' },
+    ],
+  },
+  web: {
+    key: 'web',
+    name: 'Web hero',
+    nameTl: 'Web hero',
+    layers: [
+      { d: circle(50, 50, 48), fill: 'accent' },
+      { d: circle(50, 50, 44), fill: 'main' },
+      { d: web(), fill: 'dark' },
+    ],
+  },
+  mask: {
+    key: 'mask',
+    name: 'Hero mask',
+    nameTl: 'Hero mask',
+    layers: [
+      { d: 'M4 42 C4 26 20 20 35 25 C43 28 46 32 50 32 C54 32 57 28 65 25 C80 20 96 26 96 42 C96 62 81 74 66 70 C57 67 54 60 50 60 C46 60 43 67 34 70 C19 74 4 62 4 42 Z', fill: 'accent' },
+      { d: 'M10 43 C10 31 22 27 34 30 C42 33 45 37 50 37 C55 37 58 33 66 30 C78 27 90 31 90 43 C90 58 79 67 67 64 C59 62 55 55 50 55 C45 55 41 62 33 64 C21 67 10 58 10 43 Z', fill: 'main' },
+      { d: 'M20 44 C22 36 34 35 40 42 C36 50 24 51 20 44 Z M80 44 C78 36 66 35 60 42 C64 50 76 51 80 44 Z', fill: 'white' },
+    ],
+  },
+  ring: {
+    key: 'ring',
+    name: 'Power ring',
+    nameTl: 'Power ring',
+    layers: [
+      { d: `${bar(50, 22, 50, 2, 4)} ${bar(50, 22, 22, 6, 4)} ${bar(50, 22, 78, 6, 4)} ${bar(50, 22, 10, 24, 4)} ${bar(50, 22, 90, 24, 4)}`, fill: 'gold' },
+      { d: circle(50, 66, 30), fill: 'main' },
+      { d: circle(50, 66, 20), fill: 'white' },
+      { d: 'M38 20 L62 20 L70 34 L50 50 L30 34 Z', fill: 'accent' },
+      { d: 'M42 24 L50 24 L44 34 Z', fill: 'white' },
+    ],
+  },
+  cape: {
+    key: 'cape',
+    name: 'Hero cape',
+    nameTl: 'Hero cape',
+    layers: [
+      { d: 'M30 12 L70 12 C72 42 84 70 96 94 C80 86 66 92 50 84 C34 92 20 86 4 94 C16 70 28 42 30 12 Z', fill: 'main' },
+      { d: `${bar(40, 22, 26, 84, 2.4)} ${bar(50, 22, 50, 82, 2.4)} ${bar(60, 22, 74, 84, 2.4)}`, fill: 'accent' },
+      { d: 'M24 6 H76 C76 14 70 18 62 18 H38 C30 18 24 14 24 6 Z', fill: 'accent' },
+      { d: `${circle(36, 14, 5)} ${circle(64, 14, 5)}`, fill: 'gold' },
     ],
   },
   crown: {
@@ -242,7 +302,14 @@ export const MOTIFS: Record<MotifKey, Motif> = {
 const STYLE_THEMES = /minimalist|vintage|rustic|floral|garden/;
 
 const THEME_MOTIFS: Array<[RegExp, MotifKey]> = [
-  [/hero|knight/, 'hero'],
+  [/\bweb\b/, 'web'],
+  [/mask|knight/, 'mask'],
+  [/\bring\b/, 'ring'],
+  [/cape|flying/, 'cape'],
+  [/thunder|lightning hero/, 'bolt'],
+  [/warrior princess/, 'crown'],
+  [/ocean hero/, 'shell'],
+  [/hero/, 'hero'],
   [/\bice\b|snow/, 'snowflake'],
   [/princess|doll|fashion/, 'crown'],
   [/kitten|cat with|\bbow\b/, 'heart'],

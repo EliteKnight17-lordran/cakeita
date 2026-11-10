@@ -139,7 +139,7 @@ describe('readRequest (whole messages)', () => {
 
   it('swaps trademarked characters for a generic theme and adds a licensed-topper note', () => {
     const r = readRequest('Spiderman theme cake for my son', menu, TODAY);
-    expect(r.theme).toBe('red and blue superhero');
+    expect(r.theme).toBe('red and blue web hero');
     expect(r.licensedNote).toMatch(/licensed topper/i);
     expect(r.colors.map((c) => c.name)).toEqual(['red', 'blue']);
     expect(genericizeText('Hello Kitty and Frozen')).not.toMatch(/hello kitty|frozen/i);

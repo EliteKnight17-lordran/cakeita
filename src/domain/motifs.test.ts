@@ -28,8 +28,12 @@ describe('motif shapes', () => {
 
 describe('themeMotif', () => {
   it.each([
-    ['red and blue superhero', 'hero'],
-    ['dark knight hero', 'hero'],
+    ['red and blue web hero', 'web'],
+    ['dark knight hero with a mask', 'mask'],
+    ['green power ring hero', 'ring'],
+    ['flying hero with a cape', 'cape'],
+    ['thunder hero', 'bolt'],
+    ['superhero', 'hero'],
     ['ice princess with snowflakes', 'snowflake'],
     ['fairytale princess', 'crown'],
     ['pink fashion doll', 'crown'],
@@ -73,7 +77,7 @@ describe('themeMotif', () => {
 describe('theme topper in the reader and price', () => {
   it('adds the theme topper for a character request, priced by code', () => {
     const r = readRequest('Spider-Man cake for my son, 7th birthday, 20 pax, budget 2k', menu, TODAY);
-    expect(r.theme).toBe('red and blue superhero');
+    expect(r.theme).toBe('red and blue web hero');
     expect(r.componentIds).toContain('tp-theme');
     expect(r.licensedNote).toMatch(/licensed topper/);
     const d = buildDesigns(menu, { servings: r.servings, budget: r.budget, tiers: r.tiers, sizeIn: r.sizeIn, flavorId: r.flavorId, coveringId: r.coveringId, componentIds: r.componentIds, textOnCake: r.textOnCake });
@@ -154,5 +158,22 @@ describe('saved data', () => {
     expect(up.components.find((c) => c.id === 'tp-theme')?.canMake).toBe(false);
     expect(upgradeBakery({ ...stripped, isSample: true }).components.find((c) => c.id === 'tp-theme')?.canMake).toBe(true);
     expect(upgradeBakery(old)).toBe(old);
+  });
+});
+
+describe('different heroes get different toppers', () => {
+  it.each([
+    ['Spiderman cake 20 pax', 'web'],
+    ['Green Lantern theme cake for my son', 'ring'],
+    ['batman cake', 'mask'],
+    ['Superman 5th birthday', 'cape'],
+    ['superhero theme cake, blue and red', 'hero'],
+  ])('%s', (text, motif) => {
+    const r = readRequest(text, menu, TODAY);
+    expect(motifFor(r.theme, 'Birthday')).toBe(motif);
+    expect(r.componentIds).toContain('tp-theme');
+  });
+  it('green lantern is a character, so it gets the licensed topper note', () => {
+    expect(readRequest('green lantern cake', menu, TODAY).licensedNote).toMatch(/licensed topper/);
   });
 });

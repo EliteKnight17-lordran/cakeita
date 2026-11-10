@@ -334,7 +334,7 @@ async function main() {
     await baker.getByRole('button', { name: 'Basahin at i-presyo' }).click();
     await baker.getByText('May character').waitFor();
     check('trademark swapped and licensed topper note shown', await baker.getByText(/Customer mentioned .*licensed topper/).isVisible());
-    check('character request gets a generic theme topper', (await baker.locator('[data-motif="hero"][aria-pressed="true"]').count()) === 1);
+    check('character request gets a generic theme topper', (await baker.locator('[data-motif="web"][aria-pressed="true"]').count()) === 1);
     await shot(baker, '08-pasted-dm');
 
     // ---------------- Price update + lugi ----------------

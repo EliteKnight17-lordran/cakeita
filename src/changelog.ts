@@ -13,6 +13,12 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.28.0',
+    date: '2026-11-10',
+    en: ['Hero cakes no longer all look the same: new generic toppers (web, hero mask, power ring, hero cape) next to the shield. "Green Lantern" and more heroes are now recognized, each with its own colors and the licensed-topper note.'],
+    tl: ['Hindi na pare-pareho ang hero cakes: may bagong generic na toppers (web, hero mask, power ring, hero cape) bukod sa shield. Kilala na ang "Green Lantern" at iba pang hero, may sariling kulay at paalala sa licensed topper.'],
+  },
+  {
     version: '1.27.0',
     date: '2026-11-10',
     en: ['Step 1 now offers "Pick a ready design": six popular cakes priced from the baker\'s own menu. Tap one to open it in 3D and change anything. Describing your cake or uploading a photo still works.'],

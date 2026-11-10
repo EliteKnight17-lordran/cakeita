@@ -84,10 +84,17 @@ export const COLOR_WORDS: Array<[string[], string, string]> = [
 
 /** Trademarked names are never drawn or named on the cake. They become a generic theme. */
 export const TRADEMARKS: Array<[RegExp, string, string[]]> = [
-  [/\bspider[- ]?man\b/, 'red and blue superhero', ['red', 'blue']],
-  [/\b(avengers|marvel|iron[- ]?man|captain america|hulk|thor)\b/, 'superhero', ['red', 'gold']],
-  [/\b(batman|dc comics)\b/, 'dark knight hero', ['black', 'yellow']],
-  [/\bsuperman\b/, 'flying hero', ['blue', 'red']],
+  [/\b(spider[- ]?man|spidey|miles morales|spider[- ]?verse)\b/, 'red and blue web hero', ['red', 'blue']],
+  [/\b(green lantern)\b/, 'green power ring hero', ['green', 'black']],
+  [/\b(batman|dark knight)\b/, 'dark knight hero with a mask', ['black', 'yellow']],
+  [/\b(superman|supergirl)\b/, 'flying hero with a cape', ['blue', 'red']],
+  [/\b(wonder woman)\b/, 'warrior princess hero', ['red', 'gold']],
+  [/\b(the flash)\b/, 'lightning hero', ['red', 'yellow']],
+  [/\b(thor)\b/, 'thunder hero', ['silver', 'red']],
+  [/\b(aquaman)\b/, 'ocean hero', ['teal', 'orange']],
+  [/\b(hulk)\b/, 'strong green hero', ['green', 'purple']],
+  [/\b(black panther)\b/, 'panther hero with a mask', ['black', 'purple']],
+  [/\b(avengers|marvel|iron[- ]?man|captain america|justice league|dc comics)\b/, 'superhero', ['red', 'gold']],
   [/\b(frozen|elsa|anna and elsa)\b/, 'ice princess with snowflakes', ['baby blue', 'white']],
   [/\b(disney princess|cinderella|ariel|little mermaid|rapunzel|moana)\b/, 'fairytale princess', ['pink', 'gold']],
   [/\b(mickey|minnie)( mouse)?\b/, 'cartoon mouse with polka dots', ['red', 'black']],
@@ -121,6 +128,7 @@ export const TRADEMARKS: Array<[RegExp, string, string[]]> = [
 ];
 
 const THEMES: Array<[RegExp, string, string[]]> = [
+  [/\b(super ?heroe?s?|hero theme)\b/, 'superhero', ['red', 'blue']],
   [/\bunicorns?\b/, 'unicorn', ['lavender', 'pink']],
   [/\b(dinosaurs?|dino)\b/, 'dinosaur', ['green', 'orange']],
   [/\bmermaids?\b/, 'mermaid', ['teal', 'lavender']],
