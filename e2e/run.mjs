@@ -140,6 +140,9 @@ async function main() {
     const livePrice = await shopper.getByTestId('live-price').innerText();
     check('a ready design opens on the cake step at the same price', !!readyPrice && livePrice.includes(readyPrice), `${readyPrice} vs ${livePrice.replace(/\n/g, ' ')}`);
     check('the ready design can be changed like any cake', await shopper.locator('[data-pinned-cake]').isVisible());
+    check('no JS errors on shopper phone', shopper.errors.length === 0, shopper.errors.slice(0, 3).join(' | '));
+    // Close it: a spinning 3D cake left open slows the slower CI machines down.
+    await shopper.close();
     await customer.getByLabel(/Ilarawan ang cake/).fill('2 tier pink ube cake with chocolate drip and fresh flowers for a birthday, 30 pax, "Happy 7th Mia"');
     await customer.locator('[data-make-cake]').click();
     check('making the cake shows the building steps', await customer.locator('[data-photo-building]').waitFor({ timeout: 3000 }).then(() => true, () => false));
@@ -362,7 +365,7 @@ async function main() {
     await baker.goto(`${BASE}#/baker/share`);
     await baker.reload();
     const bakerMap = baker.locator('[data-baker-map] .leaflet-container');
-    await bakerMap.waitFor({ timeout: 15000 });
+    await bakerMap.waitFor({ timeout: 30000 });
     const listBox = baker.locator('section[aria-labelledby="map-h"] input[type="checkbox"]');
     check('baker map: listing waits for a pin', await listBox.isDisabled());
     await bakerMap.scrollIntoViewIfNeeded();
@@ -699,7 +702,7 @@ async function main() {
     await picker.goto(q3);
     check('customer sees the accepted offer at their price', await picker.getByText('Pumayag sila sa alok mo').waitFor({ timeout: 8000 }).then(() => true, () => false) && Number((await picker.locator('[data-quote-price]').innerText()).replace(/[^\d]/g, '')) === est2);
 
-    for (const p of [customer, baker, elder, tester, picker, gamer, shopper]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
+    for (const p of [customer, baker, elder, tester, picker, gamer]) check(`no JS errors on ${p.label} phone`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
     await browser.close();
   } finally {
     server.kill();
