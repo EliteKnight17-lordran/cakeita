@@ -648,8 +648,8 @@ async function main() {
     check('typing and Enter sends a message', await waitTrue(async () => (await picker.locator('[data-chat-msg="customer"]').count()) === 2));
     check('chats button sits bottom right on the page', await picker.locator('[data-chat-dock-btn]').isVisible());
     await picker.locator('[data-chat-dock-btn]').click();
-    await picker.locator('[data-dock-chat]').first().click();
-    check('the chats button opens the same conversation', (await picker.locator('[data-chat-dock-panel] [data-chat-msg="customer"]').count()) === 2);
+    await picker.locator('[data-dock-chat]', { hasText: 'Salamat po!' }).click({ timeout: 15000 });
+    check('the chats button opens the same conversation', await waitTrue(async () => (await picker.locator('[data-chat-dock-panel] [data-chat-msg="customer"]').count()) === 2));
     await axe(picker, 'chat dock');
     await picker.locator('[data-chat-dock-btn]').click();
     await axe(picker, 'order chat');
